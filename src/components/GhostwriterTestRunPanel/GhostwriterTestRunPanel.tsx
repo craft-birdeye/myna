@@ -7,6 +7,8 @@ import { TestRunStepRow } from '../TestRunPanel/TestRunPanel'
 import { Tabs } from '../Tabs/Tabs'
 import type { Tab } from '../Tabs/Tabs.types'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
+import { GhostwriterTestRunEditor } from '../GhostwriterTestRunEditor/GhostwriterTestRunEditor'
+import { GhostwriterTestRunReport } from '../GhostwriterTestRunReport/GhostwriterTestRunReport'
 import { useTestRun } from '../../hooks/useTestRun'
 import type { TestRunStatus } from '../../hooks/useTestRun'
 import { buildTestRunSteps } from '../../data/testRunSteps'
@@ -24,10 +26,6 @@ const TEST_RESULT_TABS: Tab[] = [
   { id: 'details', label: 'Details' },
   { id: 'preview', label: 'Preview' },
 ]
-const TEST_RESULT_TABS_WITH_RECOMMENDATION: Tab[] = [
-  ...TEST_RESULT_TABS,
-  { id: 'recommendation', label: 'Recommendation' },
-]
 
 /** 23 Sep only — mock pass/fail rule: reviews rated below 3★ "fail" (the workflow's fallback
  *  branch didn't send a reply). Jay & Robin never calls this — it always treats reviews as
@@ -39,13 +37,8 @@ function reviewPassed(review: Review) {
 /** 23 Sep only — real pass/fail only applies to a batch that came from "Use test suite"
  *  (`batch.suiteName` set); a manually-tested batch (the plain review picker or the Upload tab)
  *  always reads as passed, in green, regardless of rating. */
-function reviewPassedInBatch(review: Review, batch: TestRunBatch) {
+export function reviewPassedInBatch(review: Review, batch: TestRunBatch) {
   return !batch.suiteName || reviewPassed(review)
-}
-
-/** 23 Sep only — the fix suggested on a failed review's Recommendation tab. */
-function getFailureRecommendation(review: Review) {
-  return `The ${review.rating}-star review from ${review.reviewerName} fell through to the fallback branch instead of getting a reply. Update "Evaluate conditions" so ratings this low are still routed to a response instead of being skipped.`
 }
 
 /** 23 Sep only — how bad a failure is, mocked off the same rating rule `reviewPassed` uses:
@@ -63,7 +56,7 @@ const SEVERITY_CHIP_VARIANT: Record<RecommendationSeverity, 'danger' | 'warning'
  *  rather than repeating one near-identical card per reviewer, since they all share the same
  *  underlying fix; each group's text is reviewer-agnostic and reports how many reviews it
  *  covers. */
-interface RecommendationGroup {
+export interface RecommendationGroup {
   severity: RecommendationSeverity
   text: string
   reviews: Review[]
@@ -81,7 +74,7 @@ function getGroupRecommendationText(severity: RecommendationSeverity) {
     : '2-star reviews are also being skipped by the fallback branch. Update "Evaluate conditions" so these ratings route to a response too.'
 }
 
-function getBatchRecommendationGroups(batch: TestRunBatch): RecommendationGroup[] {
+export function getBatchRecommendationGroups(batch: TestRunBatch): RecommendationGroup[] {
   const bySeverity = new Map<RecommendationSeverity, Review[]>()
   batch.reviews
     .filter((r) => !reviewPassedInBatch(r, batch))
@@ -94,14 +87,14 @@ function getBatchRecommendationGroups(batch: TestRunBatch): RecommendationGroup[
     .map((severity) => ({ severity, text: getGroupRecommendationText(severity), reviews: bySeverity.get(severity)! }))
 }
 
-/** 23 Sep's three left-panel sections. 'suite' and 'cycles' have no data/design yet — they
- *  render a plain empty state until a real spec exists. */
+/** 23 Sep's left-panel sections. 'cycles' still exists as a type (the generic empty-state
+ *  fallback branch below still handles it) but is hidden from `TEST_SECTIONS`/the nav — no
+ *  real spec for it yet, and it clutters the tab with a dead end. */
 type TestSection = 'cases' | 'suite' | 'cycles'
 
 const TEST_SECTIONS: { id: TestSection; label: string; icon: string; emptyCaption: string }[] = [
-  { id: 'cases', label: 'Tests', icon: 'science', emptyCaption: 'Select a variety of reviews in your test case for best results.' },
+  { id: 'cases', label: 'Test runs', icon: 'science', emptyCaption: 'Select a variety of reviews in your test case for best results.' },
   { id: 'suite', label: 'Test suite', icon: 'fact_check', emptyCaption: 'No test suites yet.' },
-  { id: 'cycles', label: 'Test cycles', icon: 'autorenew', emptyCaption: 'No test cycles yet.' },
 ]
 
 /** 23 Sep only — Test suite condition builder. Each field maps to a fixed operator set and,
@@ -347,138 +340,130 @@ function TestSuiteConditionRow({
   )
 }
 
-/** A suite's reviews source — "Add reviews" card in the Test suite editor. Either the
- *  condition-builder rows (default) or, once uploaded via `UploadReviewsFileModal`, a single
- *  file row replacing them entirely — "Upload file" (top-right, plain/no fill, mirroring the
- *  "Conditions" header's opposite end) is only offered while no file is uploaded yet. */
-function TestSuiteReviewsBlock({
-  conditions,
-  onChangeConditions,
-  uploadedFile,
-  onOpenUpload,
-  onRemoveUpload,
+/** 23 Sep only — Test suite "Add reviews from" source picker: which of the three ways to
+ *  populate a suite's reviews is currently selected. */
+type TestSuiteReviewsSource = 'customer' | 'upload' | 'generate'
+
+function testSuiteSourceLabel(source: TestSuiteReviewsSource | undefined): string {
+  if (source === 'upload') return 'File uploaded'
+  if (source === 'generate') return 'Generated by AI'
+  return 'Conditional customer reviews'
+}
+
+/** Plain circular radio, same look as `EstimateSavingsModal`'s time/cost picker — reused here
+ *  rather than exported since the two live in unrelated features. */
+function TestSuiteSourceRadio({
+  checked,
+  onClick,
+  label,
 }: {
-  conditions: TestSuiteCondition[]
-  onChangeConditions: (next: TestSuiteCondition[]) => void
-  uploadedFile: UploadedReviewsFile | null
-  onOpenUpload: () => void
-  onRemoveUpload: () => void
+  checked: boolean
+  onClick: () => void
+  label: string
 }) {
   return (
-    <div className="rounded-md border border-border p-lg">
-      <div className="mb-lg flex items-center justify-between">
-        <p className="m-0 text-body text-text-primary">Add reviews</p>
-        {!uploadedFile && (
-          <button
-            type="button"
-            onClick={onOpenUpload}
-            className="flex items-center gap-xs rounded-sm py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            <Icon name="upload" size={16} />
-            Upload file
-          </button>
-        )}
-      </div>
-      {uploadedFile ? (
-        <div className="flex items-center gap-md rounded-md border border-border p-md">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-surface-selected text-text-action">
-            <Icon name="table_chart" size={20} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="m-0 truncate text-body text-text-primary">{uploadedFile.name}</p>
-            <p className="m-0 text-small text-text-tertiary">
-              {uploadedFile.reviewCount} review{uploadedFile.reviewCount === 1 ? '' : 's'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onRemoveUpload}
-            aria-label="Remove file"
-            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <Icon name="close" size={16} />
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-col gap-md">
-            {conditions.map((condition, i) => (
-              <TestSuiteConditionRow
-                key={condition.id}
-                condition={condition}
-                isFirst={i === 0}
-                onChange={(next) => onChangeConditions(conditions.map((c, ci) => (ci === i ? next : c)))}
-                onRemove={() => onChangeConditions(conditions.filter((_, ci) => ci !== i))}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => onChangeConditions([...conditions, defaultConditionForField('rating')])}
-            className="mt-lg flex items-center gap-xs rounded-sm py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            <Icon name="add_circle" size={18} />
-            Add condition
-          </button>
-        </>
-      )}
-    </div>
+    <button type="button" onClick={onClick} className="flex items-center gap-sm">
+      <span
+        className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
+          checked ? 'border-primary' : 'border-border-selected'
+        }`}
+      >
+        {checked && <span className="size-2 rounded-full bg-primary" />}
+      </span>
+      <span className="text-body text-text-primary">{label}</span>
+    </button>
   )
 }
 
-/** "Upload file" pop-up for the Test suite editor's "Add reviews" card — same dashed-dropzone
- *  convention as `GhostwriterRunTestModal`'s Upload tab, standalone here since this editor has
- *  no other tabs to share it with. "Done" is disabled until the (mocked) upload completes. */
-function UploadReviewsFileModal({
-  open,
-  onClose,
-  onDone,
+/** A suite's reviews source — "Add reviews from" card in the Test suite editor. Three mutually
+ *  exclusive ways to populate it, picked via radio rather than tabs since exactly one always
+ *  applies and none is a secondary/advanced option: "Customer reviews" (the condition-builder
+ *  rows, default), "Upload reviews" (a spreadsheet dropzone inline on the page — this used to
+ *  live in its own pop-up modal, now shown directly here instead), and "Generate reviews with
+ *  AI" (a free-text prompt describing what to generate). */
+function TestSuiteReviewsBlock({
+  source,
+  onChangeSource,
+  conditions,
+  onChangeConditions,
+  uploadedFile,
+  onUpload,
+  onRemoveUpload,
+  aiPrompt,
+  onChangeAiPrompt,
+  aiGenerating,
+  onGenerateReviews,
 }: {
-  open: boolean
-  onClose: () => void
-  onDone: (file: UploadedReviewsFile) => void
+  source: TestSuiteReviewsSource
+  onChangeSource: (next: TestSuiteReviewsSource) => void
+  conditions: TestSuiteCondition[]
+  onChangeConditions: (next: TestSuiteCondition[]) => void
+  uploadedFile: UploadedReviewsFile | null
+  onUpload: () => void
+  onRemoveUpload: () => void
+  aiPrompt: string
+  onChangeAiPrompt: (next: string) => void
+  aiGenerating: boolean
+  onGenerateReviews: () => void
 }) {
-  const [uploaded, setUploaded] = useState(false)
-
-  useEffect(() => {
-    if (!open) setUploaded(false)
-  }, [open])
-
-  if (!open) return null
-
-  return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center" aria-hidden={!open}>
-      <div onClick={onClose} className="absolute inset-0 bg-black/20" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative flex w-full max-w-[480px] flex-col rounded-md bg-surface shadow-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-sm border-b border-border px-2xl py-lg">
-          <p className="m-0 text-h3 text-text-primary">Upload reviews</p>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <Icon name="close" size={20} />
-          </button>
-        </div>
-        <div className="px-2xl py-xl">
-          {uploaded ? (
+  return (
+    <div className="rounded-md border border-border p-lg">
+      <p className="m-0 text-body text-text-primary">Add reviews from</p>
+      <div className="mt-md flex items-center gap-2xl">
+        <TestSuiteSourceRadio
+          checked={source === 'customer'}
+          onClick={() => onChangeSource('customer')}
+          label="Customer reviews"
+        />
+        <TestSuiteSourceRadio
+          checked={source === 'upload'}
+          onClick={() => onChangeSource('upload')}
+          label="Upload reviews"
+        />
+        <TestSuiteSourceRadio
+          checked={source === 'generate'}
+          onClick={() => onChangeSource('generate')}
+          label="Generate reviews with AI"
+        />
+      </div>
+      <div className="mt-lg">
+        {source === 'customer' ? (
+          <>
+            <div className="flex flex-col gap-md">
+              {conditions.map((condition, i) => (
+                <TestSuiteConditionRow
+                  key={condition.id}
+                  condition={condition}
+                  isFirst={i === 0}
+                  onChange={(next) => onChangeConditions(conditions.map((c, ci) => (ci === i ? next : c)))}
+                  onRemove={() => onChangeConditions(conditions.filter((_, ci) => ci !== i))}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => onChangeConditions([...conditions, defaultConditionForField('rating')])}
+              className="mt-lg flex items-center gap-xs rounded-sm py-xs text-body text-text-action hover:bg-surface-hover"
+            >
+              <Icon name="add_circle" size={18} />
+              Add condition
+            </button>
+          </>
+        ) : source === 'upload' ? (
+          uploadedFile ? (
             <div className="flex items-center gap-md rounded-md border border-border p-md">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-surface-selected text-text-action">
                 <Icon name="table_chart" size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-body text-text-primary">reviews.xlsx</p>
-                <p className="m-0 text-small text-text-tertiary">{ALL_REVIEWS.length} reviews</p>
+                <p className="m-0 truncate text-body text-text-primary">{uploadedFile.name}</p>
+                <p className="m-0 text-small text-text-tertiary">
+                  {uploadedFile.reviewCount} review{uploadedFile.reviewCount === 1 ? '' : 's'}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setUploaded(false)}
+                onClick={onRemoveUpload}
                 aria-label="Remove file"
                 className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
               >
@@ -488,36 +473,38 @@ function UploadReviewsFileModal({
           ) : (
             <div className="flex flex-col items-center justify-center gap-sm rounded-md border border-dashed border-border-strong px-lg py-3xl text-center">
               <Icon name="arrow_upward" size={28} className="text-text-icon" />
-              <button type="button" onClick={() => setUploaded(true)} className="text-body text-text-action hover:underline">
+              <button type="button" onClick={onUpload} className="text-body text-text-action hover:underline">
                 Upload spreadsheet
               </button>
               <p className="m-0 text-body text-text-secondary">Drag and drop to upload your reviews</p>
               <p className="m-0 text-small text-text-tertiary">All .xlsx and .xls file types are supported</p>
             </div>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-md border-t border-border px-2xl py-md">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!uploaded}
-            onClick={() => uploaded && onDone({ name: 'reviews.xlsx', reviewCount: ALL_REVIEWS.length })}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
-              uploaded ? 'bg-primary text-white hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-            }`}
-          >
-            Done
-          </button>
-        </div>
+          )
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <textarea
+              rows={3}
+              value={aiPrompt}
+              onChange={(e) => onChangeAiPrompt(e.target.value)}
+              placeholder="Describe the reviews you'd like generated — rating range, source, topic…"
+              className="w-full resize-none rounded-sm border border-border bg-surface px-md py-sm text-body text-text-primary outline-none focus:border-primary"
+            />
+            <button
+              type="button"
+              disabled={!aiPrompt.trim() || aiGenerating}
+              onClick={onGenerateReviews}
+              className={`flex h-9 items-center self-start rounded-sm px-lg text-body transition-colors ${
+                !aiPrompt.trim() || aiGenerating
+                  ? 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                  : 'bg-primary text-white hover:bg-primary-hover'
+              }`}
+            >
+              {aiGenerating ? 'Generating…' : 'Generate reviews'}
+            </button>
+          </div>
+        )}
       </div>
-    </div>,
-    document.body,
+    </div>
   )
 }
 
@@ -529,18 +516,34 @@ function UploadReviewsFileModal({
 const MATCHING_REVIEWS_TOTAL = 1035
 const MATCHING_REVIEWS_PREVIEW_LIMIT = 10
 
-/** Sits below the Add reviews block. Before any condition/upload is added, it's just a
- *  placeholder line; once there's a reviews source, it becomes a collapsible "Reviews {count}"
- *  card — same shape as a "Contacts {count}" matching-records preview — with an info banner
- *  explaining the list is capped, then up to `MATCHING_REVIEWS_PREVIEW_LIMIT` example reviews
- *  rendered with the same `ReviewCardBody` the rest of the app uses for a review record. The
- *  reply each review already has in `data/reviewsData.ts` is stripped here — this is a preview
- *  of candidate reviews, not a record of how the agent already handled them. */
-function MatchingReviewsPreview({ hasReviewsSource }: { hasReviewsSource: boolean }) {
+/** Sits below the Add reviews from block. 'empty' before any source has produced reviews yet
+ *  (no conditions, no upload, prompt not generated), 'loading' only reachable from "Generate
+ *  reviews with AI" while its mocked 3s wait runs, 'ready' shows the same collapsible
+ *  "Reviews {count}" preview regardless of which source produced it — customer conditions,
+ *  an uploaded file, or a generated prompt all read as an equally real result. */
+function TestSuiteReviewsPreview({ status }: { status: 'empty' | 'loading' | 'ready' }) {
   const [expanded, setExpanded] = useState(true)
 
-  if (!hasReviewsSource) {
-    return <p className="m-0 text-body text-text-tertiary">Matching reviews will appear here.</p>
+  if (status === 'empty') {
+    return (
+      <div className="flex flex-col items-center justify-center gap-md rounded-md border border-border px-lg py-3xl text-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
+          <Icon name="rate_review" size={20} />
+        </span>
+        <p className="m-0 text-body text-text-secondary">Matching reviews will appear here.</p>
+      </div>
+    )
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center gap-md rounded-md border border-border px-lg py-3xl text-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
+          <span className="size-5 animate-spin rounded-full border-2 border-border border-t-primary" />
+        </span>
+        <p className="m-0 text-body text-text-secondary">Generating reviews…</p>
+      </div>
+    )
   }
 
   const preview = ALL_REVIEWS.slice(0, MATCHING_REVIEWS_PREVIEW_LIMIT)
@@ -565,7 +568,7 @@ function MatchingReviewsPreview({ hasReviewsSource }: { hasReviewsSource: boolea
           <div className="flex items-start gap-sm border-t border-border bg-chip-info-bg px-lg py-sm">
             <Icon name="info" size={18} className="mt-px shrink-0 text-chip-info-text" />
             <p className="m-0 text-small text-chip-info-text">
-              Showing you a preview of the first {MATCHING_REVIEWS_PREVIEW_LIMIT} reviews that match these conditions
+              Showing you a preview of the first {MATCHING_REVIEWS_PREVIEW_LIMIT} reviews that match
             </p>
           </div>
           <div className="flex flex-col divide-y divide-border px-lg">
@@ -595,12 +598,31 @@ function TestSuiteEditorPage({
   onSave: (suite: TestSuite) => void
 }) {
   const [name, setName] = useState(existingSuite?.name ?? 'New test suite')
+  const [source, setSource] = useState<TestSuiteReviewsSource>(existingSuite?.reviewsSource ?? 'customer')
   const [conditions, setConditions] = useState<TestSuiteCondition[]>(
     existingSuite?.conditions ?? [defaultConditionForField('rating')],
   )
   const [uploadedFile, setUploadedFile] = useState<UploadedReviewsFile | null>(null)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiGenerated, setAiGenerated] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  const handleGenerateReviews = () => {
+    setAiGenerating(true)
+    setAiGenerated(false)
+    setTimeout(() => {
+      setAiGenerating(false)
+      setAiGenerated(true)
+    }, 3000)
+  }
+
+  const previewStatus: 'empty' | 'loading' | 'ready' =
+    source === 'customer'
+      ? conditions.length > 0 ? 'ready' : 'empty'
+      : source === 'upload'
+        ? uploadedFile ? 'ready' : 'empty'
+        : aiGenerating ? 'loading' : aiGenerated ? 'ready' : 'empty'
 
   return (
     <div className="flex flex-col gap-lg">
@@ -638,6 +660,7 @@ function TestSuiteEditorPage({
               name: name.trim() || 'New test suite',
               conditions,
               reviewCount: MATCHING_REVIEWS_TOTAL,
+              reviewsSource: source,
             })
           }
           className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
@@ -646,21 +669,19 @@ function TestSuiteEditorPage({
         </button>
       </div>
       <TestSuiteReviewsBlock
+        source={source}
+        onChangeSource={setSource}
         conditions={conditions}
         onChangeConditions={setConditions}
         uploadedFile={uploadedFile}
-        onOpenUpload={() => setUploadModalOpen(true)}
+        onUpload={() => setUploadedFile({ name: 'reviews.xlsx', reviewCount: ALL_REVIEWS.length })}
         onRemoveUpload={() => setUploadedFile(null)}
+        aiPrompt={aiPrompt}
+        onChangeAiPrompt={setAiPrompt}
+        aiGenerating={aiGenerating}
+        onGenerateReviews={handleGenerateReviews}
       />
-      <MatchingReviewsPreview hasReviewsSource={conditions.length > 0 || uploadedFile !== null} />
-      <UploadReviewsFileModal
-        open={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        onDone={(file) => {
-          setUploadedFile(file)
-          setUploadModalOpen(false)
-        }}
-      />
+      <TestSuiteReviewsPreview status={previewStatus} />
     </div>
   )
 }
@@ -670,7 +691,7 @@ function TestSuiteEditorPage({
  *  Test cases uses, since a suite isn't built the same way a test case is. */
 function TestSuiteEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-md px-lg text-center">
+    <div className="mt-[15%] flex flex-col items-center gap-md px-lg text-center">
       <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
         <Icon name="fact_check" size={20} />
       </span>
@@ -698,7 +719,7 @@ function TestSuiteCard({ suite, onEdit }: { suite: TestSuite; onEdit: () => void
       <div>
         <p className="m-0 text-body text-text-primary">{suite.name}</p>
         <p className="m-0 mt-2xs text-small text-text-tertiary">
-          {suite.conditions.length} condition{suite.conditions.length === 1 ? '' : 's'}
+          {testSuiteSourceLabel(suite.reviewsSource)}
         </p>
       </div>
       <button
@@ -719,157 +740,23 @@ function TestSuiteCard({ suite, onEdit }: { suite: TestSuite; onEdit: () => void
 }
 
 /** 23 Sep only — the "Run test" CTA (header pill and centered empty-state button both use
- *  this), with a chevron opening a small menu instead of jumping straight into the review
- *  picker: "Test manually" opens that same picker, "Use test suite" opens
- *  `UseTestSuiteModal` — greyed out when there are no saved suites to pick from. */
-function TestCaseCtaButton({
-  variant,
-  onTestManually,
-  onUseTestSuite,
-  hasTestSuites,
-}: {
-  variant: 'header' | 'empty'
-  onTestManually: () => void
-  onUseTestSuite: () => void
-  hasTestSuites: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handleOutsideClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [open])
-
+ *  this). Opens `GhostwriterTestRunEditor`'s full test-run page directly; no chevron and no
+ *  menu — same "no menu" simplification Front desk (Sep 23)'s `FrontdeskRunTestCtaButton`
+ *  already made. */
+function TestCaseCtaButton({ onClick }: { onClick: () => void }) {
   return (
-    <div ref={containerRef} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-      >
-        Run test
-        <Icon name="expand_more" size={16} />
-      </button>
-      {open && (
-        <div
-          className={`absolute z-[110] mt-xs min-w-[180px] rounded-sm border border-border bg-surface py-xs shadow-dropdown ${
-            variant === 'header' ? 'right-0' : 'left-1/2 -translate-x-1/2'
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false)
-              onTestManually()
-            }}
-            className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-          >
-            Test manually
-          </button>
-          <button
-            type="button"
-            disabled={!hasTestSuites}
-            onClick={() => {
-              if (!hasTestSuites) return
-              setOpen(false)
-              onUseTestSuite()
-            }}
-            className={`block w-full px-md py-sm text-left text-body ${
-              hasTestSuites ? 'text-text-primary hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
-            }`}
-          >
-            Use test suite
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** 23 Sep only — "Use test suite" pop-up: pick a saved suite from a dropdown, then run a test
- *  against it. Only reachable when `TestCaseCtaButton` has at least one suite to offer. */
-function UseTestSuiteModal({
-  open,
-  testSuites,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean
-  testSuites: TestSuite[]
-  onClose: () => void
-  onConfirm: (suite: TestSuite) => void
-}) {
-  const [pickedId, setPickedId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) setPickedId(null)
-  }, [open])
-
-  if (!open) return null
-
-  const picked = testSuites.find((s) => s.id === pickedId) ?? null
-
-  return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center" aria-hidden={!open}>
-      <div onClick={onClose} className="absolute inset-0 bg-black/20" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative flex w-full max-w-[480px] flex-col rounded-md bg-surface shadow-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-sm border-b border-border px-2xl py-lg">
-          <p className="m-0 text-h3 text-text-primary">Use test suite</p>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <Icon name="close" size={20} />
-          </button>
-        </div>
-        <div className="flex flex-col gap-xs px-2xl py-xl">
-          <p className="m-0 text-body text-text-secondary">Test suite</p>
-          <InlineSelectTrigger
-            label={picked?.name ?? 'Select a test suite'}
-            options={testSuites.map((s) => ({ value: s.id, label: s.name }))}
-            value={pickedId ? [pickedId] : []}
-            onChange={([val]) => setPickedId(val)}
-          />
-        </div>
-        <div className="flex items-center justify-end gap-md border-t border-border px-2xl py-md">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!picked}
-            onClick={() => picked && onConfirm(picked)}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
-              picked ? 'bg-primary text-white hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-            }`}
-          >
-            Run test
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+    >
+      Run test
+    </button>
   )
 }
 
 /** Vertical section switcher pinned above the list — 23 Sep only. Same row treatment as
- *  `SideNav`'s flat leaves (h-7, rounded-sm, bg-surface-selected when active). */
+ *  `SideNav`'s flat leaves, 8px taller (h-9 / 36px vs h-7). */
 function TestSectionNav({
   active,
   onSelect,
@@ -885,7 +772,7 @@ function TestSectionNav({
           type="button"
           aria-current={section.id === active ? 'page' : undefined}
           onClick={() => onSelect(section.id)}
-          className={`flex h-7 w-full items-center gap-sm rounded-sm px-sm py-[6px] text-left transition-colors ${
+          className={`flex h-9 w-full items-center gap-sm rounded-sm px-sm text-left transition-colors ${
             section.id === active ? 'bg-surface-selected' : 'hover:bg-surface-selected'
           }`}
         >
@@ -900,7 +787,7 @@ function TestSectionNav({
 /** Plain empty state for the not-yet-built 'suite'/'cycles' sections. */
 function TestSectionEmptyState({ icon, caption }: { icon: string; caption: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-md px-lg text-center">
+    <div className="mt-[15%] flex flex-col items-center gap-md px-lg text-center">
       <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
         <Icon name={icon} size={20} />
       </span>
@@ -1047,7 +934,7 @@ function LhsBatchesContent({
 
 /** The "N reviews" count to display for a batch — `displayReviewCount` when the batch sets one
  *  (a suite run, so the number agrees with that suite's own card), else the real list length. */
-function batchReviewCount(batch: TestRunBatch) {
+export function batchReviewCount(batch: TestRunBatch) {
   return batch.displayReviewCount ?? batch.reviews.length
 }
 
@@ -1059,7 +946,7 @@ const BATCH_PANEL_TABS: Tab[] = [
 /** One recommendation group card in the panel's Recommendations tab — severity chip, the fix
  *  text, how many reviews it covers, and an Accept CTA that behaves exactly like a single
  *  review's own Accept (see `TestResultBody`). */
-function RecommendationGroupCard({
+export function RecommendationGroupCard({
   group,
   onAccept,
 }: {
@@ -1196,25 +1083,22 @@ function RhsEmptyContent() {
  *  no canvas) drives it from its own independent call. 23 Sep's `TestReviewDetailModal` sets
  *  `showReviewerHeader` so this row reads reviewer name + star rating instead of the plain
  *  "Test" label, and passes the batch-aware `passed` (see `reviewPassedInBatch`) that decides
- *  the chip and, when false, a third "Recommendation" tab with an "Accept" CTA — Jay & Robin
- *  never passes either, so it stays on the old always-Passed, two-tab behavior. */
+ *  the Passed/Failed chip — no per-review Recommendation tab here; that lives one level up, on
+ *  the batch's own aggregate Recommendations tab (`RecommendationGroupCard`) instead. */
 function TestResultBody({
   review,
   status,
   stepStatuses,
   showReviewerHeader = false,
   passed = true,
-  onAcceptRecommendation,
 }: {
   review: Review
   status: TestRunStatus
   stepStatuses: ('pending' | 'running' | 'done')[]
   showReviewerHeader?: boolean
   passed?: boolean
-  onAcceptRecommendation?: (text: string) => void
 }) {
-  const [resultTab, setResultTab] = useState<'details' | 'preview' | 'recommendation'>('details')
-  const tabs = showReviewerHeader && !passed ? TEST_RESULT_TABS_WITH_RECOMMENDATION : TEST_RESULT_TABS
+  const [resultTab, setResultTab] = useState<'details' | 'preview'>('details')
 
   return (
     <div className="flex flex-col gap-md">
@@ -1232,9 +1116,9 @@ function TestResultBody({
         <Chip label={passed ? 'Passed' : 'Failed'} variant={passed ? 'success' : 'danger'} />
       </div>
       <Tabs
-        tabs={tabs}
+        tabs={TEST_RESULT_TABS}
         activeTab={resultTab}
-        onChange={(id) => setResultTab(id as 'details' | 'preview' | 'recommendation')}
+        onChange={(id) => setResultTab(id as 'details' | 'preview')}
         showBaseline={false}
       />
       {resultTab === 'details' ? (
@@ -1254,24 +1138,9 @@ function TestResultBody({
             </div>
           )}
         </div>
-      ) : resultTab === 'preview' ? (
+      ) : (
         <div className="rounded-md border border-border p-lg">
           <ReviewCardBody review={review} />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-md rounded-md border border-border p-lg">
-          <Chip
-            label={`${SEVERITY_LABEL[getRecommendationSeverity(review)]} severity`}
-            variant={SEVERITY_CHIP_VARIANT[getRecommendationSeverity(review)]}
-          />
-          <p className="m-0 text-body text-text-primary">{getFailureRecommendation(review)}</p>
-          <button
-            type="button"
-            onClick={() => onAcceptRecommendation?.(getFailureRecommendation(review))}
-            className="flex h-9 w-fit items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-          >
-            Accept
-          </button>
         </div>
       )}
     </div>
@@ -1307,12 +1176,10 @@ function FullPageResultPanel({
   review,
   showReviewerHeader,
   passed,
-  onAcceptRecommendation,
 }: {
   review: Review
   showReviewerHeader?: boolean
   passed?: boolean
-  onAcceptRecommendation?: (text: string) => void
 }) {
   const { status, stepStatuses } = useTestRun(JAY_ROBIN_TEST_RUN_STEPS)
   return (
@@ -1322,9 +1189,42 @@ function FullPageResultPanel({
       stepStatuses={stepStatuses}
       showReviewerHeader={showReviewerHeader}
       passed={passed}
-      onAcceptRecommendation={onAcceptRecommendation}
     />
   )
+}
+
+/** Same "By {name}" pool the agent directory cards already use (Rupa/Akhil/Raynil/Haresh/John),
+ *  so a mocked tester reads as one of this account's existing people rather than a stranger.
+ *  Exported so `GhostwriterTestRunReport`'s header shows the identical name for the same run
+ *  instead of picking its own. */
+export const TESTER_NAMES = ['Rupa', 'Akhil', 'Raynil', 'Haresh', 'John']
+
+function hashSeed(seed: string) {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return hash
+}
+
+/** Deterministic, not truly random — picked once per run (seeded off its own name + timestamp)
+ *  so the same batch always attributes to the same person, in the list card and the detail
+ *  page alike. */
+export function pickTesterName(batch: TestRunBatch) {
+  return TESTER_NAMES[hashSeed(`${batch.runName}:${batch.testedAt}`) % TESTER_NAMES.length]
+}
+
+/** The line shown under a run's name — same in `TestBatchSummaryCard`'s row and
+ *  `GhostwriterTestRunReport`'s header, so clicking through doesn't repeat some of the same
+ *  details while dropping others. Only runs (`batch.runName` set) attribute to a tester; the
+ *  older plain-picker batches never had one. */
+export function testRunSubtitle(batch: TestRunBatch, total: number) {
+  return [
+    batch.runName ? `Run by ${pickTesterName(batch)}` : null,
+    batch.suiteName ? `Test suite: ${batch.suiteName}` : null,
+    `${total.toLocaleString()} review${total === 1 ? '' : 's'} tested`,
+    batch.testedAt,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }
 
 /** 23 Sep only — one card per test run, stacked in the central workspace (newest on top),
@@ -1338,6 +1238,8 @@ function TestBatchSummaryCard({ batch, onClick }: { batch: TestRunBatch; onClick
   const realTotal = batch.reviews.length
   const realPassed = batch.reviews.filter((r) => reviewPassedInBatch(r, batch)).length
   const passedCount = batch.displayReviewCount && realTotal > 0 ? Math.round((realPassed / realTotal) * total) : realPassed
+  const score = total > 0 ? (passedCount / total) * 100 : 0
+  const subtitle = testRunSubtitle(batch, total)
   return (
     <button
       type="button"
@@ -1346,21 +1248,14 @@ function TestBatchSummaryCard({ batch, onClick }: { batch: TestRunBatch; onClick
     >
       <div>
         <p className="m-0 text-body text-text-primary">
-          {batch.suiteName && `${batch.suiteName} - `}
-          {total.toLocaleString()} review{total === 1 ? '' : 's'} tested
+          {batch.runName
+            ? batch.runName
+            : `${batch.suiteName ? `${batch.suiteName} - ` : ''}${total.toLocaleString()} review${total === 1 ? '' : 's'} tested`}
         </p>
-        {batch.testedBy && (
-          <p className="m-0 mt-2xs text-small text-text-secondary">
-            {batch.suiteName ? 'Suite tested by' : 'Tested by'} {batch.testedBy}
-          </p>
-        )}
+        <p className="m-0 mt-2xs text-small text-text-secondary">{subtitle}</p>
       </div>
       <div className="text-right">
-        <Chip
-          label={`${passedCount.toLocaleString()}/${total.toLocaleString()} passed`}
-          variant={passedCount === total ? 'success' : 'warning'}
-        />
-        <p className="m-0 mt-2xs text-small text-text-secondary">{batch.testedAt}</p>
+        <Chip label={`${score.toFixed(1)}%`} variant={score === 100 ? 'success' : 'warning'} />
       </div>
     </button>
   )
@@ -1370,18 +1265,16 @@ function TestBatchSummaryCard({ batch, onClick }: { batch: TestRunBatch; onClick
  *  review's full test result: the same `TestResultBody` (Chip + Details/Preview tabs + stepper)
  *  that used to sit inline on the RHS. Opened by picking a review inside
  *  `TestBatchReviewsPanel`. */
-function TestReviewDetailModal({
+export function TestReviewDetailModal({
   open,
   review,
   passed,
   onClose,
-  onAcceptRecommendation,
 }: {
   open: boolean
   review: Review | null
   passed?: boolean
   onClose: () => void
-  onAcceptRecommendation?: (text: string) => void
 }) {
   if (!open || !review) return null
 
@@ -1406,16 +1299,7 @@ function TestReviewDetailModal({
           </button>
         </div>
         <div className="scrollbar-subtle flex-1 overflow-y-auto px-2xl py-lg">
-          <FullPageResultPanel
-            key={review.id}
-            review={review}
-            showReviewerHeader
-            passed={passed}
-            onAcceptRecommendation={(text) => {
-              onAcceptRecommendation?.(text)
-              onClose()
-            }}
-          />
+          <FullPageResultPanel key={review.id} review={review} showReviewerHeader passed={passed} />
         </div>
       </div>
     </div>,
@@ -1462,9 +1346,9 @@ function TestPageHeader({
  *    `centerContent`) fills the whole area full-bleed, with the reviews list and the result
  *    detail floating over it on the left/right — not flex columns dividing the width, and not
  *    swapped out for a different screen while empty.
- *  - `layout="fullpage"` (23 Sep): a plain full-page list+detail layout, same outer chrome as
- *    the Tools/Knowledge tabs (`bg-surface`, centered `max-w-[1200px]` column) — no canvas at
- *    all, so `centerContent` is never called.
+ *  - `layout="fullpage"` (23 Sep): a plain full-page list+detail layout (`bg-surface`) — no
+ *    canvas at all, so `centerContent` is never called. The section nav stays pinned to the
+ *    left of the page; the central workspace grows with the viewport.
  *
  *  Every picked review already has a simulated reply in `data/reviewsData.ts`, so each one
  *  reads as a passing run. */
@@ -1477,8 +1361,8 @@ export function GhostwriterTestRunPanel({
   testSuites = [],
   onSaveTestSuite,
   onUpdateTestSuite,
-  onRunTestWithSuite,
   onAcceptRecommendation,
+  onRunTestWithSuite,
 }: GhostwriterTestRunPanelProps) {
   const allReviews = batches.flatMap((batch) => batch.reviews)
   const lastBatch = batches[batches.length - 1]
@@ -1490,55 +1374,74 @@ export function GhostwriterTestRunPanel({
   const [detailBatch, setDetailBatch] = useState<TestRunBatch | null>(null)
   const [suiteEditorOpen, setSuiteEditorOpen] = useState(false)
   const [editingSuite, setEditingSuite] = useState<TestSuite | null>(null)
-  const [useSuiteModalOpen, setUseSuiteModalOpen] = useState(false)
+  /** 23 Sep only — Front desk (Sep 23) mirrors this exact pattern with its own
+   *  `createRunOpen`/`FrontdeskTestRunEditor`. */
+  const [createRunOpen, setCreateRunOpen] = useState(false)
+  /** 23 Sep only — a completed run (`batch.runName` set, i.e. one created via
+   *  `GhostwriterTestRunEditor`) opens `GhostwriterTestRunReport` in place of the Tests list
+   *  instead of the plain-batch `TestBatchReviewsPanel` slide-in; older batches have no
+   *  evaluation metrics to show and keep using `openBatch`. */
+  const [openRunReport, setOpenRunReport] = useState<TestRunBatch | null>(null)
 
   if (layout === 'fullpage') {
     const sectionMeta = TEST_SECTIONS.find((s) => s.id === section) ?? TEST_SECTIONS[0]
 
     return (
       <div className={`scrollbar-subtle flex h-full min-h-0 w-full flex-col overflow-y-auto bg-surface px-lg py-xl ${className}`}>
-        <div className="mx-auto flex w-full max-w-[1200px] flex-1 gap-2xl">
+        <div className="flex w-full flex-1 gap-2xl">
           <div className="flex w-[200px] shrink-0 flex-col border-r border-border pr-lg">
             <TestSectionNav active={section} onSelect={setSection} />
-            {section === 'cycles' && <TestSectionEmptyState icon={sectionMeta.icon} caption={sectionMeta.emptyCaption} />}
           </div>
           <div className="flex min-w-0 flex-1 flex-col pl-lg">
             {section === 'cases' ? (
+              createRunOpen ? (
+                <GhostwriterTestRunEditor
+                  key={batches.filter((batch) => batch.runName).length}
+                  defaultName={`#${batches.filter((batch) => batch.runName).length + 1} test run`}
+                  testSuites={testSuites}
+                  onBack={() => setCreateRunOpen(false)}
+                  onRun={(draft) => {
+                    onRunTestWithSuite?.(draft)
+                    setCreateRunOpen(false)
+                  }}
+                />
+              ) : openRunReport ? (
+                <GhostwriterTestRunReport
+                  batch={openRunReport}
+                  onBack={() => setOpenRunReport(null)}
+                  onAcceptRecommendation={onAcceptRecommendation}
+                />
+              ) : (
               <>
                 <div className="mb-lg flex items-center justify-between">
-                  <h1 className="m-0 text-h3 text-text-primary">Tests</h1>
+                  <h1 className="m-0 text-h3 text-text-primary">Test runs</h1>
                   {batches.length > 0 && (
-                    <TestCaseCtaButton
-                      variant="header"
-                      onTestManually={() => onRunTest?.()}
-                      onUseTestSuite={() => setUseSuiteModalOpen(true)}
-                      hasTestSuites={testSuites.length > 0}
-                    />
+                    <TestCaseCtaButton onClick={() => setCreateRunOpen(true)} />
                   )}
                 </div>
                 {batches.length > 0 ? (
                   <div className="flex flex-col gap-md">
                     {[...batches].reverse().map((batch, i) => (
-                      <TestBatchSummaryCard key={i} batch={batch} onClick={() => setOpenBatch(batch)} />
+                      <TestBatchSummaryCard
+                        key={i}
+                        batch={batch}
+                        onClick={() => (batch.runName ? setOpenRunReport(batch) : setOpenBatch(batch))}
+                      />
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-md px-lg text-center">
+                  <div className="mt-[15%] flex flex-col items-center gap-md px-lg text-center">
                     <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
                       <Icon name="science" size={20} />
                     </span>
                     <p className="m-0 text-body text-text-secondary">
                       Select a variety of reviews in your test case for best results.
                     </p>
-                    <TestCaseCtaButton
-                      variant="empty"
-                      onTestManually={() => onRunTest?.()}
-                      onUseTestSuite={() => setUseSuiteModalOpen(true)}
-                      hasTestSuites={testSuites.length > 0}
-                    />
+                    <TestCaseCtaButton onClick={() => setCreateRunOpen(true)} />
                   </div>
                 )}
               </>
+              )
             ) : section === 'suite' ? (
               suiteEditorOpen ? (
                 <TestSuiteEditorPage
@@ -1614,16 +1517,6 @@ export function GhostwriterTestRunPanel({
           review={detailReview}
           passed={detailReview && detailBatch ? reviewPassedInBatch(detailReview, detailBatch) : true}
           onClose={() => setDetailReview(null)}
-          onAcceptRecommendation={onAcceptRecommendation}
-        />
-        <UseTestSuiteModal
-          open={useSuiteModalOpen}
-          testSuites={testSuites}
-          onClose={() => setUseSuiteModalOpen(false)}
-          onConfirm={(suite) => {
-            onRunTestWithSuite?.(suite)
-            setUseSuiteModalOpen(false)
-          }}
         />
       </div>
     )

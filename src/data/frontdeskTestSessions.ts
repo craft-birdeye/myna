@@ -31,6 +31,10 @@ export interface FrontdeskTestBatch {
    *  prefix its title and reword "Tested by" to "Suite tested by", same convention as
    *  review-response's `TestRunBatch.suiteName`. */
   suiteName?: string
+  /** Name given on the test-run page, e.g. "#1 test run". */
+  runName?: string
+  personaIds?: string[]
+  qualityEvaluationIds?: string[]
 }
 
 /** Front desk (Sep 23) full-page Test tab only — a saved, reusable set of scenarios (same
@@ -42,6 +46,17 @@ export interface FrontdeskTestSuite {
   scenarios: { text: string; voice: boolean; chat: boolean }[]
   /** Pre-formatted — e.g. "Sep 23, 2026". */
   createdAt: string
+  /** How many scenarios the author asked AI to write. */
+  scenarioCount?: number
+  /** Free-text examples the author gave for those scenarios. */
+  description?: string
+  /** Personality ids selected for the suite. */
+  personaIds?: string[]
+  /** Response-quality evaluation ids the author turned on (latency included). */
+  qualityEvaluationIds?: string[]
+  uploadedFileName?: string
+  /** True after Generate scenarios, until the suite finishes writing scenarios. */
+  generating?: boolean
 }
 
 export const FRONTDESK_TEST_BATCHES: FrontdeskTestBatch[] = [

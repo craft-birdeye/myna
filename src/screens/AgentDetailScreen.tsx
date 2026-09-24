@@ -5809,7 +5809,8 @@ function GhostwriterTopBarActions({
 }: {
   onAction: (type: 'run-test' | 'activate' | 'save-draft' | 'delete') => void
   /** Jay & Robin and Front desk (Myna) only — Run test moved into the Test tab itself, so the
-   *  top bar drops it. */
+   *  top bar drops it. Response agent (23 Sep) and Front desk (Sep 23) both keep Run test
+   *  beside Activate. */
   hideRunTest?: boolean
 }) {
   const [publishOpen, setPublishOpen] = useState(false)
@@ -10162,6 +10163,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const openAgentInstanceEditor = (row: AgentInstance) => {
     // Ghostwriter edits inside its own shell (top bar + tabs) on the Workflow tab.
     if (isGhostwriterAgent) {
+      // 23 Sep only: the instance already exists, so unlock the top bar's Run test/Activate
+      // immediately instead of gating it behind "not yet created" like a fresh draft — same
+      // reasoning as the Myna branch below.
+      if (is23SepNav(navId) && isReviewResponse) setGhostwriterAgentCreated(true)
       openGhostwriterWorkflow(row.name, 'workflow')
       return
     }
@@ -10819,7 +10824,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     </button>
                   ) : (
                   <GhostwriterTopBarActions
-                    hideRunTest={isJayRobinPolish || isMynaCombinedNav}
+                    hideRunTest={(isJayRobinPolish && !is23SepPolish) || (isMynaCombinedNav && !isFrontdeskSep23Polish)}
                     onAction={(type) => {
                       // These act on the workflow, so surface it first — then fire the
                       // real handler inside AgentBuilder via a fresh nonce.
@@ -11282,7 +11287,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     onUpdateTestSuite={(suite) =>
                       setJayRobinTestSuites((prev) => prev.map((s) => (s.id === suite.id ? suite : s)))
                     }
-                    onRunTestWithSuite={(suite) =>
+                    onRunTestWithSuite={(draft) => {
                       setJayRobinTestBatches((prev) => [
                         ...prev,
                         {
@@ -11295,11 +11300,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             minute: '2-digit',
                           }),
                           testedBy: 'Haresh Rajamannar',
-                          suiteName: suite.name,
-                          displayReviewCount: suite.reviewCount,
+                          suiteName: draft.suite?.name,
+                          displayReviewCount: draft.suite?.reviewCount,
+                          runName: draft.name,
+                          qualityEvaluationIds: draft.qualityEvaluationIds,
                         },
                       ])
-                    }
+                    }}
                     onAcceptRecommendation={(text) => {
                       // Reuse the exact same handler a manual "Workflow" tab click uses,
                       // instead of hand-rolling a subset of it — this is the one path already

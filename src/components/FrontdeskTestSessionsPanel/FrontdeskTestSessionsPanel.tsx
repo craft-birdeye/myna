@@ -23,6 +23,12 @@ import {
   type FrontdeskTestTranscriptLine,
 } from '../../data/frontdeskTestSessions'
 import type { FrontdeskTestSessionsPanelProps } from './FrontdeskTestSessionsPanel.types'
+import { TestPersonalitySection } from '../TestPersonalitySection/TestPersonalitySection'
+import { FrontdeskTestSuiteEditor } from '../FrontdeskTestSuiteEditor/FrontdeskTestSuiteEditor'
+import { FrontdeskTestRunEditor } from '../FrontdeskTestRunEditor/FrontdeskTestRunEditor'
+import type { FrontdeskTestRunDraft } from '../FrontdeskTestRunEditor/FrontdeskTestRunEditor'
+import type { TestPersonality } from '../TestPersonalitySection/TestPersonalitySection.types'
+import { SEEDED_TEST_PERSONALITIES } from '../../data/testPersonalities'
 
 /** Same shell the canvas's own floating LHS ("Edit with AI") and RHS (node config / Test
  *  details) panels use: inset from the edges, rounded, elevated — not a flush column. Matches
@@ -43,11 +49,12 @@ const WEBCHAT_DEFAULT_PROMPT = "I'd like to book an appointment"
  *  Test tab has (`TEST_SECTIONS` in GhostwriterTestRunPanel.tsx): a working "Tests" list, a
  *  "Test suite" saved-scenarios feature, and an inert "Test cycles" placeholder with no data
  *  model behind it yet, same as the reference. */
-type FrontdeskTestSection = 'tests' | 'suite' | 'cycles'
+type FrontdeskTestSection = 'tests' | 'suite' | 'personality' | 'cycles'
 
 const FRONTDESK_TEST_SECTIONS: { id: FrontdeskTestSection; label: string; icon: string; emptyCaption: string }[] = [
-  { id: 'tests', label: 'Tests', icon: 'science', emptyCaption: 'Test a call or web chat scenario to see how your agent responds.' },
+  { id: 'tests', label: 'Test runs', icon: 'science', emptyCaption: 'Test a call or web chat scenario to see how your agent responds.' },
   { id: 'suite', label: 'Test suite', icon: 'fact_check', emptyCaption: 'A test suite is a saved set of call and web chat scenarios you can reuse across test runs.' },
+  { id: 'personality', label: 'Personality', icon: 'psychology', emptyCaption: '' },
   { id: 'cycles', label: 'Test cycles', icon: 'autorenew', emptyCaption: 'No test cycles yet.' },
 ]
 
@@ -386,8 +393,7 @@ function CreateTestCasesModal({
 }
 
 /** Front desk (Sep 23) full-page Test tab only — vertical section switcher pinned above the
- *  list, same row treatment as review-response's `TestSectionNav` (h-7, rounded-sm,
- *  bg-surface-selected when active). */
+ *  list. Rows match review-response's `TestSectionNav` (h-9 / 36px). */
 function FrontdeskTestSectionNav({
   active,
   onSelect,
@@ -403,7 +409,7 @@ function FrontdeskTestSectionNav({
           type="button"
           aria-current={section.id === active ? 'page' : undefined}
           onClick={() => onSelect(section.id)}
-          className={`flex h-7 w-full items-center gap-sm rounded-sm px-sm py-[6px] text-left transition-colors ${
+          className={`flex h-9 w-full items-center gap-sm rounded-sm px-sm text-left transition-colors ${
             section.id === active ? 'bg-surface-selected' : 'hover:bg-surface-selected'
           }`}
         >
@@ -428,89 +434,17 @@ function FrontdeskTestSectionEmptyState({ icon, caption }: { icon: string; capti
   )
 }
 
-/** Front desk (Sep 23) full-page Test tab only — the "Run test" CTA (header pill and centered
- *  empty-state button both use this), same shape as review-response's `TestCaseCtaButton` but
- *  with three items instead of two: "Test call"/"Test webchat" open the same right-side panel
- *  Front desk (Myna) already has, "Use test suite" opens the suite picker — greyed out until
- *  at least one suite has been saved. */
-function FrontdeskRunTestCtaButton({
-  variant,
-  onTestCall,
-  onTestWebchat,
-  onUseTestSuite,
-  hasTestSuites,
-}: {
-  variant: 'header' | 'empty'
-  onTestCall: () => void
-  onTestWebchat: () => void
-  onUseTestSuite: () => void
-  hasTestSuites: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handleOutsideClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [open])
-
+/** Front desk (Sep 23) full-page Test tab only — opens the test-run page. No menu: the call,
+ *  web chat, and suite choices used to live in a dropdown under this button. */
+function FrontdeskRunTestCtaButton({ onClick }: { onClick: () => void }) {
   return (
-    <div ref={containerRef} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-      >
-        Run test
-        <Icon name="expand_more" size={16} />
-      </button>
-      {open && (
-        <div
-          className={`absolute z-[110] mt-xs min-w-[180px] rounded-sm border border-border bg-surface py-xs shadow-dropdown ${
-            variant === 'header' ? 'right-0' : 'left-1/2 -translate-x-1/2'
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false)
-              onTestCall()
-            }}
-            className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-          >
-            Test call
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false)
-              onTestWebchat()
-            }}
-            className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-          >
-            Test webchat
-          </button>
-          <button
-            type="button"
-            disabled={!hasTestSuites}
-            onClick={() => {
-              if (!hasTestSuites) return
-              setOpen(false)
-              onUseTestSuite()
-            }}
-            className={`block w-full px-md py-sm text-left text-body ${
-              hasTestSuites ? 'text-text-primary hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
-            }`}
-          >
-            Use test suite
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+    >
+      Create test
+    </button>
   )
 }
 
@@ -531,8 +465,9 @@ function FrontdeskTestBatchSummaryCard({ batch, onClick }: { batch: FrontdeskTes
         {batch.testedBy === 'Myna' && <TwoStarSparkleIcon size={14} className="shrink-0 text-[#8350CE]" />}
         <div>
           <p className="m-0 text-body text-text-primary">
-            {batch.suiteName && `${batch.suiteName} - `}
-            {total} session{total === 1 ? '' : 's'} tested
+            {batch.runName
+              ? batch.runName
+              : `${batch.suiteName ? `${batch.suiteName} - ` : ''}${total} session${total === 1 ? '' : 's'} tested`}
           </p>
           <p className="m-0 mt-2xs text-small text-text-secondary">
             {batch.suiteName ? 'Suite tested by' : 'Tested by'} {batch.testedBy}
@@ -653,8 +588,11 @@ export function FrontdeskTestSessionsPanel({
   const [section, setSection] = useState<FrontdeskTestSection>('tests')
   const [suites, setSuites] = useState<FrontdeskTestSuite[]>([])
   const [createSuiteOpen, setCreateSuiteOpen] = useState(false)
+  const [createRunOpen, setCreateRunOpen] = useState(false)
+  const [editingSuite, setEditingSuite] = useState<FrontdeskTestSuite | null>(null)
   const [useSuiteModalOpen, setUseSuiteModalOpen] = useState(false)
   const [openBatch, setOpenBatch] = useState<FrontdeskTestBatch | null>(null)
+  const [personalities, setPersonalities] = useState<TestPersonality[]>(SEEDED_TEST_PERSONALITIES)
 
   const filteredBatches = batches
     .map((batch) => ({ ...batch, sessions: batch.sessions.filter((s) => s.channel === channelTab) }))
@@ -702,15 +640,37 @@ export function FrontdeskTestSessionsPanel({
     setBatches((prev) => [...prev, ...newBatches])
   }
 
-  function handleSaveSuite(drafts: { text: string; voice: boolean; chat: boolean }[]) {
-    if (drafts.length === 0) return
-    const suite: FrontdeskTestSuite = {
-      id: `fd-suite-${Date.now()}`,
-      name: `Test suite ${suites.length + 1}`,
-      scenarios: drafts,
-      createdAt: 'Just now',
+  function handleSaveSuite(suite: FrontdeskTestSuite) {
+    setSuites((prev) => (prev.some((item) => item.id === suite.id) ? prev.map((item) => (item.id === suite.id ? suite : item)) : [...prev, suite]))
+    setEditingSuite(null)
+    setCreateSuiteOpen(false)
+  }
+
+  function handleCreateRun(draft: FrontdeskTestRunDraft) {
+    const session: FrontdeskTestSession = {
+      id: `fd-test-run-${Date.now()}`,
+      title: draft.name,
+      channel: 'voice',
+      outcome: 'passed',
+      durationSecs: 48,
+      audioUrl: voicemailSample,
+      transcript: [
+        { speaker: 'business', text: PREVIEW_GREETING },
+        { speaker: 'user', text: 'I would like to book an appointment.' },
+      ],
     }
-    setSuites((prev) => [...prev, suite])
+    setBatches((prev) => [
+      ...prev,
+      {
+        sessions: [session],
+        testedAt: 'Just now',
+        testedBy: 'Myna',
+        runName: draft.name,
+        personaIds: draft.personaIds,
+        qualityEvaluationIds: draft.qualityEvaluationIds,
+      },
+    ])
+    setCreateRunOpen(false)
   }
 
   function handleUseSuite(suite: FrontdeskTestSuite) {
@@ -765,24 +725,25 @@ export function FrontdeskTestSessionsPanel({
     return (
       <div className={`relative h-full min-h-0 w-full overflow-hidden bg-surface ${className}`}>
       <div className="scrollbar-subtle flex h-full min-h-0 w-full flex-col overflow-y-auto px-lg py-xl">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-1 gap-2xl">
+        <div className="flex w-full flex-1 gap-2xl">
           <div className="flex w-[200px] shrink-0 flex-col border-r border-border pr-lg">
             <FrontdeskTestSectionNav active={section} onSelect={setSection} />
           </div>
           <div className="flex min-w-0 flex-1 flex-col pl-lg">
             {section === 'tests' ? (
+              createRunOpen ? (
+                <FrontdeskTestRunEditor
+                  key={batches.filter((batch) => batch.runName).length}
+                  defaultName={`#${batches.filter((batch) => batch.runName).length + 1} test run`}
+                  personalities={personalities}
+                  onBack={() => setCreateRunOpen(false)}
+                  onRun={handleCreateRun}
+                />
+              ) : (
               <>
                 <div className="mb-lg flex items-center justify-between">
-                  <h1 className="m-0 text-h3 text-text-primary">Tests</h1>
-                  {batches.length > 0 && (
-                    <FrontdeskRunTestCtaButton
-                      variant="header"
-                      onTestCall={() => setRhsMode('call-preview')}
-                      onTestWebchat={() => setRhsMode('webchat-preview')}
-                      onUseTestSuite={() => setUseSuiteModalOpen(true)}
-                      hasTestSuites={suites.length > 0}
-                    />
-                  )}
+                  <h1 className="m-0 text-h3 text-text-primary">Test runs</h1>
+                  {batches.length > 0 && <FrontdeskRunTestCtaButton onClick={() => setCreateRunOpen(true)} />}
                 </div>
                 {batches.length > 0 ? (
                   <div className="flex flex-col gap-md">
@@ -796,24 +757,33 @@ export function FrontdeskTestSessionsPanel({
                       <Icon name="science" size={20} />
                     </span>
                     <p className="m-0 max-w-[360px] text-body text-text-secondary">{sectionMeta.emptyCaption}</p>
-                    <FrontdeskRunTestCtaButton
-                      variant="empty"
-                      onTestCall={() => setRhsMode('call-preview')}
-                      onTestWebchat={() => setRhsMode('webchat-preview')}
-                      onUseTestSuite={() => setUseSuiteModalOpen(true)}
-                      hasTestSuites={suites.length > 0}
-                    />
+                    <FrontdeskRunTestCtaButton onClick={() => setCreateRunOpen(true)} />
                   </div>
                 )}
               </>
+              )
             ) : section === 'suite' ? (
+              createSuiteOpen ? (
+                <FrontdeskTestSuiteEditor
+                  key={editingSuite?.id ?? 'new'}
+                  existingSuite={editingSuite}
+                  onBack={() => {
+                    setEditingSuite(null)
+                    setCreateSuiteOpen(false)
+                  }}
+                  onSave={handleSaveSuite}
+                />
+              ) : (
               <>
                 <div className="mb-lg flex items-center justify-between">
                   <h1 className="m-0 text-h3 text-text-primary">Test suite</h1>
                   {suites.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setCreateSuiteOpen(true)}
+                      onClick={() => {
+                        setEditingSuite(null)
+                        setCreateSuiteOpen(true)
+                      }}
                       className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                     >
                       Create test suite
@@ -822,20 +792,49 @@ export function FrontdeskTestSessionsPanel({
                 </div>
                 {suites.length > 0 ? (
                   <div className="flex flex-col gap-md">
-                    {suites.map((suite) => (
+                    {suites.map((suite) => {
+                      const personalityCount = suite.personaIds?.length ?? 0
+                      return (
                       <div
                         key={suite.id}
-                        className="flex w-full items-center justify-between gap-lg rounded-md border border-border p-lg text-left"
+                        className="group flex w-full items-center justify-between gap-lg rounded-md border border-border p-lg text-left"
                       >
                         <div>
                           <p className="m-0 text-body text-text-primary">{suite.name}</p>
-                          <p className="m-0 mt-2xs text-small text-text-tertiary">
-                            {suite.scenarios.length} scenario{suite.scenarios.length === 1 ? '' : 's'}
-                          </p>
+                          {personalityCount > 0 && (
+                            <p className="m-0 mt-2xs text-small text-text-tertiary">
+                              {personalityCount} {personalityCount === 1 ? 'personality' : 'personalities'}
+                            </p>
+                          )}
                         </div>
-                        <p className="m-0 shrink-0 text-small text-text-tertiary">{suite.createdAt}</p>
+                        <button
+                          type="button"
+                          aria-label="Edit test suite"
+                          onClick={() => {
+                            setEditingSuite(suite)
+                            setCreateSuiteOpen(true)
+                          }}
+                          className="flex h-9 min-w-[120px] shrink-0 items-center justify-end rounded-sm px-sm"
+                        >
+                          <span className="flex items-center justify-end gap-xs text-small text-text-tertiary group-hover:hidden">
+                            {suite.generating ? (
+                              <>
+                                <span className="size-4 animate-spin rounded-full border-2 border-border border-t-primary" />
+                                In progress
+                              </>
+                            ) : (
+                              <>
+                                {suite.scenarios.length} scenario{suite.scenarios.length === 1 ? '' : 's'}
+                              </>
+                            )}
+                          </span>
+                          <span className="hidden group-hover:block">
+                            <Icon name="edit" size={16} className="text-text-icon" />
+                          </span>
+                        </button>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="flex flex-1 flex-col items-center justify-center gap-md px-lg text-center">
@@ -845,7 +844,10 @@ export function FrontdeskTestSessionsPanel({
                     <p className="m-0 max-w-[360px] text-body text-text-secondary">{sectionMeta.emptyCaption}</p>
                     <button
                       type="button"
-                      onClick={() => setCreateSuiteOpen(true)}
+                      onClick={() => {
+                        setEditingSuite(null)
+                        setCreateSuiteOpen(true)
+                      }}
                       className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                     >
                       Create test suite
@@ -853,6 +855,9 @@ export function FrontdeskTestSessionsPanel({
                   </div>
                 )}
               </>
+              )
+            ) : section === 'personality' ? (
+              <TestPersonalitySection personalities={personalities} onChange={setPersonalities} />
             ) : (
               <>
                 <p className="m-0 text-body text-text-primary">{sectionMeta.label}</p>
@@ -895,14 +900,6 @@ export function FrontdeskTestSessionsPanel({
             setOpenBatch(null)
           }}
           onClose={() => setOpenBatch(null)}
-        />
-
-        <CreateTestCasesModal
-          open={createSuiteOpen}
-          onCancel={() => setCreateSuiteOpen(false)}
-          onRunTest={handleSaveSuite}
-          title="Create test suite"
-          submitLabel="Save test suite"
         />
 
         {useSuiteModalOpen && (

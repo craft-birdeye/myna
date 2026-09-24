@@ -868,8 +868,8 @@ export function App() {
               setRailActive(id)
               setDeepRoute({})
               setIsAgentSetupActive(false)
-              if (id === 'frontdesk') setNavActive('manage-appointments')
-              if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+              if (id === 'frontdesk') setNavActive('frontdesk-agent-sep-23')
+              if (id === 'reviews') setNavActive('response-agents-23-sep')
             }}
             products={PRODUCTS}
             activeProduct={activeProduct}
