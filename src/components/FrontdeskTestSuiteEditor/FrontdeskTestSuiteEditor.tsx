@@ -18,10 +18,9 @@ const PREVIEW_OUTCOMES = [
  *  placeholder) — an editable example rather than empty text with instructions floating over
  *  it, so "Generate scenarios" always has something to work from without typing first. */
 const DEFAULT_SCENARIO_DESCRIPTION =
-  'For example: a new patient calls to book a cleaning. A caller asks to reschedule, then changes their mind. Someone disputes a bill and asks to speak with a person.'
+  'A new patient calls to book a cleaning. A caller asks to reschedule, then changes their mind. Someone disputes a bill and asks to speak with a person.'
 
 interface PreviewScenario {
-  summary: string
   description: string
   outcome: string
 }
@@ -142,7 +141,6 @@ export function FrontdeskTestSuiteEditor({
     const count = Math.max(0, Number(scenarioCount) || 0)
     const customText = description.trim()
     const rows: PreviewScenario[] = Array.from({ length: count }, (_, index) => ({
-      summary: `Scenario ${index + 1}`,
       description: customText || FRONTDESK_SCENARIO_SUGGESTIONS[index % FRONTDESK_SCENARIO_SUGGESTIONS.length],
       outcome: PREVIEW_OUTCOMES[index % PREVIEW_OUTCOMES.length],
     }))
@@ -268,18 +266,14 @@ export function FrontdeskTestSuiteEditor({
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-surface-l2">
-                <th className="border-b border-border px-md py-sm text-small text-text-secondary">Call summary</th>
-                <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Call description</th>
+                <th className="border-b border-border px-md py-sm text-small text-text-secondary">Call description</th>
                 <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Expected outcome</th>
               </tr>
             </thead>
             <tbody>
               {previewScenarios.map((row, i) => (
                 <tr key={i} className="border-b border-border last:border-0">
-                  <td className="px-md py-md align-top text-body text-text-primary">{row.summary}</td>
-                  <td className="max-w-[320px] border-l border-border px-md py-md align-top text-body text-text-secondary">
-                    {row.description}
-                  </td>
+                  <td className="max-w-[320px] px-md py-md align-top text-body text-text-secondary">{row.description}</td>
                   <td className="max-w-[320px] border-l border-border px-md py-md align-top text-body text-text-secondary">
                     {row.outcome}
                   </td>
