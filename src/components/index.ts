@@ -282,3 +282,8 @@ export type { DateRangeSelectorProps } from './DateRangeSelector/DateRangeSelect
 export type { ReportHeaderProps } from './ReportHeader/ReportHeader.types'
 export type { InfoCardProps, InfoCardListItemProps } from './InfoCard/InfoCard.types'
 export { INFO_CARD_LAYOUT, INFO_CARD_LIST_ITEM_LAYOUT } from './InfoCard/InfoCard.types'
+export { JayRobinCreateFlow } from './JayRobinCreateFlow/JayRobinCreateFlow'
+export type { JayRobinCreateFlowProps } from './JayRobinCreateFlow/JayRobinCreateFlow.types'
+export { SparkleLoader } from './SparkleLoader/SparkleLoader'
+export { NodesUpdatedCard } from './JayRobinCreateFlow/NodesUpdatedCard'
+export type { NodesUpdatedCardProps } from './JayRobinCreateFlow/NodesUpdatedCard'

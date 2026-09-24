@@ -725,9 +725,33 @@ function FlowCanvasInner({
 
   // Enrich nodes with selectedNodeId — positions come directly from buildFlow,
   // no local state needed because nodes never move on the canvas.
+  /* React Flow forgets a node's measured size whenever it re-adopts a node *object* it hasn't
+     seen before: `adoptUserNodes` rebuilds `measured` from the user node alone and resets
+     `handleBounds` — and nothing re-measures until the element's size actually changes.
+     Our node objects are rebuilt on every list change (each staged build step, the final
+     swap), so edges — which need both ends measured — vanished and stayed gone. Capture the
+     dimension changes RF reports and hand `measured` back on every node, the way the
+     controlled-nodes pattern expects; re-adoption then keeps dimensions and handle bounds. */
+  const [measuredDims, setMeasuredDims] = useState({});
+  const handleNodesChange = useCallback((changes) => {
+    const dims = changes.filter((c) => c.type === 'dimensions' && c.dimensions);
+    if (dims.length === 0) return;
+    setMeasuredDims((prev) => {
+      let next = prev;
+      for (const c of dims) {
+        const cur = prev[c.id];
+        if (cur && cur.width === c.dimensions.width && cur.height === c.dimensions.height) continue;
+        if (next === prev) next = { ...prev };
+        next[c.id] = { width: c.dimensions.width, height: c.dimensions.height };
+      }
+      return next;
+    });
+  }, []);
+
   const styledNodes = useMemo(
     () => nodes.map((n) => ({
       ...n,
+      ...(measuredDims[n.id] ? { measured: measuredDims[n.id] } : {}),
       // XYFlow keeps nodes `visibility:hidden` until both width and height are known
       // (`nodeHasDimensions`). Without seeds, newly dropped cards never paint — and with
       // the start node hidden on exploration scratch, the canvas looks empty.
@@ -809,7 +833,7 @@ function FlowCanvasInner({
         ...(n.id === '__end__' ? { hideAdd: !!n.data?.hideAddBeforeEnd } : {}),
       },
     })),
-    [nodes, selectedNodeId, viewOnly, draftBlocked, onEditDraft, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
+    [nodes, measuredDims, selectedNodeId, viewOnly, draftBlocked, onEditDraft, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
   );
 
   // Pin the flow entry 24px below the controls bar, horizontally centered in the
@@ -1174,6 +1198,7 @@ function FlowCanvasInner({
       <ReactFlow
         nodes={styledNodes}
         edges={styledEdges}
+        onNodesChange={handleNodesChange}
         nodeTypes={NODE_TYPES}
         edgeTypes={EDGE_TYPES}
         defaultEdgeOptions={defaultEdgeOptions}

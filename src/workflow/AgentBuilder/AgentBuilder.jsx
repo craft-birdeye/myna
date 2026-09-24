@@ -1368,6 +1368,10 @@ export default function AgentBuilder({
   externalFocusNodeId = null,
   /** Bumped when the same node is focused again so the canvas re-pans. */
   externalFocusNonce = 0,
+  /** External "open this node's config panel" (Jay & Robin's "N nodes updated" card rows):
+   *  selects the node, opens the RHS drawer and pans to it — `nonce` bumps per click so the
+   *  same node can be opened twice. */
+  externalOpenNode = null,
   /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
   autoOpenCoachTour = false,
   /** Suppresses the floating back-cluster + run-test/Activate chrome — for embedding the
@@ -1973,6 +1977,34 @@ export default function AgentBuilder({
     const frame = requestAnimationFrame(() => setCanvasFocusNodeId(externalFocusNodeId));
     return () => cancelAnimationFrame(frame);
   }, [externalFocusNodeId, externalFocusNonce, nodeList, nodeDetails]);
+
+  /* External open-node requests: same outcome as clicking the card on the canvas. Nested
+     nodes get their branch/path expanded first so the panel and the card both show. */
+  const externalOpenNonce = externalOpenNode?.nonce ?? 0;
+  useEffect(() => {
+    if (!externalOpenNonce || !externalOpenNode?.id) return undefined;
+    const id = externalOpenNode.id;
+    if (id === START_NODE_ID) {
+      handleNodeClick({ id: START_NODE_ID, type: 'start', data: {} });
+      return undefined;
+    }
+    const located = locateNodeContainer(id, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+    }
+    setPaletteSection(null);
+    setFocusBranchPathId(null);
+    setSelectedNodeId(id);
+    setDrawerOpen(true);
+    setActiveProcedureId(null);
+    setCanvasFocusNodeId(null);
+    const frame = requestAnimationFrame(() => setCanvasFocusNodeId(id));
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalOpenNonce]);
 
   /* Shell-owned header CTAs (Ghostwriter's top bar) call straight into these handlers, so
      the visible buttons live outside but the behaviour stays here. */

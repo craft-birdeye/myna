@@ -1,4 +1,5 @@
 import React, { Suspense, type ReactNode } from 'react'
+import { revealReviewResponseWorkflow } from '../data/reviewResponseBuildReveal'
 import {
   AUTOMOTIVE_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -187,6 +188,13 @@ interface WorkflowEditorScreenProps {
   /** Drives canvas node highlighting/checkmarks from outside — see `AgentBuilder`'s matching
    *  prop. */
   externalTestRun?: { activeNodeId: string | null; doneNodeIds: string[] } | null
+  /** Jay & Robin's build pass: how many plan steps have been built so far (0–5). While set,
+   *  the canvas shows only the nodes those steps produce (`revealReviewResponseWorkflow`);
+   *  `null` shows the workflow as-is. */
+  buildRevealStage?: number | null
+  /** Open a node's config panel from outside the canvas (Jay & Robin's "N nodes updated"
+   *  rows). `nonce` bumps per request. */
+  externalOpenNode?: { id: string; nonce: number } | null
 }
 
 export function WorkflowEditorScreen({
@@ -232,6 +240,8 @@ export function WorkflowEditorScreen({
   hideLeftFloater = false,
   collapseLeftFloaterOnPanel = false,
   externalTestRun = null,
+  buildRevealStage = null,
+  externalOpenNode = null,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -353,12 +363,16 @@ export function WorkflowEditorScreen({
           nodes: patchNodes(baseWorkflow.nodes as unknown[]) as typeof baseWorkflow.nodes,
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
-  const workflow = applyFrontDeskCopy(
+  const fullWorkflow = applyFrontDeskCopy(
     applyReviewResponseCopy(rawWorkflow, agentBaseName, shownName, agentName),
     agentBaseName,
     shownName,
     agentName,
   )
+  /* Staged reveal (Jay & Robin's build pass): slicing `nodeDetails` is what makes
+     AgentBuilder's seed-sync pick up the new node list mid-session. */
+  const workflow =
+    buildRevealStage === null ? fullWorkflow : revealReviewResponseWorkflow(fullWorkflow, buildRevealStage)
 
   // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
@@ -418,6 +432,7 @@ export function WorkflowEditorScreen({
             hideLeftFloater={hideLeftFloater}
             collapseLeftFloaterOnPanel={collapseLeftFloaterOnPanel}
             externalTestRun={externalTestRun}
+            externalOpenNode={externalOpenNode}
             procedures={filteredProcedures}
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}
