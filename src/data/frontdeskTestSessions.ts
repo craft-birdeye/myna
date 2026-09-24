@@ -152,6 +152,82 @@ export const FRONTDESK_TEST_BATCHES: FrontdeskTestBatch[] = [
   },
 ]
 
+/** Seeded default test suites for the Test tab's "Test suite" section — named after common
+ *  front-desk case categories so the empty-state doesn't ship with zero suites to pick from
+ *  in the Test Run editor's "Test suite" dropdown. */
+export const FRONTDESK_TEST_SUITES: FrontdeskTestSuite[] = [
+  {
+    id: 'fd-suite-billing-issues',
+    name: 'Billing issues',
+    description:
+      'A patient disputes a charge on their statement. A caller asks why their insurance didn’t cover a visit. Someone wants a refund for a cancelled appointment.',
+    createdAt: '5 days ago',
+    scenarios: [
+      { text: 'A patient calls disputing a charge on their latest statement.', voice: true, chat: true },
+      { text: 'A caller asks why their insurance only partially covered a recent visit.', voice: true, chat: true },
+      { text: 'Someone requests a refund after cancelling an appointment they were billed for.', voice: true, chat: true },
+      { text: 'A patient wants to set up a payment plan for an outstanding balance.', voice: true, chat: false },
+    ],
+    scenarioCount: 4,
+  },
+  {
+    id: 'fd-suite-unclear-information',
+    name: 'Unclear information',
+    description:
+      'A caller gives a vague reason for their visit and needs follow-up questions. Someone isn’t sure which location they’re registered at. A patient can’t recall their provider’s name.',
+    createdAt: '5 days ago',
+    scenarios: [
+      { text: 'A caller says they need "some kind of checkup" but can’t specify what for.', voice: true, chat: true },
+      { text: 'A patient isn’t sure which of the practice’s locations they’re registered at.', voice: true, chat: true },
+      { text: 'Someone can’t recall their provider’s name and describes them instead.', voice: true, chat: false },
+      { text: 'A caller gives a date of birth that doesn’t match any record on file.', voice: true, chat: true },
+    ],
+    scenarioCount: 4,
+  },
+  {
+    id: 'fd-suite-appointment-scheduling',
+    name: 'Appointment scheduling',
+    description:
+      'A new patient calls to book a first visit. A caller asks to reschedule, then changes their mind. Someone wants the next available same-day slot.',
+    createdAt: '4 days ago',
+    scenarios: [
+      { text: 'A new patient calls to book their first appointment.', voice: true, chat: true },
+      { text: 'A caller asks to reschedule, then changes their mind mid-call.', voice: true, chat: true },
+      { text: 'Someone wants the next available same-day appointment.', voice: true, chat: true },
+      { text: 'A patient asks to book a recurring appointment every month.', voice: false, chat: true },
+      { text: 'A caller wants to cancel an appointment and isn’t sure of the cancellation policy.', voice: true, chat: true },
+    ],
+    scenarioCount: 5,
+  },
+  {
+    id: 'fd-suite-insurance-verification',
+    name: 'Insurance verification',
+    description:
+      'A caller wants to know if their insurance provider is accepted. Someone asks whether a specific procedure is covered. A patient needs to update their insurance on file.',
+    createdAt: '3 days ago',
+    scenarios: [
+      { text: 'A caller wants to confirm whether their insurance provider is accepted.', voice: true, chat: true },
+      { text: 'A patient asks whether a specific procedure is covered under their plan.', voice: true, chat: true },
+      { text: 'Someone needs to update their insurance information on file before their visit.', voice: false, chat: true },
+      { text: 'A caller asks what their estimated out-of-pocket cost will be for a visit.', voice: true, chat: true },
+    ],
+    scenarioCount: 4,
+  },
+  {
+    id: 'fd-suite-escalations-complaints',
+    name: 'Escalations & complaints',
+    description:
+      'A caller is upset about a long wait time and wants to speak with a manager. Someone complains about a missed callback. A patient wants to file a formal complaint.',
+    createdAt: '2 days ago',
+    scenarios: [
+      { text: 'A caller is upset about a long wait time and asks to speak with a manager.', voice: true, chat: false },
+      { text: 'Someone complains that they never received a promised callback.', voice: true, chat: true },
+      { text: 'A patient wants to file a formal complaint about their last visit.', voice: true, chat: true },
+    ],
+    scenarioCount: 3,
+  },
+]
+
 /** "Create Test Cases" modal — the sparkle "Generate" button on a scenario field prefills it
  *  with one of these, cycling through so repeat clicks (or several scenarios in one modal
  *  session) don't repeat the same suggestion. */

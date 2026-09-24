@@ -17,6 +17,7 @@ import {
   FRONTDESK_TEST_BATCHES,
   FRONTDESK_SCENARIO_SUGGESTIONS,
   FRONTDESK_CUSTOM_TEST_REPLY,
+  FRONTDESK_TEST_SUITES,
   type FrontdeskTestBatch,
   type FrontdeskTestSession,
   type FrontdeskTestSuite,
@@ -588,7 +589,7 @@ export function FrontdeskTestSessionsPanel({
 
   // Sep 23 full-page Test tab only — Myna's floating mode never touches these.
   const [section, setSection] = useState<FrontdeskTestSection>('tests')
-  const [suites, setSuites] = useState<FrontdeskTestSuite[]>([])
+  const [suites, setSuites] = useState<FrontdeskTestSuite[]>(FRONTDESK_TEST_SUITES)
   const [createSuiteOpen, setCreateSuiteOpen] = useState(false)
   const [createRunOpen, setCreateRunOpen] = useState(false)
   const [editingSuite, setEditingSuite] = useState<FrontdeskTestSuite | null>(null)

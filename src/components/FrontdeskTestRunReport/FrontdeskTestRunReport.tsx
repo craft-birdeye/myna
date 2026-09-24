@@ -104,6 +104,7 @@ export function FrontdeskTestRunReport({ batch, onBack, onAcceptRecommendation }
             <thead>
               <tr className="bg-surface-l2">
                 <th className="border-b border-border px-md py-sm text-small text-text-secondary">Session</th>
+                <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Status</th>
                 {metrics.map((metric) => (
                   <th key={metric.id} className="border-b border-l border-border px-md py-sm text-small text-text-secondary">
                     {metric.label}
@@ -119,17 +120,22 @@ export function FrontdeskTestRunReport({ batch, onBack, onAcceptRecommendation }
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-hover"
                 >
                   <td className="max-w-[360px] px-md py-md align-top">
+                    <p className="m-0 text-body text-text-primary">{session.title}</p>
+                    <p className="m-0 mt-2xs text-small text-text-tertiary">
+                      {session.channel === 'voice' ? 'Voice call' : 'Web chat'}
+                    </p>
+                  </td>
+                  <td className="border-l border-border px-md py-md align-top">
                     <div className="flex items-center gap-sm">
                       <Icon
                         name={session.outcome === 'passed' ? 'check_circle' : 'cancel'}
                         size={16}
                         className={session.outcome === 'passed' ? 'text-accent-positive' : 'text-chip-danger-text'}
                       />
-                      <p className="m-0 text-body text-text-primary">{session.title}</p>
+                      <p className="m-0 text-body text-text-primary">
+                        {session.outcome === 'passed' ? 'Passed' : 'Failed'}
+                      </p>
                     </div>
-                    <p className="m-0 mt-2xs text-small text-text-tertiary">
-                      {session.channel === 'voice' ? 'Voice call' : 'Web chat'}
-                    </p>
                   </td>
                   {metrics.map((metric) => (
                     <td key={metric.id} className="border-l border-border px-md py-md align-top text-body text-text-primary">
