@@ -272,12 +272,10 @@ function PlanCard({
         </button>
 
         {open && (
-          <ol className="relative m-0 flex list-none flex-col gap-lg px-lg pb-md pt-xs">
-            {/* Rail through the markers — stops at the last marker, not the card edge. */}
-            <span className="absolute bottom-[calc(12px+1.25rem)] left-[calc(16px+5px)] top-[calc(4px+12px)] w-px bg-border" aria-hidden />
+          <ol className="m-0 flex list-none flex-col gap-lg px-lg pb-md pt-xs">
             {steps.map((step) => (
-              <li key={step.title} className="relative flex items-start gap-md">
-                <span className="relative z-[1] mt-[7px] flex size-[11px] shrink-0 items-center justify-center rounded-full border border-border-selected bg-surface" aria-hidden />
+              <li key={step.title} className="flex items-start gap-md">
+                <span className="mt-[7px] flex size-[11px] shrink-0 rounded-full border border-border-selected bg-surface" aria-hidden />
                 <span className="flex min-w-0 flex-1 flex-col gap-2xs">
                   <span className="text-body text-text-primary">{step.title}</span>
                   <span className="text-small text-text-secondary">{step.text}</span>
