@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Icon } from '../Icon/Icon'
 import { SelectMenuProps } from './SelectMenu.types'
-import { Check, ChevronRight, Search } from 'lucide-react'
 
 function CheckBox({ checked }: { checked: boolean }) {
   return (
@@ -9,7 +9,7 @@ function CheckBox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
+      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
     </span>
   )
 }
@@ -27,7 +27,11 @@ export function SelectMenu({
   const selected = new Set(value)
 
   const filtered = useMemo(
-    () => options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase())),
+    () => options.filter((o) => {
+      const q = query.trim().toLowerCase()
+      if (!q) return true
+      return o.label.toLowerCase().includes(q) || (o.description?.toLowerCase().includes(q) ?? false)
+    }),
     [options, query],
   )
   const allSelected = options.length > 0 && options.every((o) => selected.has(o.value))
@@ -58,8 +62,8 @@ export function SelectMenu({
       <div className={`flex flex-1 flex-col gap-xs overflow-hidden ${title ? '' : 'pt-md'}`}>
         <div className={`flex flex-1 flex-col gap-xs overflow-y-auto px-lg ${multi && !onApply ? 'pb-md' : 'pb-xs'}`}>
           {searchable && (
-            <div className="flex h-[34px] shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
-              <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+            <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
+              <Icon name="search" size={20} className="text-text-icon" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -82,7 +86,15 @@ export function SelectMenu({
 
           {filtered.map((opt) => {
             const isSel = selected.has(opt.value)
-            // Single select — label left; chevron for drill-in rows, else gray tick when selected.
+            // Single select — label left, gray tick on the right, gray selected row.
+            const labelBlock = (
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-body text-text-primary">{opt.label}</span>
+                {opt.description && (
+                  <span className="truncate text-xs text-text-tertiary">{opt.description}</span>
+                )}
+              </span>
+            )
             if (!multi) {
               return (
                 <button
@@ -93,28 +105,22 @@ export function SelectMenu({
                     isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
                   }`}
                 >
-                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
-                  {opt.showChevron ? (
-                    <ChevronRight className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-                  ) : (
-                    isSel && <Check className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-                  )}
+                  {labelBlock}
+                  {isSel && <Icon name="check" size={20} className="shrink-0 text-text-icon" />}
                 </button>
               )
             }
-            // Multi select — checkbox on the left.
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => toggle(opt.value)}
-                className="flex w-full items-center gap-sm rounded-sm py-sm pr-sm text-left hover:bg-surface-hover"
+                className={`flex w-full gap-sm rounded-sm py-sm pr-sm text-left hover:bg-surface-hover ${opt.description ? 'items-start' : 'items-center'}`}
               >
-                <CheckBox checked={isSel} />
-                <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
-                {opt.showChevron && (
-                  <ChevronRight className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-                )}
+                <span className={opt.description ? 'mt-xs' : ''}>
+                  <CheckBox checked={isSel} />
+                </span>
+                {labelBlock}
               </button>
             )
           })}
@@ -132,7 +138,7 @@ export function SelectMenu({
             <button
               type="button"
               onClick={onApply}
-              className="rounded-md bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
+              className="rounded-sm bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Apply
             </button>

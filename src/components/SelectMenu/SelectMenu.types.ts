@@ -1,8 +1,8 @@
 export interface SelectOption {
   value: string
   label: string
-  /** When true, shows a trailing chevron (submenu / drill-in affordance). */
-  showChevron?: boolean
+  /** Optional second line under the label (e.g. appointment type description). */
+  description?: string
 }
 
 export interface SelectMenuProps {

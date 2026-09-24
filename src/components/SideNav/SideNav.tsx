@@ -99,12 +99,18 @@ function Section({
     return <FlatLeaf section={section} active={section.id === activeId} onSelect={onSelect} />
   }
 
+  const hasActiveChild = section.items.some((item) => item.id === activeId)
+
   return (
     <div className="flex flex-col gap-xs">
       <button
         type="button"
         onClick={onHeaderClick}
-        className="flex h-7 w-full items-center justify-between gap-sm rounded-sm px-sm py-[6px] hover:bg-surface-selected"
+        className={`flex h-7 w-full items-center justify-between gap-sm rounded-sm px-sm py-[6px] transition-colors ${
+          hasActiveChild && !expanded
+            ? 'bg-surface-selected'
+            : 'hover:bg-surface-selected'
+        }`}
       >
         <span className="flex min-w-0 items-center gap-xs">
           <span className="truncate text-body text-text-primary">{section.label}</span>
@@ -184,11 +190,20 @@ export function SideNav({
       })
       return
     }
-    if (section.items?.[0]) {
-      selectItem(section.items[0].id)
+
+    const isExpanded = expandedIds.has(section.id)
+    const hasActiveChild = section.items?.some((item) => item.id === activeId) ?? false
+
+    if (isExpanded) {
+      setExpandedIds(new Set())
       return
     }
+
     setExpandedIds(new Set([section.id]))
+
+    if (section.items?.[0] && !hasActiveChild) {
+      onSelect?.(section.items[0].id)
+    }
   }
 
   return (
