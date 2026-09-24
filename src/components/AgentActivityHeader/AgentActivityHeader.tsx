@@ -100,7 +100,9 @@ export function AgentActivityHeader({
           {running ? <ActivityDots /> : <DoneCheck />}
         </span>
       )}
-      <span className={`text-[12px] leading-5 ${running ? 'gw-shimmer' : 'text-text-primary'}`}>
+      {/* Keyed on the label so a status change (Working → Fetching templates → Working) fades
+          in rather than snapping. */}
+      <span key={label} className={`gw-flow__in text-[12px] leading-5 ${running ? 'gw-shimmer' : 'text-text-primary'}`}>
         {label}
       </span>
       <span className="shrink-0 text-[12px] leading-5 text-text-tertiary">

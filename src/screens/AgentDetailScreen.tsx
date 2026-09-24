@@ -43,6 +43,9 @@ import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import { GreyTriggerIcon } from '../workflow/Molecules/Canvas/CanvasNodeIcons'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
+import { useTypewriter } from '../hooks/useTypewriter'
+import { SparkleLoader } from '../components/SparkleLoader/SparkleLoader'
+import { JayRobinCreateFlow } from '../components/JayRobinCreateFlow/JayRobinCreateFlow'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
@@ -2217,80 +2220,9 @@ Transcripts are the single most valuable input here — they tell me the real di
 
 I'll use defaults for greeting, consent, and voice for now and review later. First get the transcripts, then confirm channels — that's the one mandatory setting I can't infer.`
 
-// Types a string out character-by-character; fires onDone once complete.
-function useTypewriter(
-  text: string,
-  { charsPerTick = 4, intervalMs = 16, startDelayMs = 0, onDone }: {
-    charsPerTick?: number
-    intervalMs?: number
-    startDelayMs?: number
-    onDone?: () => void
-  } = {},
-) {
-  const [typed, setTyped] = useState('')
-  const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
-
-  useEffect(() => {
-    setTyped('')
-    let i = 0
-    let interval: number | undefined
-    const start = window.setTimeout(() => {
-      interval = window.setInterval(() => {
-        i += charsPerTick
-        setTyped(text.slice(0, i))
-        if (i >= text.length) {
-          window.clearInterval(interval)
-          onDoneRef.current?.()
-        }
-      }, intervalMs)
-    }, startDelayMs)
-    return () => {
-      window.clearTimeout(start)
-      if (interval) window.clearInterval(interval)
-    }
-  }, [text, charsPerTick, intervalMs, startDelayMs])
-
-  return { typed, done: typed.length >= text.length }
-}
-
 function TypingCaret() {
   return (
     <span className="thoughts-caret ml-px inline-block h-[1em] w-px translate-y-px bg-text-secondary" aria-hidden />
-  )
-}
-
-// Animated gradient "AI" sparkle. When `spinning`, it rotates + pulses as a
-// loading indicator while the agent composes a response; otherwise it rests.
-function SparkleLoader({
-  size = 18,
-  spinning = true,
-  className,
-}: {
-  size?: number
-  spinning?: boolean
-  className?: string
-}) {
-  return (
-    <span
-      className={`sparkle-loader ${spinning ? 'is-spinning' : ''} ${className ?? ''}`}
-      style={{ width: size, height: size }}
-      aria-hidden
-    >
-      <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
-        <defs>
-          <linearGradient id="sparkle-loader-grad" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#9b6cf0" />
-            <stop offset="55%" stopColor="#6834b7" />
-            <stop offset="100%" stopColor="#3b82f6" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M12 2 Q12 12 22 12 Q12 12 12 22 Q12 12 2 12 Q12 12 12 2 Z"
-          fill="url(#sparkle-loader-grad)"
-        />
-      </svg>
-    </span>
   )
 }
 
@@ -6339,6 +6271,9 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
+  onBuildStart,
+  onBuildProgress,
+  onOpenNode,
   onViewWorkflow,
   onBack,
   onSubmittedChange,
@@ -6409,6 +6344,11 @@ export function HealthcareFrontdeskCreateAgentScreen({
   ghostwriterPolish?: boolean
   /** True once Create agent has been used, so the chat stops offering it again. */
   agentCreated?: boolean
+  /** Jay & Robin: the build pass started / advanced by one plan step — see `JayRobinCreateFlow`. */
+  onBuildStart?: () => void
+  onBuildProgress?: (completedSteps: number) => void
+  /** Jay & Robin: a "N nodes updated" row was clicked — open that node on the canvas. */
+  onOpenNode?: (nodeId: string) => void
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -6456,6 +6396,9 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onCreateFromScratch={onCreateFromScratch}
       onSelectFromLibrary={onSelectFromLibrary}
       onCreateAgent={onCreateAgent}
+      onBuildStart={onBuildStart}
+      onBuildProgress={onBuildProgress}
+      onOpenNode={onOpenNode}
       onViewWorkflow={onViewWorkflow}
       onBack={onBack}
       onSubmittedChange={onSubmittedChange}
@@ -6494,6 +6437,9 @@ function HealthcareFrontdeskCreateAgentLive({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
+  onBuildStart,
+  onBuildProgress,
+  onOpenNode,
   onViewWorkflow,
   onBack,
   onSubmittedChange,
@@ -6528,6 +6474,9 @@ function HealthcareFrontdeskCreateAgentLive({
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
   onCreateAgent?: (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => void
+  onBuildStart?: () => void
+  onBuildProgress?: (completedSteps: number) => void
+  onOpenNode?: (nodeId: string) => void
   onViewWorkflow?: () => void
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
@@ -6573,6 +6522,16 @@ function HealthcareFrontdeskCreateAgentLive({
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
+  /** Jay & Robin (and its 23 Sep copy) — the only navs that relabel Simulation as Test, and the
+   *  only ones that get the self-contained `JayRobinCreateFlow` story instead of
+   *  `ReviewResponseThread`. */
+  const isJayRobinFlow = simulationTabLabel === 'Test'
+  /** Bumped on a rewind-to-start so the flow remounts from its first line. */
+  const [jayRobinFlowKey, setJayRobinFlowKey] = useState(0)
+  /** Jay & Robin: rewind on the opening message. The shell stays (unlike `resetCreateFlow`,
+   *  which would drop the canvas + docked panel), the thread empties, and the text waits in
+   *  the composer — Send restarts the flow with whatever is there. */
+  const [jayRobinRewound, setJayRobinRewound] = useState(false)
   const [prompt, setPrompt] = useState('')
   /** Exploration landing only — Option 1 = rotating placeholders; Option 2 = short seed prompt. */
   const [landingPromptOption, setLandingPromptOption] = useState<'1' | '2'>('1')
@@ -6828,6 +6787,8 @@ function HealthcareFrontdeskCreateAgentLive({
   }
 
   const resetCreateFlow = () => {
+    setJayRobinFlowKey((k) => k + 1)
+    setJayRobinRewound(false)
     setSubmitted(false)
     onSubmittedChange?.(false)
     onDraftReady?.(null)
@@ -7264,7 +7225,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const canSendFollowUp =
     isReminderFlow && handoffFollowDone && !connectAnswer
       ? Boolean(followUp.trim() || attachments.length > 0)
-      : isReviewFlow
+      : isReviewFlow && isJayRobinFlow
+        ? Boolean(followUp.trim() && (jayRobinRewound || !reviewThreadBusy))
+        : isReviewFlow
         ? Boolean(followUp.trim() && reviewComposerFill && !reviewThreadBusy)
         : phase === 'ask-docs'
           ? Boolean(followUp.trim() || attachments.length > 0)
@@ -7285,6 +7248,21 @@ function HealthcareFrontdeskCreateAgentLive({
         setAttachments([])
         setFollowUp('')
       }
+      return
+    }
+    // Jay & Robin: after a rewind-to-start, Send is the new opening message and the flow
+    // remounts around it; otherwise whatever is typed answers the question that's open.
+    if (isReviewFlow && isJayRobinFlow) {
+      if (!followUp.trim()) return
+      if (jayRobinRewound) {
+        setPrompt(followUp.trim())
+        setJayRobinRewound(false)
+        setJayRobinFlowKey((k) => k + 1)
+        setReviewThreadBusy(true)
+      } else {
+        setReviewPendingAnswer(followUp.trim())
+      }
+      setFollowUp('')
       return
     }
     // Review response create flow: send composer text into the thread's current question.
@@ -7416,6 +7394,9 @@ function HealthcareFrontdeskCreateAgentLive({
             </span>
           </div>
         )}
+        {/* Jay & Robin's review flow renders this turn itself (it carries the hover actions —
+            time · copy · rewind — every other turn in that thread has). */}
+        {!(isReviewFlow && isJayRobinFlow) && (
         <div className="flex justify-end pt-md">
           <span className="flex max-w-[80%] flex-col items-end gap-sm rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
             {/* Ghostwriter only: anything attached on the landing rides along, so the seeded
@@ -7430,6 +7411,7 @@ function HealthcareFrontdeskCreateAgentLive({
             <span>{prompt.trim()}</span>
           </span>
         </div>
+        )}
 
         {introThinking && !explorationModeChoice ? (
           <IntroThinkingLoaderRow />
@@ -7462,7 +7444,36 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
 
             {(introReplyReady || explorationModeChoice) && (
-              isReviewFlow ? (
+              isReviewFlow && isJayRobinFlow ? (
+                /* Jay & Robin: the whole create story (analysis → questions → plan → build)
+                   is one self-contained component; `ReviewResponseThread` below stays as the
+                   original Ghostwriter's own sequential beats. */
+                jayRobinRewound ? null : (
+                <JayRobinCreateFlow
+                  key={jayRobinFlowKey}
+                  prompt={prompt}
+                  onBuildStart={onBuildStart}
+                  onBuildProgress={onBuildProgress}
+                  onOpenNode={onOpenNode}
+                  onCreateAgent={() => saveCreatedAgent()}
+                  onOpenPlan={onOpenPlanExternal ?? (() => setPlanPanelOpen(true))}
+                  planOpen={onOpenPlanExternal ? planOpenExternal : planPanelOpen}
+                  agentCreated={agentCreated}
+                  onAnswerCardOpenChange={setAnswerCardOpen}
+                  onBusyChange={setReviewThreadBusy}
+                  pendingAnswer={reviewPendingAnswer}
+                  onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
+                  onRewindToStart={(text) => {
+                    // Back to before the first message: the thread clears and the text goes
+                    // back into this panel's composer, ready to send again.
+                    setJayRobinRewound(true)
+                    setFollowUp(text)
+                    setReviewThreadBusy(false)
+                    setAnswerCardOpen(false)
+                  }}
+                />
+                )
+              ) : isReviewFlow ? (
                 <ReviewResponseThread
                   onDraftReady={(name) => {
                     if (name) setAgentName(name)
@@ -9519,6 +9530,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   /** Ghostwriter: until "Create agent" is pressed the build isn't real yet, so the other
    *  tabs stay disabled and the top bar carries no Run test / Activate / kebab. */
   const [ghostwriterAgentCreated, setGhostwriterAgentCreated] = useState(false)
+  /** Jay & Robin: plan steps built so far during the chat's build pass (0–5), `null` when no
+   *  build is running. Drives the canvas's staged node reveal (`buildRevealStage`) and, once
+   *  non-null, swaps the empty scratch canvas for the real (initially empty) workflow. */
+  const [ghostwriterBuildStage, setGhostwriterBuildStage] = useState<number | null>(null)
+  /** Jay & Robin: a "N nodes updated" row asked for this node's panel — forwarded to the canvas. */
+  const [ghostwriterOpenNode, setGhostwriterOpenNode] = useState<{ id: string; nonce: number } | null>(null)
   /** Ghostwriter: covers the canvas with placeholder node shapes for a beat right after
    *  "Create agent" — the swap from empty scratch canvas to the fully-built workflow felt
    *  instant/jarring otherwise. */
@@ -9650,6 +9667,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setToastVisible(true)
     // Cover the canvas with placeholder node shapes briefly before the real, fully-built
     // workflow appears — an instant swap from the empty scratch canvas read as a glitch.
+    // Not when the nodes were revealed step by step (Jay & Robin) — they're already there.
+    if (ghostwriterBuildStage !== null) return
     setGhostwriterCanvasSkeleton(true)
     if (ghostwriterCanvasSkeletonTimerRef.current) clearTimeout(ghostwriterCanvasSkeletonTimerRef.current)
     ghostwriterCanvasSkeletonTimerRef.current = setTimeout(() => setGhostwriterCanvasSkeleton(false), 6000)
@@ -10390,7 +10409,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
-    const createWorkflowAgentName = (isGhostwriterPolish && (ghostwriterDirect === 'scratch' || ghostwriterCombinedFlow) && isReviewResponse && !ghostwriterAgentCreated)
+    const createWorkflowAgentName = (isGhostwriterPolish && (ghostwriterDirect === 'scratch' || ghostwriterCombinedFlow) && isReviewResponse && !ghostwriterAgentCreated && ghostwriterBuildStage === null)
       /* "Create from scratch" — this exact name is what makes the editor start empty
          (isReviewsScratchCreateName in WorkflowEditorScreen) instead of loading the
          prebuilt Review response workflow. Combined-flow (Send from the landing composer)
@@ -10583,6 +10602,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             onEditAgent?.('')
           }}
           onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
+          onBuildStart={() => setGhostwriterBuildStage(0)}
+          onBuildProgress={setGhostwriterBuildStage}
+          onOpenNode={(id) => setGhostwriterOpenNode({ id, nonce: Date.now() })}
           agentCreated={ghostwriterAgentCreated}
           onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
           libraryCards={
@@ -11055,6 +11077,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 /* The empty-scratch → fully-built workflow swap (on "Create agent") must not
                    remount AgentBuilder here — that would blow away the docked live chat above. */
                 preserveCanvasIdentity={isGhostwriterPolish && ghostwriterCombinedFlow}
+                /* Jay & Robin: the canvas fills in one node per built plan step, in lockstep
+                   with the chat's build pass; once created it shows the whole workflow. */
+                buildRevealStage={isJayRobinPolish && !ghostwriterAgentCreated ? ghostwriterBuildStage : null}
+                externalOpenNode={isJayRobinPolish ? ghostwriterOpenNode : null}
               />
               {isGhostwriterPolish && ghostwriterCanvasSkeleton && (
                 <div

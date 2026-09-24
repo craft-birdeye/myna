@@ -2220,6 +2220,21 @@
 }
 
 /*
+ * Ghostwriter: the open AI panel takes the left rail's place. The AI / Trigger / Actions /
+ * Controls stack hides while the panel is up, and the panel docks at the stack's own 16px
+ * inset instead of sitting to its right — the bottom controls follow through the variable.
+ */
+.agent-builder--gw.agent-builder--lhs-ai-open {
+  --rr-chrome-lhs-panel-left: 16px;
+  /* The rail's 88px (56px labelled rail + 12px gap + the 20px the panel used to clear it by)
+     goes to the panel instead: 360px → 448px, so the right edge stays where it was. */
+  --rr-chrome-lhs-panel-width: 448px;
+}
+.agent-builder--gw.agent-builder--lhs-ai-open .rr-chrome-left-stack {
+  display: none;
+}
+
+/*
  * Controls stay bottom-left, but slide clear of an open LHS panel. The AI panel already
  * drives `--rr-controls-shift` (see above); the Trigger/Actions/Controls palette had no
  * such rule because its default `bottom: 96px` kept it above the controls — now that it
