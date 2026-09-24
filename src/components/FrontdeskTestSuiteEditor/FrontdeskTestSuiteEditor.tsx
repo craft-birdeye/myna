@@ -14,6 +14,12 @@ const PREVIEW_OUTCOMES = [
   'Agent cannot complete the request and hands off to a person with a summary.',
 ]
 
+/** Pre-filled into the description textarea for a brand-new suite (not shown as a grey
+ *  placeholder) — an editable example rather than empty text with instructions floating over
+ *  it, so "Generate scenarios" always has something to work from without typing first. */
+const DEFAULT_SCENARIO_DESCRIPTION =
+  'For example: a new patient calls to book a cleaning. A caller asks to reschedule, then changes their mind. Someone disputes a bill and asks to speak with a person.'
+
 interface PreviewScenario {
   summary: string
   description: string
@@ -123,7 +129,7 @@ export function FrontdeskTestSuiteEditor({
   const [scenarioCount, setScenarioCount] = useState(
     String(existingSuite?.scenarioCount ?? (existingSuite ? existingSuite.scenarios.length : 5)),
   )
-  const [description, setDescription] = useState(existingSuite?.description ?? '')
+  const [description, setDescription] = useState(existingSuite?.description ?? DEFAULT_SCENARIO_DESCRIPTION)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(existingSuite?.uploadedFileName ?? null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [previewScenarios, setPreviewScenarios] = useState<PreviewScenario[]>([])
@@ -246,7 +252,6 @@ export function FrontdeskTestSuiteEditor({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
-          placeholder="For example: a new patient calls to book a cleaning. A caller asks to reschedule, then changes their mind. Someone disputes a bill and asks to speak with a person."
           className="w-full resize-y rounded-sm border border-border bg-surface px-md py-sm text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
         />
         <button
