@@ -233,8 +233,8 @@ function AnswersSummaryCard({
 }
 
 /**
- * The plan — a stepper of five pointers (hollow-dot markers on a rail, title + one line of
- * what it does), a title row that folds the list away, and the two things you can do with
+ * The plan — five pointers (title + one line of what it does, no markers), a title row that
+ * folds the list away, and the two things you can do with
  * it: "See details" (text button — the full plan panel) and "Create agent" (primary).
  */
 function PlanCard({
@@ -274,8 +274,7 @@ function PlanCard({
         {open && (
           <ol className="m-0 flex list-none flex-col gap-lg px-lg pb-md pt-xs">
             {steps.map((step) => (
-              <li key={step.title} className="flex items-start gap-md">
-                <span className="mt-[7px] flex size-[11px] shrink-0 rounded-full border border-border-selected bg-surface" aria-hidden />
+              <li key={step.title} className="flex items-start">
                 <span className="flex min-w-0 flex-1 flex-col gap-2xs">
                   <span className="text-body text-text-primary">{step.title}</span>
                   <span className="text-small text-text-secondary">{step.text}</span>
