@@ -1,111 +1,50 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import {
-  AgentLibraryPreviewModal,
   AttachMenuPopover,
   Chip,
   CustomizeColumnsDrawer,
   DataTable,
+  EstimateSavingsModal,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
   Icon,
   INFO_CARD_LAYOUT,
   InfoCard,
+  InfoCardListItem,
   InfoTooltip,
-  LibraryCardIcon,
   MediaLibraryModal,
+  MetricTiles,
   PromptComposer,
   RefChip,
-  ReviewResponseOutcomesCharts,
   Tabs,
   Toast,
   Tooltip,
   TopNav,
-  type AgentLibraryPreviewData,
-  type AgentLibraryPreviewStep,
   type AttachItem,
   type ChipVariant,
   type Column,
   type ColumnOption,
+  type EstimateSavingsValues,
   type FilterField,
-  type LibraryCardGlyph,
-  type LibraryCardTone,
-  type RowMenuItem,
+  type Metric,
   type Tab,
 } from '../components'
-import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
-import { GreyTriggerIcon } from '../workflow/Molecules/Canvas/CanvasNodeIcons'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
-import { getAgentWorkflows } from '../data/agentWorkflows'
-import {
-  isAgentExplorationChrome,
-  isExplorationHideCanvasStartNode,
-  isFrontdeskExplorationChrome,
-  isLlmTaskExplorationLayout,
-  isResponseAgentsExplorationChrome,
-  isResponseAgentsExplorationNav,
-  isResponseAgentsSep1StyleNav,
-  isSep1StyleAgentListNav,
-  isFullCanvasStyleNav,
-  fullCanvasVariantLabel,
-  isGhostwriterNav,
-} from '../data/agentNavIds'
-import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
-import iconAgentsPurple from '../assets/icon-agents-purple.svg'
-import iconAgentsTwoStarSparkle from '../assets/icon-agents-two-star-sparkle.svg'
-/* Same glyph the canvas's Run test button uses, so the shell-owned CTA matches it. */
-import iconRrPreview from '../assets/rr-chrome/icon-preview.svg'
-import { AgentActivityHeader } from '../components/AgentActivityHeader/AgentActivityHeader'
-import {
-  GhostwriterDigestPrompt,
-  GhostwriterGuidelinesBlock,
-  GhostwriterPlanCard,
-  GhostwriterPlaybookBlock,
-  GhostwriterPlaybookTemplatesBlock,
-  GhostwriterReadingBlock,
-  GhostwriterTemplateDraftsBlock,
-  GhostwriterSourcesBlock,
-  GhostwriterSpamScreenBlock,
-} from '../components/AgentActivityHeader/GhostwriterReadingBlock'
-import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
-import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
-import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
-import {
-  PLAYBOOK_PLAN_CARD,
-  PLAYBOOK_TEMPLATE_OPTIONS,
-  PLAYBOOK_TEMPLATE_QUESTION,
-  PLAYBOOK_TRIAGE_PARAGRAPH,
-} from '../data/ghostwriterPlaybookBlock'
-import {
-  LEARNING_INTRO_PARAGRAPH,
-  READING_INTRO_PARAGRAPH,
-  PLAN_INTRO_PARAGRAPH,
-  SOURCES_NEXT_PARAGRAPH,
-  SPAM_DIGEST_QUESTION,
-} from '../data/ghostwriterReadingBlock'
-import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import {
-  rememberCreateAgentChat,
-  getLastSavedCreateChat,
-  setCreateAiDraftTrail,
-  registerBuiltinCreateAiDraft,
-} from '../data/createAgentChatStore'
+import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
-import { FrontDeskDraftReviewContent, FRONT_DESK_DRAFT_REFILL_PROCEDURE } from '../components/AgentDraftReview/FrontDeskDraftReviewContent'
-import { useAiBuilderTrail } from '../components/AiBuilderPanel/useAiBuilderTrail'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -120,23 +59,11 @@ import LocationsDrawer from '../workflow/RHSDrawer/LocationsDrawer.jsx'
 
 interface AgentDetailScreenProps {
   agentName: string
-  /**
-   * Side-nav item id (e.g. `response-agents-sep-1`). Used to distinguish Sep 1
-   * library-only create landings from the Ghostwriter create flow that shares
-   * the same display `agentName`.
-   */
-  navId?: string
-  onEditAgent?: (
-    agentName: string,
-    draft?: WizardAgentDraft,
-    returnTo?: { instanceName: string; tab: string },
-    status?: string,
-  ) => void
+  onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
-  /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
-   *  (threaded through to `AgentInstanceScreen` → `AgentSettingsTab`). */
-  onOpenIntegrationSettings?: (integrationId: string) => void
+  /** Settings tab's Booking template "Edit template" link — opens that template's editor. */
+  onOpenBookingTemplates?: (templateId: string) => void
   product?: string
   /** Set (e.g. by the canvas eye icon) to reopen a specific instance + tab after a remount. */
   pendingInstanceView?: { instanceName: string; tab: string } | null
@@ -147,140 +74,6 @@ interface AgentDetailScreenProps {
    *  recommendation inside a specific agent instance. */
   initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
   onInitialRecommendationFocusConsumed?: () => void
-  /** Set by the host app (e.g. the Agent directory "Create agent" CTA) to land directly in
-   *  the create-agent flow instead of the agent's default Agents-tab table. */
-  autoOpenCreateFlow?: boolean
-  onAutoOpenCreateFlowConsumed?: () => void
-  /** Address-bar deep link: instance, tab, log row, panel. */
-  routeDeep?: DeepRoute
-  onDeepRouteChange?: (deep: DeepRoute) => void
-}
-
-/** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
-const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
-  'response-agents-sep-1',
-  'response-agents-full-canvas',
-  // Ghostwriter is deliberately absent: its Create agent opens the same full-bleed
-  // Ghostwriter chat shell exploration uses, not the illustration + library cards.
-  'response-agents',
-  'reminder-agent-sep-1',
-])
-
-const REVIEW_RESPONSE_AGENT_NAME = 'Review response agents'
-const REVIEW_RESPONSE_EXPLORATION_AGENT_NAME = 'Review response agents (exploration)'
-
-function isReviewResponseAgentName(name: string) {
-  return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
-}
-
-/** Review response agent (exploration) grid card layout — locked to Default (Figma icon card). */
-type ExplorationCardLayout = 'default' | 'r1' | 'r2' | 'r3'
-
-const SHORT_MONTH: Record<string, string> = {
-  January: 'Jan',
-  February: 'Feb',
-  March: 'Mar',
-  April: 'Apr',
-  May: 'May',
-  June: 'Jun',
-  July: 'Jul',
-  August: 'Aug',
-  September: 'Sep',
-  October: 'Oct',
-  November: 'Nov',
-  December: 'Dec',
-}
-
-function formatShortUpdatedDate(raw?: string): string | null {
-  if (!raw) return null
-  const [month, day] = raw.trim().split(/\s+/)
-  if (month && day && SHORT_MONTH[month]) return `${SHORT_MONTH[month]} ${day}`
-  return raw
-}
-
-/** Default exploration card meta — "By Rupa · Aug 6". */
-function formatCardAuthorMeta(updatedBy?: string, lastUpdated?: string): string {
-  const author = updatedBy?.trim().split(/\s+/)[0]
-  const date = formatShortUpdatedDate(lastUpdated)
-  if (author && date) return `By ${author} · ${date}`
-  if (author) return `By ${author}`
-  return date ?? '—'
-}
-
-/** Footer location count — "20 locations". */
-function formatCardLocationLabel(locations?: string): string | null {
-  if (!locations?.trim()) return null
-  const digits = locations.replace(/[^\d]/g, '')
-  if (!digits) return null
-  const count = Number.parseInt(digits, 10)
-  if (!Number.isFinite(count)) return null
-  return `${count.toLocaleString()} location${count === 1 ? '' : 's'}`
-}
-
-/** Tooltip only when line-clamp / truncate actually clips the text. */
-function TruncatedTooltipText({
-  text,
-  className,
-  tooltipClassName = 'block w-full min-w-0 max-w-full overflow-hidden',
-  as: Tag = 'span',
-}: {
-  text: string
-  className?: string
-  tooltipClassName?: string
-  as?: 'span' | 'h3' | 'p'
-}) {
-  const ref = useRef<HTMLElement>(null)
-  const [truncated, setTruncated] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const check = () => {
-      setTruncated(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)
-    }
-    check()
-    const ro = new ResizeObserver(check)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [text])
-
-  return (
-    <Tooltip
-      content={text}
-      variant="detail"
-      disabled={!truncated}
-      className={tooltipClassName}
-    >
-      <Tag ref={ref as never} className={className}>
-        {text}
-      </Tag>
-    </Tooltip>
-  )
-}
-
-const FRONTDESK_AGENT_NAME = 'Front desk agent'
-const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
-
-function isFrontdeskAgentName(name: string) {
-  return name === FRONTDESK_AGENT_NAME || name === FRONTDESK_EXPLORATION_AGENT_NAME
-}
-
-/** Instance-card icon — resolved from agent + instance names so each agent type keeps its own glyph. */
-function getAgentInstanceCardGlyph(agentName: string, instanceName?: string): LibraryCardGlyph {
-  const key = `${instanceName ?? ''} ${agentName}`.toLowerCase()
-  if (key.includes('front desk') || isFrontdeskAgentName(agentName)) return 'front-desk'
-  if (key.includes('reminder')) return 'reminder'
-  if (key.includes('waitlist')) return 'scheduling'
-  if (key.includes('pre-visit') || key.includes('previsit')) return 'prep'
-  if (key.includes('recall')) return 'noshow'
-  if (key.includes('revenue')) return 'dashboard'
-  if (key.includes('treatment plan')) return 'medication'
-  if (key.includes('review generation')) return 'generation'
-  if (key.includes('review tagging')) return 'tagging'
-  if (key.includes('tagging') && key.includes('routing')) return 'routing'
-  if (key.includes('outreach')) return 'sms-webchat'
-  if (isReviewResponseAgentName(agentName) || key.includes('review response')) return 'autonomous'
-  return 'templates'
 }
 
 interface AgentInstance {
@@ -325,88 +118,7 @@ interface AgentInstance {
   clickThroughRate?: string
   /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
   issues?: number
-  lastUpdated?: string
-  updatedBy?: string
-  /** When true, Agents table shows a "Draft by {draftUpdatedBy} · {draftUpdatedAgo}" subtext under this row's name. */
-  hasDraft?: boolean
-  draftUpdatedBy?: string
-  draftUpdatedAgo?: string
-  /** Region label from the source RegionRow — used by Agents FilterPanel. */
-  region?: string
-  /** City mapped from region for Location filter. */
-  locationName?: string
-  /** Default exploration card body copy — falls back to workflow goals when omitted. */
-  cardDescription?: string
-  [key: string]: string | number | boolean | undefined
-}
-
-function AgentInstanceMoreMenu({
-  row,
-  items,
-  compact = false,
-}: {
-  row: AgentInstance
-  items: RowMenuItem<AgentInstance>[]
-  /** Ghost icon button (no border) for dense card headers. */
-  compact?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  const visibleItems = items.filter((item) => (item.visible ? item.visible(row) : true))
-  if (visibleItems.length === 0) return null
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        aria-label="More actions"
-        onClick={(e) => {
-          e.stopPropagation()
-          const rect = btnRef.current?.getBoundingClientRect()
-          if (!rect) return
-          setMenuPos({ top: rect.bottom + 4, left: rect.right - 216 })
-          setOpen((current) => !current)
-        }}
-        className={
-          compact
-            ? 'flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2 hover:text-text-primary'
-            : 'flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2'
-        }
-      >
-        <Icon name="more_vert" size={compact ? 18 : 20} />
-      </button>
-      {open && createPortal(
-        <>
-          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-[110] min-w-[216px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
-            style={{ top: menuPos.top, left: menuPos.left }}
-          >
-            {visibleItems.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  item.onClick(row)
-                  setOpen(false)
-                }}
-                className={`block w-full px-md py-sm text-left text-body hover:bg-surface-hover ${
-                  item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </>,
-        document.body,
-      )}
-    </>
-  )
+  [key: string]: string | number | undefined
 }
 
 const TABS: Tab[] = [
@@ -415,15 +127,15 @@ const TABS: Tab[] = [
 ]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
-  Active: 'success',
-  Inactive: 'warning',
+  Running: 'success',
+  Paused:  'warning',
   Draft:   'neutral',
 }
 
 // Default row order for the instance table — active agents first, drafts last.
 const STATUS_ORDER: Record<string, number> = {
-  Active: 0,
-  Inactive: 1,
+  Running: 0,
+  Paused: 1,
   Draft: 2,
 }
 
@@ -471,154 +183,73 @@ interface RegionRow {
   clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
-  /** Live instance also has an unpublished draft — shown as a subtext under the row's name. */
-  hasDraft?: boolean
-  lastUpdated?: string
-  updatedBy?: string
-  draftUpdatedBy?: string
-  draftUpdatedAgo?: string
-  /** Default exploration card body copy — falls back to workflow goals when omitted. */
-  cardDescription?: string
 }
 
-/** Sample dates / editors for the Agents table trailing columns. */
-const LAST_UPDATED_SAMPLES = [
-  'August 6',
-  'August 5',
-  'August 3',
-  'July 29',
-] as const
-const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
-/** Relative timestamps for the Agents table's "Draft by {name} · {ago}" subtext. */
-const DRAFT_AGO_SAMPLES = ['2h ago', '4h ago', '1d ago', '3d ago'] as const
-
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
-  [FRONTDESK_AGENT_NAME]: [
-    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
-    { region: 'East region',  status: 'Active', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
-    { region: 'South region', status: 'Inactive',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
-    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
-  ],
-  [FRONTDESK_EXPLORATION_AGENT_NAME]: [
-    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
-    { region: 'East region',  status: 'Active', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
-    { region: 'South region', status: 'Inactive',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
-    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
+  'Front desk agent': [
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'] },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'] },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140' },
   ],
   'Reminder agent': [
-    { region: 'North region', status: 'Active', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min', issues: AGENT_INSTANCE_ISSUE_COUNTS['Reminder agent - North region'], instanceName: 'Reminder agent - North region' },
-    { region: 'East region',  status: 'Active', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min', instanceName: 'Reminder agent - East region' },
-    { region: 'South region', status: 'Inactive',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min', instanceName: 'Reminder agent - South region' },
-    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min', instanceName: 'Reminder agent - West region' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min' },
+    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min' },
+    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min' },
+    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min' },
   ],
   'Outreach agent': [
-    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
-    { region: 'East region',  status: 'Active', channels: 'Text, Email',       interactions: '610', fcr: '37%', aht: '3m 10s', escalation: '12%', locations: '212' },
-    { region: 'South region', status: 'Inactive',  channels: 'Email',             interactions: '360', fcr: '35%', aht: '3m 30s', escalation: '14%', locations: '180' },
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Text, Email',       interactions: '610', fcr: '37%', aht: '3m 10s', escalation: '12%', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '360', fcr: '35%', aht: '3m 30s', escalation: '14%', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call, Text',  interactions: '213', fcr: '30%', aht: '3m 55s', escalation: '17%', locations: '140' },
   ],
   'Waitlist agent': [
-    { region: 'North region', status: 'Active', channels: 'Text, Email',       outreachSent: '800',  slotsFilled: '780',  fillRate: '34%', timeSaved: '1.8 hrs', locations: '500' },
-    { region: 'East region',  status: 'Active', channels: 'Voice call',        outreachSent: '500',  slotsFilled: '400',  fillRate: '29%', timeSaved: '2.2 hrs', locations: '250' },
-    { region: 'South region', status: 'Inactive',  channels: 'Text',              outreachSent: '500',  slotsFilled: '490',  fillRate: '26%', timeSaved: '2.8 hrs', locations: '200' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       outreachSent: '800',  slotsFilled: '780',  fillRate: '34%', timeSaved: '1.8 hrs', locations: '500' },
+    { region: 'East region',  status: 'Running', channels: 'Voice call',        outreachSent: '500',  slotsFilled: '400',  fillRate: '29%', timeSaved: '2.2 hrs', locations: '250' },
+    { region: 'South region', status: 'Paused',  channels: 'Text',              outreachSent: '500',  slotsFilled: '490',  fillRate: '26%', timeSaved: '2.8 hrs', locations: '200' },
     { region: 'West region',  status: 'Draft',   channels: 'Email',             outreachSent: '1050', slotsFilled: '1000', fillRate: '22%', timeSaved: '3.4 hrs', locations: '100' },
   ],
   'Pre-visit agent': [
-    { region: 'North region', status: 'Active', channels: 'Text, Email',       interactions: '1,040', fcr: '962',   aht: '93%', escalation: '37h', locations: '358' },
-    { region: 'East region',  status: 'Active', channels: 'Voice call',        interactions: '880',   fcr: '810',   aht: '92%', escalation: '31h', locations: '212' },
-    { region: 'South region', status: 'Inactive',  channels: 'Web chat',          interactions: '760',   fcr: '694',   aht: '91%', escalation: '27h', locations: '180' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,040', fcr: '962',   aht: '93%', escalation: '37h', locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Voice call',        interactions: '880',   fcr: '810',   aht: '92%', escalation: '31h', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Web chat',          interactions: '760',   fcr: '694',   aht: '91%', escalation: '27h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Text',              interactions: '620',   fcr: '556',   aht: '90%', escalation: '22h', locations: '140' },
   ],
   'Recall agent': [
-    { region: 'North region', status: 'Active', channels: 'Voice call, Text',  patientsContacted: '1,120', recallConversionRate: '71%', avgTouchesToBook: '2.2', staffHoursSaved: '94h', revenueRecovered: '$44K', locations: '358' },
-    { region: 'East region',  status: 'Active', channels: 'Text, Email',       patientsContacted: '890',   recallConversionRate: '69%', avgTouchesToBook: '2.4', staffHoursSaved: '74h', revenueRecovered: '$32K', locations: '212' },
-    { region: 'South region', status: 'Inactive',  channels: 'Email',             patientsContacted: '820',   recallConversionRate: '66%', avgTouchesToBook: '2.6', staffHoursSaved: '62h', revenueRecovered: '$28K', locations: '180' },
+    { region: 'North region', status: 'Running', channels: 'Voice call, Text',  patientsContacted: '1,120', recallConversionRate: '71%', avgTouchesToBook: '2.2', staffHoursSaved: '94h', revenueRecovered: '$44K', locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Text, Email',       patientsContacted: '890',   recallConversionRate: '69%', avgTouchesToBook: '2.4', staffHoursSaved: '74h', revenueRecovered: '$32K', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Email',             patientsContacted: '820',   recallConversionRate: '66%', avgTouchesToBook: '2.6', staffHoursSaved: '62h', revenueRecovered: '$28K', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        patientsContacted: '580',   recallConversionRate: '62%', avgTouchesToBook: '2.8', staffHoursSaved: '44h', revenueRecovered: '$20K', locations: '140' },
   ],
   'Revenue agent': [
-    { region: 'North region', status: 'Active', channels: 'Text, Email',       balancesContacted: '590', amountCollected: '$48K', arDaysReduced: '-31%', clickToPayRate: '76%', staffHoursSaved: '62h', locations: '358' },
-    { region: 'East region',  status: 'Active', channels: 'Email',             balancesContacted: '440', amountCollected: '$38K', arDaysReduced: '-28%', clickToPayRate: '74%', staffHoursSaved: '46h', locations: '212' },
-    { region: 'South region', status: 'Inactive',  channels: 'Text',              balancesContacted: '490', amountCollected: '$34K', arDaysReduced: '-26%', clickToPayRate: '72%', staffHoursSaved: '40h', locations: '180' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       balancesContacted: '590', amountCollected: '$48K', arDaysReduced: '-31%', clickToPayRate: '76%', staffHoursSaved: '62h', locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Email',             balancesContacted: '440', amountCollected: '$38K', arDaysReduced: '-28%', clickToPayRate: '74%', staffHoursSaved: '46h', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Text',              balancesContacted: '490', amountCollected: '$34K', arDaysReduced: '-26%', clickToPayRate: '72%', staffHoursSaved: '40h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       balancesContacted: '300', amountCollected: '$22K', arDaysReduced: '-23%', clickToPayRate: '70%', staffHoursSaved: '28h', locations: '140' },
   ],
   'Treatment plan agent': [
-    { region: 'North region', status: 'Active', channels: 'Voice call',        plansFollowedUp: '680', acceptanceRate: '63%', revenueUnlocked: '$288K', callToBookingConversion: '48%', warmTransferRate: '9%', avgTouchesToAccept: '2.0', staffHoursSaved: '88h', locations: '358' },
-    { region: 'East region',  status: 'Active', channels: 'Voice call, Text',  plansFollowedUp: '530', acceptanceRate: '61%', revenueUnlocked: '$224K', callToBookingConversion: '44%', warmTransferRate: '11%', avgTouchesToAccept: '2.1', staffHoursSaved: '68h', locations: '212' },
-    { region: 'South region', status: 'Inactive',  channels: 'Text, Email',       plansFollowedUp: '490', acceptanceRate: '59%', revenueUnlocked: '$204K', callToBookingConversion: '41%', warmTransferRate: '12%', avgTouchesToAccept: '2.2', staffHoursSaved: '58h', locations: '180' },
+    { region: 'North region', status: 'Running', channels: 'Voice call',        plansFollowedUp: '680', acceptanceRate: '63%', revenueUnlocked: '$288K', callToBookingConversion: '48%', warmTransferRate: '9%', avgTouchesToAccept: '2.0', staffHoursSaved: '88h', locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Voice call, Text',  plansFollowedUp: '530', acceptanceRate: '61%', revenueUnlocked: '$224K', callToBookingConversion: '44%', warmTransferRate: '11%', avgTouchesToAccept: '2.1', staffHoursSaved: '68h', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Email',       plansFollowedUp: '490', acceptanceRate: '59%', revenueUnlocked: '$204K', callToBookingConversion: '41%', warmTransferRate: '12%', avgTouchesToAccept: '2.2', staffHoursSaved: '58h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Email',             plansFollowedUp: '440', acceptanceRate: '57%', revenueUnlocked: '$176K', callToBookingConversion: '38%', warmTransferRate: '14%', avgTouchesToAccept: '2.4', staffHoursSaved: '48h', locations: '140' },
   ],
   'Tagging & routing agent': [
-    { region: 'North region', status: 'Active', channels: 'Voice call, Text, Chat', statusUpdated: '1000', conversationsAssigned: '900', conversationsManaged: '950', timeSaved: '20m', locations: '500' },
-    { region: 'East Region',  status: 'Active', channels: 'Text, Chat',             statusUpdated: '1000', conversationsAssigned: '800', conversationsManaged: '900', timeSaved: '15m', locations: '250' },
-    { region: 'South Region', status: 'Inactive',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
+    { region: 'North region', status: 'Running', channels: 'Voice call, Text, Chat', statusUpdated: '1000', conversationsAssigned: '900', conversationsManaged: '950', timeSaved: '20m', locations: '500' },
+    { region: 'East Region',  status: 'Running', channels: 'Text, Chat',             statusUpdated: '1000', conversationsAssigned: '800', conversationsManaged: '900', timeSaved: '15m', locations: '250' },
+    { region: 'South Region', status: 'Paused',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
     { region: 'West Region',  status: 'Draft',   channels: 'Chat',                   statusUpdated: '400',  conversationsAssigned: '350', conversationsManaged: '380', timeSaved: '2m',  locations: '100' },
   ],
-  [REVIEW_RESPONSE_AGENT_NAME]: [
-    { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
-    { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true, draftUpdatedAgo: '4h ago' },
-    { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
-  ],
-  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
-    {
-      region: 'North Region',
-      status: 'Active',
-      channels: 'Email',
-      reviewsResponded: '102',
-      responseRate: '15%',
-      avgResponseTime: '20m',
-      timeSaved: '4h 20m',
-      locations: '500',
-      instanceName: 'Review response agent - North Region',
-      cardDescription:
-        'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
-    },
-    {
-      region: 'East Region',
-      status: 'Active',
-      channels: 'Email',
-      reviewsResponded: '98',
-      responseRate: '9%',
-      avgResponseTime: '5m',
-      timeSaved: '1h 10m',
-      locations: '250',
-      instanceName: 'Review response agent - East Region',
-      cardDescription:
-        'Replies to eligible reviews using pre-approved templates after a quick quality check. Escalates edge cases to your team instead of posting automatically.',
-    },
-    {
-      region: 'South Region',
-      status: 'Active',
-      channels: 'Email',
-      reviewsResponded: '53',
-      responseRate: '9%',
-      avgResponseTime: '10m',
-      timeSaved: '45m',
-      locations: '200',
-      instanceName: 'Review response agent - South Region',
-      hasDraft: true,
-      draftUpdatedAgo: '4h ago',
-      cardDescription:
-        'Publishes templated responses across Google and Facebook for every new review. A pending draft updates the rotation rules for negative-star reviews.',
-    },
-    {
-      region: 'West Region',
-      status: 'Inactive',
-      channels: 'Email',
-      reviewsResponded: '35',
-      responseRate: '8%',
-      avgResponseTime: '2m',
-      timeSaved: '3h 20m',
-      locations: '100',
-      instanceName: 'Review response agent - West Region',
-      cardDescription:
-        'Paused instance that previously suggested reply drafts in the dashboard for staff approval before posting. Re-enable to resume coverage for this region.',
-    },
+  'Review response agents': [
+    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   'Review generation agents': [
     {
       region: 'North Region',
-      status: 'Active',
+      status: 'Running',
       channels: 'Email, Text',
       reviewsReceived: '112',
       contactsReached: '115',
@@ -629,7 +260,7 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     },
     {
       region: 'A/B testing',
-      status: 'Active',
+      status: 'Running',
       channels: 'Email, Text',
       reviewsReceived: '137',
       contactsReached: '150',
@@ -639,517 +270,130 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
       instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
     },
   ],
-  // First-time empty — no instances yet; Agents tab shows the create empty state.
-  'Review tagging agents': [],
 }
 
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
 
-/** Map region labels → sample cities so Location filter matches real row fields. */
-const REGION_TO_LOCATION: Record<string, string> = {
-  'North region': 'Mountain View',
-  'North Region': 'Mountain View',
-  'East region': 'Palo Alto',
-  'East Region': 'Palo Alto',
-  'South region': 'San Jose',
-  'South Region': 'San Jose',
-  'West region': 'Sunnyvale',
-  'West Region': 'Sunnyvale',
-}
-
-function matchesChannelFilter(rowChannels: string, picked: string[]) {
-  if (!picked.length) return true
-  const parts = rowChannels.split(',').map((c) => c.trim().toLowerCase())
-  return picked.some((p) => parts.includes(p.toLowerCase()))
-}
-
-function matchesStatusFilter(row: AgentInstance, picked: string[]) {
-  if (!picked.length) return true
-  return picked.some((status) => {
-    if (status === 'Draft') return row.status === 'Draft' || !!row.hasDraft
-    return row.status === status
-  })
-}
-
-function parseAgentsUpdatedMs(value?: string) {
-  if (!value) return 0
-  // Display strings omit the year (e.g. "August 6") — pin a year so sort still works.
-  const forParse = /,\s*\d{4}\b/.test(value) || /\b\d{4}\b/.test(value) ? value : `${value}, 2026`
-  const t = Date.parse(forParse)
-  return Number.isFinite(t) ? t : 0
-}
+type LibraryView = 'grid' | 'list'
 
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
   {
-    id: 'sms-webchat',
-    title: 'SMS and Webchat',
-    description:
-      'Handles customer conversations using your configured skills, procedures, and tools.',
-    glyph: 'sms-webchat' as const,
-    tone: 'info' as const,
+    id: 'routing',
+    title: 'Routing and triage',
+    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
-    glyph: 'intake' as const,
-    tone: 'success' as const,
   },
   {
     id: 'established',
     title: 'Established patient scheduling',
     description: 'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
-    glyph: 'scheduling' as const,
-    tone: 'ai' as const,
   },
   {
     id: 'urgent',
     title: 'Urgent escalations',
     description: 'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
-    glyph: 'routing' as const,
-    tone: 'danger' as const,
   },
 ]
 
 // ── Healthcare-only "Front desk agents" create screen: library cards ───────
-type CreateLibraryCard = {
-  id: string
-  title: string
-  description: string
-  glyph?: LibraryCardGlyph
-  tone?: LibraryCardTone
-  /** Preview modal Outcome — falls back to a generic coverage blurb when omitted. */
-  outcome?: string
-  /** Short value-proposition chip shown on the library card, after the description. */
-  valueProp?: string
-  steps?: AgentLibraryPreviewStep[]
-}
-
-function workflowAgentNameForLibraryCard(card: CreateLibraryCard, currentAgent?: string): string {
-  const haystack = `${card.id} ${card.title} ${currentAgent ?? ''}`.toLowerCase()
-  if (haystack.includes('reminder') || haystack.includes('no-show') || haystack.includes('confirmation')) {
-    return 'Reminder agent'
-  }
-  if (haystack.includes('generation')) return 'Review generation agent'
-  if (haystack.includes('review')) return 'Review response agent'
-  if (haystack.includes('waitlist')) return 'Waitlist agent'
-  if (haystack.includes('outreach')) return 'Outreach agent'
-  if (haystack.includes('tagging')) return 'Tagging & routing agent'
-  if (haystack.includes('pre-visit') && !haystack.includes('preparation')) return 'Pre-visit agent'
-  if (currentAgent?.startsWith('Reminder')) return 'Reminder agent'
-  return 'Front desk agent'
-}
-
-function toLibraryPreviewData(
-  card: CreateLibraryCard,
-  opts?: { product?: string; agentName?: string },
-): AgentLibraryPreviewData {
-  return {
-    id: card.id,
-    name: card.title,
-    goal: card.description,
-    outcome:
-      card.outcome ??
-      'Increase coverage by automating more of this workflow across locations. Free your team to focus on exceptions while the agent handles the routine work.',
-    locationsLabel: 'All locations',
-    product: opts?.product,
-    workflowAgentName: workflowAgentNameForLibraryCard(card, opts?.agentName),
-    steps: card.steps ?? [
-      {
-        kind: 'trigger',
-        title: '1. Workflow starts',
-        description: 'Agent triggers when the configured event occurs across all sources and locations.',
-      },
-      {
-        kind: 'task',
-        title: '2. Complete the agent goal',
-        description: card.description,
-      },
-    ],
-  }
-}
-
-const HEALTHCARE_FRONTDESK_CREATE_CARDS: CreateLibraryCard[] = [
+const HEALTHCARE_FRONTDESK_CREATE_CARDS = [
   {
-    id: 'sms-webchat',
-    title: 'SMS and Webchat',
-    description:
-      'Handles customer conversations using your configured skills, procedures, and tools.',
-    glyph: 'sms-webchat',
-    tone: 'info',
+    id: 'routing',
+    title: 'Routing and triage',
+    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
-    glyph: 'intake',
-    tone: 'success',
   },
   {
     id: 'patient-scheduling',
     title: 'Patient scheduling',
     description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
-    glyph: 'scheduling',
-    tone: 'ai',
   },
 ]
 
-const REMINDER_CREATE_CARDS: CreateLibraryCard[] = [
+const REMINDER_CREATE_CARDS = [
   {
     id: 'appointment-confirmation-reminder',
     title: 'Appointment confirmation reminder',
     description:
       'Sends a multi-step reminder sequence at 72h, 24h, and 2h before the appointment. Adapts tone and channel based on patient history and no-show risk.',
-    glyph: 'reminder',
-    tone: 'info',
   },
   {
     id: 'no-show-risk-intervention',
     title: 'No-show risk intervention agent',
     description:
-      'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign — including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
-    glyph: 'noshow',
-    tone: 'danger',
+      'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign – including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
   },
   {
     id: 'pre-visit-preparation-reminder',
     title: 'Pre-visit preparation reminder',
     description:
       'Reminds patients of pre-visit requirements — fasting, medication holds, forms, and insurance documents. Checks completion status via patient portal and sends a targeted follow-up only for outstanding items.',
-    glyph: 'prep',
-    tone: 'success',
   },
   {
     id: 'chronic-care-medication-reminder',
     title: 'Chronic care & medication reminder',
     description:
       "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
-    glyph: 'medication',
-    tone: 'warning',
   },
 ]
 
-const WAITLIST_CREATE_CARDS: CreateLibraryCard[] = [
-  {
-    id: 'waitlist-agent',
-    title: 'Waitlist agent',
-    description:
-      'Manages waitlist requests by reviewing availability, offering open slots, and confirming appointments with patients.',
-    glyph: 'scheduling',
-    tone: 'info',
-    outcome:
-      'Fill more cancelled and open slots automatically. Reach waitlisted patients faster so your schedule stays fuller with less staff outreach.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. Open or cancelled slot is available',
-        description: 'Agent triggers when a cancelled or newly opened appointment slot needs to be filled.',
-      },
-      {
-        kind: 'task',
-        title: '2. Outreach and confirm',
-        description: 'Contacts waitlisted patients, offers the open slot, and confirms the booking.',
-      },
-    ],
-  },
-]
-
-const PREVISIT_CREATE_CARDS: CreateLibraryCard[] = [
-  {
-    id: 'previsit-checkin-outreach',
-    title: 'Pre-visit agent',
-    description: 'The Pre-Visit Agent automates pre-appointment check-in form outreach.',
-    glyph: 'prep',
-    tone: 'success',
-    outcome:
-      'Increase intake completion before visits. Patients arrive prepared so your front desk spends less time chasing forms.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. Upcoming appointment needs intake',
-        description: 'Agent triggers ahead of the visit when intake or check-in forms are still outstanding.',
-      },
-      {
-        kind: 'task',
-        title: '2. Send outreach and follow up',
-        description: 'Sends check-in form reminders and follows up until the intake is completed.',
-      },
-    ],
-  },
-]
-
-const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
+const REVIEW_RESPONSE_CREATE_CARDS = [
   {
     id: 'reviews-response-templates',
     title: 'Review response agent replying using templates',
-    description: 'Uses pre-defined templates and responds to reviews automatically',
-    glyph: 'templates',
-    tone: 'info',
-    valueProp: 'On-brand & consistent',
-    outcome:
-      'Respond to more reviews consistently with on-brand templates. Reduce drafting time while keeping reply quality steady across locations.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
-      },
-      {
-        kind: 'task',
-        title: '2. Match and post a template reply',
-        description: 'Selects the best matching template by rating and topic, then posts the reply automatically.',
-      },
-    ],
+    description: 'Uses pre-defined templates and responds to reviews automatically.',
   },
   {
     id: 'reviews-response-autonomous',
     title: 'Review response agent replying autonomously',
-    description:
-      'Uses AI to analyze review sentiment, generates and posts unique, context-aware replies automatically',
-    glyph: 'autonomous',
-    tone: 'danger',
-    valueProp: 'Fully autonomous',
-    outcome:
-      'Increase review coverage by responding to more reviews across platforms effortlessly. Boost response rates with faster, personalized replies that build trust and satisfaction.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
-      },
-      {
-        kind: 'task',
-        title: '2. Analyze sentiment and draft reply',
-        description:
-          'Uses AI to understand the review, generate a unique context-aware reply, and apply brand tone guidelines.',
-      },
-      {
-        kind: 'task',
-        title: '3. Post reply automatically',
-        description: 'Publishes the reply to the original review source without waiting for human approval.',
-      },
-    ],
+    description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
   },
   {
     id: 'reviews-response-human-approval',
     title: 'Review response agent replying after human approval',
-    description:
-      'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting',
-    glyph: 'approval',
-    tone: 'success',
-    valueProp: 'Human-in-the-loop',
-    outcome:
-      'Keep humans in the loop for sensitive replies while still drafting faster. Improve consistency without losing final approval control.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
-      },
-      {
-        kind: 'task',
-        title: '2. Draft reply for approval',
-        description: 'Generates a unique reply and routes it to the dashboard for a teammate to approve or edit.',
-      },
-      {
-        kind: 'task',
-        title: '3. Post after approval',
-        description: 'Publishes the reply once a human approves the draft.',
-      },
-    ],
+    description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
   },
   {
     id: 'reviews-response-dashboard-suggestions',
     title: 'Review response agent suggesting replies in dashboard',
-    description:
-      'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting',
-    glyph: 'dashboard',
-    tone: 'ai',
-    valueProp: 'One-click posting',
-    outcome:
-      'Give your team ready-to-post drafts in the dashboard. Speed up manual responses while keeping full control of when replies go live.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
-      },
-      {
-        kind: 'task',
-        title: '2. Suggest reply in dashboard',
-        description: 'Surfaces a unique draft reply next to the review so a teammate can post with one click.',
-      },
-    ],
+    description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
   },
 ]
 
-/** Rotating landing-composer placeholders for the review response create flow. */
-const REVIEW_RESPONSE_PLACEHOLDERS = [
-  'Reply to new reviews using templates…',
-  'Create a review response agent that drafts and posts unique, context-aware replies automatically…',
-  'Hold replies for human approval…',
-  'Build an agent that suggests reply drafts in the dashboard for one-click posting…',
-  'Flag spam and alert the team…',
-] as const
-
-/** Response agents (exploration) landing — Option 2 composer seed. */
-const REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2 =
-  'Hey, I want you to respond to my reviews.'
-
-/**
- * Ghostwriter landing only — picking Files from the attach menu seeds the composer with a
- * playbook doc and the sentence that goes with it, rather than opening `FilesModal`. The
- * demo's "I already wrote this down" entry point.
- */
-const GHOSTWRITER_PLAYBOOK_ATTACHMENT: AttachItem = {
-  id: 'gw-playbook',
-  kind: 'file',
-  label: 'Review response playbook v3.docx',
-}
-
-const GHOSTWRITER_PLAYBOOK_PROMPT =
-  'These are our review response use cases. Build the agent from this.'
-
-const FRONTDESK_PLACEHOLDERS = [
-  'Route urgent calls to the right team…',
-  'Create a front desk agent that handles intake, verifies insurance, and books the right visit…',
-  'Schedule or reschedule returning patients…',
-  'Build an agent that triages symptoms and transfers with full call context…',
-  'Answer after-hours questions…',
-] as const
-
-const REMINDER_PLACEHOLDERS = [
-  'Send appointment reminders at 72h, 24h, and 2h…',
-  'Create a reminder agent that intervenes on high no-show risk patients with a live AI call…',
-  'Remind patients about forms and prep…',
-  'Build an agent that nudges overdue medication refills and chronic care follow-ups…',
-  'Confirm visits over text and email…',
-] as const
-
-const DEFAULT_CREATE_PLACEHOLDER = 'Describe the agent you want to build…'
-
-const REVIEW_GENERATION_CREATE_CARDS: CreateLibraryCard[] = [
+const REVIEW_GENERATION_CREATE_CARDS = [
   {
     id: 'reviews-generation-standard',
     title: 'Review generation agent',
     description: 'Sends review requests to customers after transactions complete across email and text.',
-    glyph: 'generation',
-    tone: 'info',
   },
   {
     id: 'reviews-generation-ab',
     title: 'Review generation agent with A/B testing',
     description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
-    glyph: 'generation-ab',
-    tone: 'ai',
   },
 ]
 
 const REVIEW_GENERATION_CREATE_PROMPT =
   'Create a review generation agent that sends review request emails and texts after a customer completes a transaction, so we get more reviews across locations.'
 
-const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
-  {
-    id: 'review-tagging-evaluation',
-    title: 'Review tagging - Review evaluation',
-    description:
-      'Analyzes review comments to identify topics mentioned in it. Uses the identified topics to tag reviews.',
-    glyph: 'tagging',
-    tone: 'success',
-    outcome:
-      'Tag more reviews consistently by topic so teams can find and act on themes faster across locations.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations.',
-      },
-      {
-        kind: 'task',
-        title: '2. Identify topics and apply tags',
-        description:
-          'Analyzes review comments for mentioned topics, then applies matching tags to the review.',
-      },
-    ],
-  },
-  {
-    id: 'review-tagging-high-risk',
-    title: 'High risk review tagging agent',
-    description:
-      'Analyzes review comments to identify extreme negative sentiments and critical issue topics mentioned to match them with tags existing in the account',
-    glyph: 'tagging-risk',
-    tone: 'danger',
-    outcome:
-      'Surface high-risk reviews quickly so teams can prioritize responses and escalate critical issues.',
-    steps: [
-      {
-        kind: 'trigger',
-        title: '1. New review is received or updated',
-        description:
-          'Agent triggers when a new review is received or an existing review is updated across all sources and locations.',
-      },
-      {
-        kind: 'task',
-        title: '2. Detect high-risk sentiment and tag',
-        description:
-          'Flags extreme negative sentiment and critical topics, then matches them to existing account tags.',
-      },
-    ],
-  },
-]
-
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
     {
-      id: 'sms-webchat',
-      title: 'SMS and Webchat',
-      description:
-        'Handles customer conversations using your configured skills, procedures, and tools.',
-    },
-    {
-      id: 'new-patient',
-      title: 'New patient intake',
-      description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
-    },
-    {
-      id: 'patient-scheduling',
-      title: 'Patient scheduling',
-      description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
-    },
-  ],
-  'Reminder agent': [
-    {
-      id: 'appointment-confirmation-reminder',
-      title: 'Appointment confirmation reminder',
-      description:
-        'Sends a multi-step reminder sequence at 72h, 24h, and 2h before the appointment. Adapts tone and channel based on patient history and no-show risk.',
-    },
-    {
-      id: 'no-show-risk-intervention',
-      title: 'No-show risk intervention agent',
-      description:
-        'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign – including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
-    },
-    {
-      id: 'pre-visit-preparation-reminder',
-      title: 'Pre-visit preparation reminder',
-      description:
-        'Reminds patients of pre-visit requirements — fasting, medication holds, forms, and insurance documents. Checks completion status via patient portal and sends a targeted follow-up only for outstanding items.',
-    },
-    {
-      id: 'chronic-care-medication-reminder',
-      title: 'Chronic care & medication reminder',
-      description:
-        "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
+      id: 'frontdesk-routing-triage',
+      title: 'Front desk agent routing and triage',
+      description: 'Handles inbound calls, texts, and web chats to identify patient needs, answer questions from the knowledge base, manage appointments & verify insurance',
     },
   ],
   'Recall agent': [
@@ -1209,192 +453,130 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       description: 'Analyze conversations to assign the right contact status, route messages to the appropriate team or user, and manage when conversations stay open or closed.',
     },
   ],
-  [REVIEW_RESPONSE_AGENT_NAME]: [
+  'Review response agents': [
     {
       id: 'reviews-response-templates',
       title: 'Review response agent replying using templates',
-      description: 'Uses pre-defined templates and responds to reviews automatically',
+      description: 'Uses pre-defined templates and responds to reviews automatically.',
     },
     {
       id: 'reviews-response-autonomous',
       title: 'Review response agent replying autonomously',
-      description: 'Uses AI to analyze sentiment and post unique, context-aware replies automatically',
+      description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
     },
     {
       id: 'reviews-response-human-approval',
       title: 'Review response agent replying after human approval',
-      description: 'Uses AI to analyze sentiment, generate unique replies for human approval before posting',
+      description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
     },
     {
       id: 'reviews-response-dashboard-suggestions',
       title: 'Review response agent suggesting replies in dashboard',
-      description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
+      description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
     },
   ],
-  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
+  'Review generation agents': [
     {
-      id: 'reviews-response-templates',
-      title: 'Review response agent replying using templates',
-      description: 'Uses pre-defined templates and responds to reviews automatically',
+      id: 'reviews-generation-standard',
+      title: 'Review generation agent',
+      description: 'Sends review requests to customers after transactions complete across email and text.',
     },
     {
-      id: 'reviews-response-autonomous',
-      title: 'Review response agent replying autonomously',
-      description: 'Uses AI to analyze sentiment and post unique, context-aware replies automatically',
-    },
-    {
-      id: 'reviews-response-human-approval',
-      title: 'Review response agent replying after human approval',
-      description: 'Uses AI to analyze sentiment, generate unique replies for human approval before posting',
-    },
-    {
-      id: 'reviews-response-dashboard-suggestions',
-      title: 'Review response agent suggesting replies in dashboard',
-      description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
+      id: 'reviews-generation-ab',
+      title: 'Review generation agent with A/B testing',
+      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
     },
   ],
-  'Review generation agents': REVIEW_GENERATION_CREATE_CARDS,
-  'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
-/**
- * Create-flow library grid:
- * - ≤4 cards → one centered row (container shrinks to N cards)
- * - >4 cards → max 4 per row, left-aligned wrap (same as Review response Library)
- */
-function createLibraryGridClasses(cardCount: number): { shell: string; grid: string } {
-  if (cardCount > 4) {
-    return {
-      shell: 'max-w-[1280px]',
-      grid: 'grid-cols-1 min-[500px]:grid-cols-2 min-[900px]:grid-cols-4',
-    }
-  }
-  if (cardCount === 4) {
-    return {
-      shell: 'max-w-[1280px]',
-      grid: 'grid-cols-1 min-[500px]:grid-cols-4',
-    }
-  }
-  if (cardCount === 3) {
-    return {
-      shell: 'max-w-[1000px]',
-      grid: 'grid-cols-1 min-[500px]:grid-cols-3',
-    }
-  }
-  if (cardCount === 2) {
-    return {
-      shell: 'max-w-[720px]',
-      grid: 'grid-cols-1 min-[500px]:grid-cols-2',
-    }
-  }
-  return {
-    shell: 'max-w-[360px]',
-    grid: 'max-w-[325px] grid-cols-1',
-  }
-}
-
-// ── Illustration for the create-agent empty state (library-only landing) ───
+// ── Illustration for the create-agent empty state ──────────────────────────
 function CreateAgentEmptyState({
-  cards,
   onCreateFromScratch,
   onSelectFromLibrary,
-  onPreview,
-  fromScratchLabel = 'Create from scratch',
-  /** `build` = screenshot-style "Build your agent" + collapsible library (1st-time UX). */
-  layout = 'compact',
-  libraryDefaultOpen = true,
 }: {
-  cards: CreateLibraryCard[]
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
-  onPreview?: (card: CreateLibraryCard) => void
-  fromScratchLabel?: string
-  layout?: 'compact' | 'build'
-  libraryDefaultOpen?: boolean
 }) {
-  const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
-  const cardCount = cards.length
-  const { shell: libraryShellClass, grid: libraryGridClass } = createLibraryGridClasses(cardCount)
-  const showLibrary = layout === 'compact' || libraryOpen
   return (
-    <div
-      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${libraryShellClass}`}
-    >
-      <img
-        src={agentEmptyState}
-        alt=""
-        width={282}
-        height={194}
-        className="h-[194px] w-[282px] shrink-0 select-none"
-        draggable={false}
-      />
-
-      {layout === 'build' ? (
-        <div className="flex flex-col items-center gap-sm text-center">
-          <p className="m-0 flex items-center justify-center gap-xs text-body text-text-primary">
-            <span
-              className="ai-gradient-icon size-4 shrink-0"
-              style={{
-                WebkitMaskImage: `url("${iconAgentsPurple}")`,
-                maskImage: `url("${iconAgentsPurple}")`,
-              }}
-              aria-hidden
-            />
-            <span>
-              Build your agent.{' '}
-              <button
-                type="button"
-                onClick={onCreateFromScratch}
-                className="text-body text-text-action hover:underline"
-              >
-                {fromScratchLabel}
-              </button>
-            </span>
-          </p>
-          <p className="m-0 text-body text-text-primary">or</p>
-          <button
-            type="button"
-            onClick={() => setLibraryOpen((open) => !open)}
-            className="flex items-center gap-xs text-body text-text-primary"
-            aria-expanded={libraryOpen}
-          >
-            Select from library
-          </button>
+    <div className="flex w-full max-w-[980px] flex-col items-center gap-[24px] py-lg">
+      {/* Mini workflow illustration */}
+      <div className="relative shrink-0">
+        <div
+          style={{
+            width: 168,
+            background: '#fff',
+            borderRadius: 6,
+            padding: '20px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            boxShadow: '0 2px 12px rgba(33,33,33,0.08)',
+          }}
+        >
+          <div style={{ background: '#ebeff6', borderRadius: 4, height: 23, width: 76, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+            <div style={{ background: '#afbcdf', height: 4, borderRadius: 100, width: 51 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 1 }}>
+            {[0, 1].map((i) => (
+              <div key={i} style={{ width: 36, height: 31, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <svg width="36" height="31" viewBox="0 0 36 31" fill="none" style={{ position: 'absolute' }}>
+                  <path d="M18 0 L18 12 M18 12 L6 24 M18 12 L30 24" stroke="#afbcdf" strokeWidth="1" fill="none" />
+                </svg>
+                <div style={{ background: '#f4f6f7', borderRadius: 40, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#555', lineHeight: 1 }}>add</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 1, width: '100%' }}>
+            <div style={{ background: '#ebeff6', border: '1px dashed #2b3650', borderRadius: 4, height: 23, width: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#555', lineHeight: 1 }}>add</span>
+            </div>
+            <div style={{ background: '#ebeff6', borderRadius: 4, height: 23, flex: 1, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+              <div style={{ background: '#afbcdf', height: 4, borderRadius: 100, width: '80%' }} />
+            </div>
+          </div>
         </div>
-      ) : (
-        <p className="m-0 text-center text-body text-text-secondary">
+        {/* AI overlay chip */}
+        <div style={{ position: 'absolute', top: -23, right: -62, background: '#ecf5fd', border: '1px solid #6834b7', borderRadius: 4, padding: '11px 7px', display: 'flex', alignItems: 'flex-end', gap: 5, width: 116 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#6834b7', lineHeight: 1 }}>auto_awesome</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ background: '#3790e7', height: 4, borderRadius: 100, width: '100%' }} />
+            <div style={{ background: '#9aceff', height: 4, borderRadius: 100, width: '60%' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Copy + CTAs */}
+      <div className="flex flex-col items-center gap-sm text-center">
+        <p style={{ fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px', color: '#212121', margin: 0 }}>
+          Build your agent.{' '}
           <button
             type="button"
             onClick={onCreateFromScratch}
-            className="text-body text-text-action hover:underline"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#1976d2', fontSize: 14, fontFamily: 'inherit', letterSpacing: '-0.28px', lineHeight: '20px' }}
           >
-            {fromScratchLabel}
-          </button>
-          <span className="text-text-primary">{' or select from '}</span>
-          <button type="button" className="text-body text-text-primary hover:underline">
-            library
+            Set up a new agent
           </button>
         </p>
-      )}
+        <p style={{ fontSize: 14, color: '#212121', margin: 0, letterSpacing: '-0.28px', lineHeight: '20px' }}>or</p>
+        <p style={{ fontSize: 14, color: '#212121', margin: 0, letterSpacing: '-0.28px', lineHeight: '20px' }}>
+          Select from <span style={{ color: '#1976d2' }}>library</span>
+        </p>
+      </div>
 
-      {showLibrary && (
-        <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-          <div className={`grid w-full gap-md ${libraryGridClass}`}>
-            {cards.map((tpl) => (
-              <InfoCard
-                key={tpl.id}
-                title={tpl.title}
-                description={tpl.description}
-                glyph={tpl.glyph}
-                tone={tpl.tone}
-                actionLabel="Use agent"
-                onAction={() => onSelectFromLibrary(tpl.id)}
-                onPreview={onPreview ? () => onPreview(tpl) : undefined}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Library template cards — same InfoCard component as the Library tab */}
+      <div className="grid w-full grid-cols-4 gap-md">
+        {LIBRARY_TEMPLATES.map((tpl) => (
+          <InfoCard
+            key={tpl.id}
+            title={tpl.title}
+            description={tpl.description}
+            actionLabel="Use agent"
+            onAction={() => onSelectFromLibrary(tpl.id)}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -1422,7 +604,7 @@ const RECOMMENDED_PROCEDURES = [
     description: 'Detects urgent symptoms or safety issues and routes the caller fast, for caller safety.',
   },
   {
-    name: 'Book, cancel, or reschedule appointment',
+    name: 'Book, cancel, reschedule appointment',
     description: 'Verifies patient identity, confirms insurance, matches services, and secures a slot.',
   },
   {
@@ -1476,7 +658,7 @@ const JOB_TO_PROCEDURE: Record<string, string> = {
   dfc: 'Talk to human',
   rcu: 'General inquiry',
   slc: 'Handle emergency or urgent concern',
-  mau: 'Book, cancel, or reschedule appointment',
+  mau: 'Book, cancel, reschedule appointment',
 }
 
 
@@ -1585,7 +767,7 @@ export function getCreateWithAiSetup(agentName: string): {
   variant: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   pageTitle: string
   initialPrompt?: string
-  libraryCards?: CreateLibraryCard[]
+  libraryCards?: { id: string; title: string; description: string }[]
   fromScratchLabel: string
 } {
   const name = agentName || ''
@@ -1644,40 +826,6 @@ Open questions before I draft the workflow:
 const REVIEW_RESPONSE_INTRO_PARAGRAPHS = [
   "You're getting about 120 new reviews a week and 2,400 are still unanswered. I'll build an agent that triages every review, writes an on-brand reply, and publishes it — let me get a few details right.",
   'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
-]
-
-/** Response agents (exploration) Ghostwriter — first question after landing SEND. */
-const REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS = [
-  "A review response agent — I can do that. Almost everything I need is already sitting in your account, so I'm only going to ask you the one thing I can't work out on my own.",
-  'It changes the whole shape of the build:',
-]
-
-const REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS = [
-  {
-    id: 'live',
-    title: 'Respond as reviews come in',
-    description: 'A live agent that watches your sources and replies within minutes, indefinitely.',
-    recommended: true,
-  },
-  {
-    id: 'backlog',
-    title: 'Clear my backlog once',
-    description: 'A single pass over everything currently unanswered, then it stops.',
-    recommended: false,
-  },
-] as const
-
-const REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS = [
-  'Got it.',
-  'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
-]
-
-const GHOSTWRITER_SHELL_TABS: Tab[] = [
-  { id: 'ghostwriter', label: 'Ghostwriter' },
-  { id: 'workflow', label: 'Workflow' },
-  { id: 'tools', label: 'Tools' },
-  { id: 'knowledge', label: 'Knowledge' },
-  { id: 'simulation', label: 'Simulation' },
 ]
 
 const REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS = `Sources: all of them. Trigger becomes every new or updated review across the full source set — no per-site filters to maintain.
@@ -2087,80 +1235,37 @@ const DRAFT_BUILD_STATUS_LABELS = [
   'Finalising your draft',
 ]
 
-/** Minimum time the Agent activity header stays in its running state. */
-const ACTIVITY_MIN_RUN_MS = 1400
-
 function CreateAgentThinkingPanel({
   open,
   onToggle,
   onComplete,
   text = CREATE_AGENT_THOUGHTS_TEXT,
   label = 'Thoughts',
-  fast = true,
-  activityChrome = false,
+  fast = false,
 }: {
   open: boolean
   onToggle: () => void
   onComplete?: () => void
   text?: string
   label?: string
-  /** Faster typewriter for create-agent thoughts (default on). */
+  /** Faster typewriter — used by the Reminder create flow. */
   fast?: boolean
-  /** Ghostwriter: swap the "Thoughts" row for the shared Agent activity header — dot-grid
-   *  loader + shimmer while typing, then a grey "· N steps · 1.8s" pill. */
-  activityChrome?: boolean
 }) {
   const completedRef = useRef(false)
-  /** Live elapsed while the thought streams; frozen once it finishes. */
-  const [elapsedMs, setElapsedMs] = useState(0)
   const { typed, done } = useTypewriter(text, {
-    charsPerTick: fast ? 10 : 6,
-    intervalMs: fast ? 10 : 12,
+    charsPerTick: fast ? 8 : 4,
+    intervalMs: fast ? 12 : 16,
     onDone: () => {
       if (completedRef.current) return
       completedRef.current = true
-      window.setTimeout(() => onComplete?.(), fast ? 100 : 180)
+      window.setTimeout(() => onComplete?.(), fast ? 200 : 350)
     },
   })
 
   const lines = typed.split('\n')
 
-  /* The typewriter can finish in ~200ms on a short thought, which would flash the loader
-     and shimmer past too fast to read. Hold the running state for a minimum beat so the
-     interaction is actually perceptible. */
-  const [minHoldElapsed, setMinHoldElapsed] = useState(false)
-  useEffect(() => {
-    if (!activityChrome) return undefined
-    const id = window.setTimeout(() => setMinHoldElapsed(true), ACTIVITY_MIN_RUN_MS)
-    return () => window.clearTimeout(id)
-  }, [activityChrome])
-
-  const activityRunning = !done || !minHoldElapsed
-
-  useEffect(() => {
-    if (!activityChrome || !activityRunning) return undefined
-    const started = Date.now() - elapsedMs
-    const id = window.setInterval(() => setElapsedMs(Date.now() - started), 100)
-    return () => window.clearInterval(id)
-    // `elapsedMs` is seeded once per run; re-running on every tick would reset the clock.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityChrome, activityRunning])
-
-  /* Each non-empty line of the thought reads as one step. */
-  const stepCount = text.split('\n').filter((l) => l.trim()).length
-
   return (
     <div className="agent-build-fade mt-3xl flex flex-col gap-sm">
-      {activityChrome ? (
-        <AgentActivityHeader
-          running={activityRunning}
-          steps={stepCount}
-          seconds={`${(elapsedMs / 1000).toFixed(1)}s`}
-          collapsed={!open}
-          onToggle={onToggle}
-          toggleDisabled={!done}
-        />
-      ) : (
       <button
         type="button"
         onClick={onToggle}
@@ -2168,11 +1273,7 @@ function CreateAgentThinkingPanel({
         aria-expanded={open}
         className="group flex items-center gap-sm text-left disabled:cursor-default"
       >
-        <GreyTriggerIcon
-          size={16}
-          inAvatarColumn
-          className="text-text-secondary transition-colors group-hover:text-text-primary"
-        />
+        <Icon name="bolt" size={18} className="shrink-0 text-text-icon" />
         <span className="text-body text-text-secondary transition-colors group-hover:text-text-primary">{label}</span>
         <Icon
           name={open ? 'expand_less' : 'expand_more'}
@@ -2180,14 +1281,13 @@ function CreateAgentThinkingPanel({
           className="shrink-0 text-text-icon transition-colors group-hover:text-text-primary"
         />
       </button>
-      )}
       <div
         className={`overflow-hidden transition-[max-height,opacity,margin] duration-200 ${
           open ? 'mt-sm max-h-[2400px] opacity-100' : 'mt-0 max-h-0 opacity-0'
         }`}
         aria-hidden={!open}
       >
-        <div className="ml-[12px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
+        <div className="ml-[9px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
           {lines.map((line, i) => {
             const isLast = i === lines.length - 1
             const caret = isLast && !done ? <TypingCaret /> : null
@@ -2221,7 +1321,7 @@ function CreateAgentThinkingPanel({
   )
 }
 
-// Intro "Thinking" loader — sits in the same slot the Thoughts row (trigger icon + label) takes
+// Intro "Thinking" loader — sits in the same slot the Thoughts row (bolt icon + label) takes
 // over once loading finishes.
 function IntroThinkingLoaderRow() {
   return (
@@ -2243,13 +1343,13 @@ function TypedParagraphs({
   paragraphs,
   className,
   onDone,
-  fast = true,
+  fast = false,
   instant = false,
 }: {
   paragraphs: ReactNode[]
   className?: string
   onDone?: () => void
-  /** Faster typewriter for create-agent replies (default on). */
+  /** Faster typewriter — used by the Reminder create flow. */
   fast?: boolean
   /** Show the full reply immediately — used when reopening a past chat from history. */
   instant?: boolean
@@ -2259,8 +1359,8 @@ function TypedParagraphs({
   const texts = paragraphs.map((p) => (typeof p === 'string' ? p : ''))
   const current = texts[visible] ?? ''
   const { typed, done } = useTypewriter(instant ? '' : current, {
-    charsPerTick: fast ? 10 : 6,
-    intervalMs: fast ? 10 : 12,
+    charsPerTick: fast ? 8 : 4,
+    intervalMs: fast ? 12 : 16,
   })
 
   useEffect(() => {
@@ -2273,7 +1373,7 @@ function TypedParagraphs({
     if (instant) return
     if (!done) return
     if (visible < paragraphs.length - 1) {
-      const t = window.setTimeout(() => setVisible((v) => v + 1), fast ? 60 : 100)
+      const t = window.setTimeout(() => setVisible((v) => v + 1), fast ? 120 : 200)
       return () => window.clearTimeout(t)
     }
     onDone?.()
@@ -2464,7 +1564,6 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
-          fast
           paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -2510,80 +1609,6 @@ function ReviewAgentReply({
             onComplete?.()
           }}
         />
-      </div>
-    </div>
-  )
-}
-
-/** Demo trigger: picking this pill simulates a mid-stream API failure. */
-function isSourcesStreamFailDemo(text: string) {
-  return /^facebook only\.?$/i.test(text.trim())
-}
-
-const SOURCES_STREAM_FAIL_PARTIAL =
-  "Got it — I'll limit the trigger to Facebook reviews only. Next I'll narrow loc"
-
-/** Streams a partial assistant reply, then surfaces an inline failure + Retry. */
-function GhostwriterStreamFailTurn({
-  onFail,
-}: {
-  onFail: (partial: string) => void
-}) {
-  const onFailRef = useRef(onFail)
-  onFailRef.current = onFail
-
-  const { typed, done } = useTypewriter(SOURCES_STREAM_FAIL_PARTIAL, {
-    charsPerTick: 3,
-    intervalMs: 18,
-  })
-
-  useEffect(() => {
-    if (!done) return
-    // Brief pause after the last token so the cut feels like a dropped stream.
-    const t = window.setTimeout(() => onFailRef.current(SOURCES_STREAM_FAIL_PARTIAL), 280)
-    return () => window.clearTimeout(t)
-  }, [done])
-
-  return (
-    <div className="agent-build-fade mt-3xl flex gap-sm" aria-live="polite">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning />
-      </span>
-      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
-        <p className="whitespace-pre-wrap">
-          {typed}
-          <TypingCaret />
-        </p>
-      </div>
-    </div>
-  )
-}
-
-/** Inline stream-failure state (ChatGPT / Claude / Fin pattern) — not a toast. */
-function GhostwriterStreamFailError({
-  partial,
-  onRetry,
-}: {
-  partial: string
-  onRetry: () => void
-}) {
-  return (
-    <div className="agent-build-fade mt-3xl flex gap-sm" role="alert">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={false} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-sm text-body leading-6">
-        {partial ? (
-          <p className="whitespace-pre-wrap text-text-primary">{partial}</p>
-        ) : null}
-        <p className="text-text-secondary">Couldn&apos;t generate a response</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-        >
-          Retry
-        </button>
       </div>
     </div>
   )
@@ -2659,37 +1684,6 @@ function ReviewChoicePills({
   )
 }
 
-function ReviewModeChoiceCards({
-  onPick,
-  options = REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS,
-}: {
-  onPick: (title: string) => void
-  /** Defaults to the live-vs-backlog pair; the playbook flow passes its own set. */
-  options?: readonly { id: string; title: string; description: string; recommended?: boolean }[]
-}) {
-  /* No `w-full` on the wrapper: with `ml-3xl` it resolved to parent-width + 32px and
-     overflowed the scroll container, clipping the cards' right edge. In this flex column
-     the default stretch already fills the parent minus the margin. */
-  return (
-    <div className="agent-build-fade ml-3xl mt-sm flex max-w-full flex-col gap-sm">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onPick(option.title)}
-          className="flex flex-col items-start gap-xs rounded-lg border border-border bg-surface px-lg py-md text-left transition-colors hover:bg-surface-hover"
-        >
-          <span className="flex flex-wrap items-center gap-sm">
-            <span className="text-body text-text-primary">{option.title}</span>
-            {option.recommended ? <Chip label="Recommended" variant="info" /> : null}
-          </span>
-          <span className="text-small text-text-secondary">{option.description}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function ReviewBuildingCard({
   onDone,
   persisted = false,
@@ -2744,6 +1738,7 @@ function ReviewBuildingCard({
       </p>
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
+          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -2798,38 +1793,17 @@ function ReviewResponseThread({
   onViewWorkflow,
   onMakeChanges,
   workflowVisible = false,
-  explorationModeChoice = false,
-  ghostwriterPolish = false,
-  agentCreated = false,
-  fromPlaybook = false,
-  onOpenPlan,
-  planOpen = false,
   suppressAutoScrollBriefly,
   pendingAnswer,
   onPendingAnswerConsumed,
   onComposerFillChange,
   onBusyChange,
-  onTrailChange,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
   onViewWorkflow?: () => void
   onMakeChanges?: () => void
   workflowVisible?: boolean
-  /** Response agents (exploration): live-vs-backlog cards before the sources script. */
-  explorationModeChoice?: boolean
-  /** Ghostwriter: thoughts panels wear the Agent activity header. */
-  ghostwriterPolish?: boolean
-  /** True once Create agent has been used — retires that CTA in the plan card. */
-  agentCreated?: boolean
-  /**
-   * Ghostwriter: the opening message carried the review-response playbook, so the agent
-   * reads the document back as requirements instead of giving its usual intro.
-   */
-  fromPlaybook?: boolean
-  /** Ghostwriter plan panel — opened from the plan card, rendered by the parent. */
-  onOpenPlan?: () => void
-  planOpen?: boolean
   suppressAutoScrollBriefly: () => void
   /** Answer submitted from the bottom composer (click-to-fill → send). */
   pendingAnswer?: string
@@ -2837,38 +1811,9 @@ function ReviewResponseThread({
   /** Scripted reply for the current open question — parent fills composer on click. */
   onComposerFillChange?: (text: string | null) => void
   onBusyChange?: (busy: boolean) => void
-  /** Emits the visible create-thread turns for the shared AI Builder draft store. */
-  onTrailChange?: (trail: CreateChatTurn[]) => void
 }) {
   const [introDone, setIntroDone] = useState(false)
-  /** Playbook opening: requirements → triage reply → templates check → the cadence question. */
-  const [playbookBlockDone, setPlaybookBlockDone] = useState(false)
-  const [playbookTriageDone, setPlaybookTriageDone] = useState(false)
-  const [playbookTemplatesDone, setPlaybookTemplatesDone] = useState(false)
-  const [templateQuestionDone, setTemplateQuestionDone] = useState(false)
-  const [templateAnswer, setTemplateAnswer] = useState('')
-  const [templateDraftsDone, setTemplateDraftsDone] = useState(false)
-  const [openQuestionsIntroDone, setOpenQuestionsIntroDone] = useState(false)
-  const [openQuestionsDone, setOpenQuestionsDone] = useState(false)
-  const [modeAnswer, setModeAnswer] = useState('')
-  const [modeFollowReady, setModeFollowReady] = useState(false)
-  const [modeFollowDone, setModeFollowDone] = useState(false)
-  /** Ghostwriter's reading block: intro reply finished, then the block itself. */
-  const [readingIntroDone, setReadingIntroDone] = useState(false)
-  const [readingBlockDone, setReadingBlockDone] = useState(false)
-  const [learningIntroDone, setLearningIntroDone] = useState(false)
-  const [learningBlockDone, setLearningBlockDone] = useState(false)
-  const [sourcesBlockDone, setSourcesBlockDone] = useState(false)
-  const [sourcesTeaserDone, setSourcesTeaserDone] = useState(false)
-  const [spamScreenDone, setSpamScreenDone] = useState(false)
-  const [digestQuestionDone, setDigestQuestionDone] = useState(false)
-  const [digestEmail, setDigestEmail] = useState('')
-  const [planIntroDone, setPlanIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
-  /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
-  const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
-  const [sourcesStreamPartial, setSourcesStreamPartial] = useState('')
-  const [sourcesStreamAttemptKey, setSourcesStreamAttemptKey] = useState(0)
   const [sourcesThoughtsOpen, setSourcesThoughtsOpen] = useState(true)
   const [sourcesReplyReady, setSourcesReplyReady] = useState(false)
   const [sourcesReplyDone, setSourcesReplyDone] = useState(false)
@@ -2910,13 +1855,7 @@ function ReviewResponseThread({
   const [postDraftAnswer, setPostDraftAnswer] = useState('')
 
   const awaitingStep =
-    explorationModeChoice && introDone && !modeAnswer
-      ? null
-      : explorationModeChoice && modeAnswer && !modeFollowDone
-        ? null
-        : ghostwriterPolish
-          ? null /* reading block replaces the sources question */
-          : introDone && (!explorationModeChoice || modeFollowDone) && !sourcesAnswer
+    introDone && !sourcesAnswer
       ? 'sources'
       : sourcesReplyDone && !locationsAnswer
         ? 'locations'
@@ -2936,27 +1875,6 @@ function ReviewResponseThread({
                       ? 'build'
                       : null
 
-  const applySourcesAnswer = (raw: string, { recoverFail = false }: { recoverFail?: boolean } = {}) => {
-    const text = raw.trim()
-    if (!text) return
-    const fill = REVIEW_RESPONSE_CHOICES.sources.composerFill
-    const next =
-      text === 'All sources' || text === fill
-        ? fill
-        : text
-    setSourcesThoughtsOpen(true)
-    setSourcesReplyReady(false)
-    setSourcesReplyDone(false)
-    setSourcesStreamPartial('')
-    if (recoverFail || !isSourcesStreamFailDemo(next)) {
-      setSourcesStreamPhase('ok')
-    } else {
-      setSourcesStreamPhase('attempting')
-      setSourcesStreamAttemptKey((k) => k + 1)
-    }
-    setSourcesAnswer(next)
-  }
-
   const applyAnswer = (raw: string) => {
     const text = raw.trim()
     if (!text || !awaitingStep) return
@@ -2964,7 +1882,9 @@ function ReviewResponseThread({
 
     switch (awaitingStep) {
       case 'sources':
-        applySourcesAnswer(text)
+        setSourcesAnswer(
+          text === 'All sources' || text === fill ? fill : text,
+        )
         break
       case 'locations':
         if (text === 'Select locations') {
@@ -3009,43 +1929,22 @@ function ReviewResponseThread({
     }
   }
 
-  const handleSourcesStreamRetry = () => {
-    // Re-send the same user prompt; this time the stream succeeds (no auto-retry loop).
-    applySourcesAnswer(sourcesAnswer || 'Facebook only', { recoverFail: true })
-  }
-
   useEffect(() => {
-    if (!pendingAnswer?.trim()) return
-    // While a failed turn sits inline, composer stays live — a new send rephrases.
-    if (sourcesStreamPhase === 'failed') {
-      applySourcesAnswer(pendingAnswer)
-      onPendingAnswerConsumed?.()
-      return
-    }
-    if (!awaitingStep) return
+    if (!pendingAnswer?.trim() || !awaitingStep) return
     applyAnswer(pendingAnswer)
     onPendingAnswerConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingAnswer, awaitingStep, sourcesStreamPhase])
+  }, [pendingAnswer, awaitingStep])
 
   useEffect(() => {
-    if (sourcesStreamPhase === 'failed' && sourcesAnswer) {
-      onComposerFillChange?.(sourcesAnswer)
-      return
-    }
     onComposerFillChange?.(
       awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep].composerFill : null,
     )
-  }, [awaitingStep, onComposerFillChange, sourcesStreamPhase, sourcesAnswer])
-
-  const sourcesAwaitingReply =
-    Boolean(sourcesAnswer) && !sourcesReplyDone && sourcesStreamPhase !== 'failed'
+  }, [awaitingStep, onComposerFillChange])
 
   const busy =
     !introDone ||
-    (explorationModeChoice && !modeAnswer) ||
-    (explorationModeChoice && Boolean(modeAnswer) && !modeFollowDone) ||
-    sourcesAwaitingReply ||
+    (Boolean(sourcesAnswer) && !sourcesReplyDone) ||
     (Boolean(locationsAnswer) && !locationsReplyDone) ||
     (Boolean(spamOkAnswer) && !spamAlertDone) ||
     (Boolean(spamAlertAnswer) && !spamEmailDone) ||
@@ -3065,128 +1964,6 @@ function ReviewResponseThread({
     if (buildCardDone) onDraftReady?.(REVIEW_RESPONSE_BUILD_CARD.title)
   }, [buildCardDone, onDraftReady])
 
-  useEffect(() => {
-    if (!onTrailChange) return
-    const trail: CreateChatTurn[] = []
-    const pushAgent = (paragraphs: string[]) => {
-      trail.push({ kind: 'agent', paragraphs })
-    }
-
-    // Intro is on screen as soon as this thread mounts (typed reply).
-    pushAgent(
-      explorationModeChoice
-        ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
-        : REVIEW_RESPONSE_INTRO_PARAGRAPHS,
-    )
-    if (explorationModeChoice && modeAnswer) {
-      trail.push({ kind: 'user', text: modeAnswer })
-      if (modeFollowReady || modeFollowDone) {
-        pushAgent([...REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS])
-      }
-    }
-
-    if (sourcesAnswer) {
-      trail.push({ kind: 'user', text: sourcesAnswer })
-      if (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') {
-        trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
-        if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
-      }
-    }
-    if (locationsAnswer) {
-      trail.push({ kind: 'user', text: locationsAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_LOCATIONS_THOUGHTS })
-      if (locationsReplyReady || locationsReplyDone) pushAgent(REVIEW_RESPONSE_LOCATIONS_REPLY)
-    }
-    if (spamOkAnswer) {
-      trail.push({ kind: 'user', text: spamOkAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_OK_THOUGHTS })
-      if (spamAlertReady || spamAlertDone) pushAgent(REVIEW_RESPONSE_SPAM_ALERT_REPLY)
-    }
-    if (spamAlertAnswer) {
-      trail.push({ kind: 'user', text: spamAlertAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_ALERT_THOUGHTS })
-      if (spamEmailReady || spamEmailDone) pushAgent(REVIEW_RESPONSE_SPAM_EMAIL_REPLY)
-    }
-    if (spamEmailAnswer) {
-      trail.push({ kind: 'user', text: spamEmailAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_EMAIL_THOUGHTS })
-      if (offlineReady || offlineDone) pushAgent(REVIEW_RESPONSE_OFFLINE_REPLY)
-    }
-    if (offlineAnswer) {
-      trail.push({ kind: 'user', text: offlineAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_OFFLINE_THOUGHTS })
-      if (writingReady || writingDone) pushAgent(REVIEW_RESPONSE_WRITING_REPLY)
-    }
-    if (writingAnswer) {
-      trail.push({ kind: 'user', text: writingAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_WRITING_THOUGHTS })
-      if (publishReady || publishDone) pushAgent(REVIEW_RESPONSE_PUBLISH_REPLY)
-    }
-    if (publishAnswer) {
-      trail.push({ kind: 'user', text: publishAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_PUBLISH_THOUGHTS })
-      if (holdReady || holdDone) pushAgent(REVIEW_RESPONSE_HOLD_REPLY)
-    }
-    if (buildAnswer) {
-      trail.push({ kind: 'user', text: buildAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_BUILD_THOUGHTS })
-      if (summaryReady || summaryDone) pushAgent(REVIEW_RESPONSE_SUMMARY_PARAGRAPHS)
-    }
-    if (buildCardDone) {
-      trail.push({
-        kind: 'draft',
-        title: REVIEW_RESPONSE_BUILD_CARD.title,
-        description: REVIEW_RESPONSE_BUILD_CARD.description,
-        variant: 'review-response',
-      })
-    }
-    if (postDraftDone) {
-      pushAgent([REVIEW_RESPONSE_POST_DRAFT_REPLY])
-    }
-    if (postDraftAnswer) {
-      trail.push({ kind: 'user', text: postDraftAnswer })
-    }
-
-    onTrailChange(trail)
-  }, [
-    onTrailChange,
-    explorationModeChoice,
-    modeAnswer,
-    modeFollowReady,
-    modeFollowDone,
-    sourcesAnswer,
-    sourcesStreamPhase,
-    sourcesReplyReady,
-    sourcesReplyDone,
-    locationsAnswer,
-    locationsReplyReady,
-    locationsReplyDone,
-    spamOkAnswer,
-    spamAlertReady,
-    spamAlertDone,
-    spamAlertAnswer,
-    spamEmailReady,
-    spamEmailDone,
-    spamEmailAnswer,
-    offlineReady,
-    offlineDone,
-    offlineAnswer,
-    writingReady,
-    writingDone,
-    writingAnswer,
-    publishReady,
-    publishDone,
-    publishAnswer,
-    holdReady,
-    holdDone,
-    buildAnswer,
-    summaryReady,
-    summaryDone,
-    buildCardDone,
-    postDraftDone,
-    postDraftAnswer,
-  ])
-
   const handlePostDraftAnswer = (label: string) => {
     if (label === 'View in agent builder') {
       onViewWorkflow?.()
@@ -3197,9 +1974,6 @@ function ReviewResponseThread({
     else if (label === 'Make changes') onMakeChanges?.()
   }
 
-  /** Only the first template option ("draft all four") triggers the drafting beat. */
-  const templateDraftsRequested = templateAnswer === PLAYBOOK_TEMPLATE_OPTIONS[0].title
-
   const choice = awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep] : null
   const postDraftPills = workflowVisible
     ? REVIEW_RESPONSE_POST_DRAFT_PILLS.filter((label) => label !== 'View in agent builder')
@@ -3207,186 +1981,17 @@ function ReviewResponseThread({
 
   return (
     <>
-      {/* An attached playbook answers everything the intro would have asked, so the agent
-          reads the document back as requirements instead and keeps only the cadence
-          question. Every other entry point keeps the intro paragraphs unchanged. */}
-      {fromPlaybook ? (
-        <>
-          <GhostwriterPlaybookBlock onComplete={() => setPlaybookBlockDone(true)} />
-          {playbookBlockDone && (
-            <ReviewAgentReply
-              paragraphs={[PLAYBOOK_TRIAGE_PARAGRAPH]}
-              onComplete={() => setPlaybookTriageDone(true)}
-            />
-          )}
-          {playbookTriageDone && (
-            <GhostwriterPlaybookTemplatesBlock onComplete={() => setPlaybookTemplatesDone(true)} />
-          )}
-          {playbookTemplatesDone && (
-            <ReviewAgentReply
-              paragraphs={[PLAYBOOK_TEMPLATE_QUESTION]}
-              onComplete={() => setTemplateQuestionDone(true)}
-            />
-          )}
-          {templateQuestionDone && !templateAnswer && (
-            <ReviewModeChoiceCards options={PLAYBOOK_TEMPLATE_OPTIONS} onPick={setTemplateAnswer} />
-          )}
-          {templateAnswer && <UserBubble>{templateAnswer}</UserBubble>}
-          {/* Only "draft all four" earns the drafting beat; the other two answers go
-              straight on to the next question. */}
-          {templateDraftsRequested && (
-            <GhostwriterTemplateDraftsBlock onComplete={() => setTemplateDraftsDone(true)} />
-          )}
-          {(templateDraftsRequested ? templateDraftsDone : !!templateAnswer) && (
-            <ReviewAgentReply
-              paragraphs={[OPEN_QUESTIONS_INTRO]}
-              onComplete={() => setOpenQuestionsIntroDone(true)}
-            />
-          )}
-          {openQuestionsIntroDone && (
-            <GhostwriterOpenQuestions onDone={() => setOpenQuestionsDone(true)} />
-          )}
-          {/* The playbook path lands on the same plan card the conversational path ends on,
-              rather than re-asking the sources/templates/tone questions it already answered. */}
-          {openQuestionsDone && (
-            <ReviewAgentReply
-              paragraphs={[OPEN_QUESTIONS_LOCKED_IN]}
-              onComplete={() => setPlanIntroDone(true)}
-            />
-          )}
-          {openQuestionsDone && planIntroDone && (
-            <GhostwriterPlanCard
-              onCreateAgent={() => onCreateAgent?.()}
-              onOpenPlan={onOpenPlan}
-              planOpen={planOpen}
-              agentCreated={agentCreated}
-              copy={PLAYBOOK_PLAN_CARD}
-            />
-          )}
-        </>
-      ) : (
-        <>
-          <ReviewAgentReply
-            paragraphs={
-              explorationModeChoice
-                ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
-                : REVIEW_RESPONSE_INTRO_PARAGRAPHS
-            }
-            onComplete={() => setIntroDone(true)}
-          />
-          {introDone && (
-            <MessageActions
-              copyText={
-                (explorationModeChoice
-                  ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
-                  : REVIEW_RESPONSE_INTRO_PARAGRAPHS
-                ).join('\n\n')
-              }
-              className="ml-3xl"
-            />
-          )}
-          {explorationModeChoice && introDone && !modeAnswer && (
-            <ReviewModeChoiceCards onPick={setModeAnswer} />
-          )}
-        </>
-      )}
-      {explorationModeChoice && modeAnswer && <UserBubble>{modeAnswer}</UserBubble>}
-      {/* Ghostwriter goes and reads the account rather than asking for sources/templates/
-          tone — so its follow-up is the reading block, not the sources question. */}
-      {explorationModeChoice && modeAnswer && ghostwriterPolish && (
-        <>
-          <ReviewAgentReply
-            paragraphs={[READING_INTRO_PARAGRAPH]}
-            onComplete={() => setReadingIntroDone(true)}
-          />
-          {readingIntroDone && (
-            <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
-          )}
-          {readingBlockDone && (
-            <ReviewAgentReply
-              paragraphs={[LEARNING_INTRO_PARAGRAPH]}
-              onComplete={() => setLearningIntroDone(true)}
-            />
-          )}
-          {learningIntroDone && (
-            <GhostwriterGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
-          )}
-          {learningBlockDone && (
-            <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
-          )}
-          {sourcesBlockDone && (
-            <ReviewAgentReply
-              paragraphs={[SOURCES_NEXT_PARAGRAPH]}
-              onComplete={() => setSourcesTeaserDone(true)}
-            />
-          )}
-          {sourcesTeaserDone && (
-            <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
-          )}
-          {spamScreenDone && (
-            <ReviewAgentReply
-              paragraphs={[SPAM_DIGEST_QUESTION]}
-              onComplete={() => setDigestQuestionDone(true)}
-            />
-          )}
-          {digestQuestionDone && !digestEmail && (
-            <GhostwriterDigestPrompt onSubmit={setDigestEmail} />
-          )}
-          {digestEmail && <UserBubble>{digestEmail}</UserBubble>}
-          {digestEmail && (
-            <ReviewAgentReply
-              paragraphs={[PLAN_INTRO_PARAGRAPH]}
-              onComplete={() => setPlanIntroDone(true)}
-            />
-          )}
-          {planIntroDone && (
-            <GhostwriterPlanCard
-              onCreateAgent={() => onCreateAgent?.()}
-              onOpenPlan={onOpenPlan}
-              planOpen={planOpen}
-              agentCreated={agentCreated}
-            />
-          )}
-        </>
-      )}
-      {explorationModeChoice && modeAnswer && !ghostwriterPolish && (
-        <ReviewAgentReply
-          paragraphs={[...REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS]}
-          onComplete={() => {
-            setModeFollowReady(true)
-            setModeFollowDone(true)
-          }}
-        />
-      )}
-      {explorationModeChoice && modeFollowDone && !ghostwriterPolish && (
-        <MessageActions
-          copyText={REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS.join('\n\n')}
-          className="ml-3xl"
-        />
+      <ReviewAgentReply paragraphs={REVIEW_RESPONSE_INTRO_PARAGRAPHS} onComplete={() => setIntroDone(true)} />
+      {introDone && (
+        <MessageActions copyText={REVIEW_RESPONSE_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />
       )}
       {choice && awaitingStep === 'sources' && (
         <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
       )}
       {sourcesAnswer && <UserBubble>{sourcesAnswer}</UserBubble>}
-      {sourcesAnswer && sourcesStreamPhase === 'attempting' && (
-        <GhostwriterStreamFailTurn
-          key={sourcesStreamAttemptKey}
-          onFail={(partial) => {
-            setSourcesStreamPartial(partial)
-            setSourcesStreamPhase('failed')
-          }}
-        />
-      )}
-      {sourcesAnswer && sourcesStreamPhase === 'failed' && (
-        <GhostwriterStreamFailError
-          partial={sourcesStreamPartial}
-          onRetry={handleSourcesStreamRetry}
-        />
-      )}
-      {sourcesAnswer && (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') && (
+      {sourcesAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={sourcesThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3417,7 +2022,6 @@ function ReviewResponseThread({
       {locationsAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={locationsThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3448,7 +2052,6 @@ function ReviewResponseThread({
       {spamOkAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={spamOkThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3479,7 +2082,6 @@ function ReviewResponseThread({
       {spamAlertAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={spamAlertThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3510,7 +2112,6 @@ function ReviewResponseThread({
       {spamEmailAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={spamEmailThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3541,7 +2142,6 @@ function ReviewResponseThread({
       {offlineAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={offlineThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3572,7 +2172,6 @@ function ReviewResponseThread({
       {writingAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={writingThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3603,7 +2202,6 @@ function ReviewResponseThread({
       {publishAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={publishThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3634,7 +2232,6 @@ function ReviewResponseThread({
       {buildAnswer && (
         <>
           <CreateAgentThinkingPanel
-            activityChrome={ghostwriterPolish}
             open={buildThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3702,11 +2299,10 @@ function ReviewResponseThread({
       {locationsDrawerOpen && (
         <LocationsDrawer
           onBack={() => setLocationsDrawerOpen(false)}
-          onSave={(selected: { id: string; name: string }[] | { locations?: { id: string; name: string }[] }) => {
+          onSave={(selected: { id: string; name: string }[]) => {
             setLocationsDrawerOpen(false)
-            const list = Array.isArray(selected) ? selected : (selected?.locations || [])
-            if (!list.length) return
-            const names = list.map((loc) => loc.name)
+            if (!selected.length) return
+            const names = selected.map((loc) => loc.name)
             const answer =
               names.length <= 2
                 ? names.join(', ')
@@ -3934,6 +2530,7 @@ function ReminderBuildingCard({
           When the workflow canvas is open, collapse to title + one-liner only. */}
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
+          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -3959,7 +2556,7 @@ function ReminderBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm">
+          <div className="mt-md flex flex-col gap-sm pl-lg">
             {REMINDER_DESIGN_STEPS.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -3978,7 +2575,7 @@ function ReminderBuildingCard({
             })}
           </div>
         ) : !collapsed ? (
-          <div className="agent-build-fade mt-lg">
+          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
             <ReminderDraftReviewContent
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -4315,20 +2912,12 @@ const CREATE_AGENT_DOCS_REPLY_PARAGRAPHS = [
   "CALLOUT: This might take 10–15 minutes. No need to wait — close this whenever, and I'll notify you when your draft is ready.",
 ]
 
-/** Pre-filled into the composer when John clicks the box after being asked for docs. */
-const DEMO_DOCS_ATTACHMENTS: AttachItem[] = [
-  { id: 'docs-transcripts', kind: 'file', label: 'call-transcripts (612).zip' },
-  { id: 'docs-faq', kind: 'file', label: 'insurance-faq.pdf' },
-  { id: 'docs-sop', kind: 'file', label: 'front-desk-SOP.pdf' },
-]
-
 function GhostwriterDocsReply({ onComplete }: { onComplete?: () => void }) {
   return (
     <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
-          fast
           paragraphs={CREATE_AGENT_DOCS_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -4374,7 +2963,6 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
-          fast
           paragraphs={CREATE_AGENT_DRAFT_READY_INTRO}
           onDone={() => setStage('list')}
         />
@@ -4382,7 +2970,7 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
         {(stage === 'list' || stage === 'closing' || stage === 'done') && (
           <div className="agent-build-fade flex flex-col gap-sm">
             <p className="text-body text-text-primary">What your callers actually ask for:</p>
-            <ul className="flex flex-col gap-sm">
+            <ul className="flex flex-col gap-xs">
               {CALLER_JOB_BREAKDOWN.map((job) => (
                 <li key={job.id} className="flex items-start gap-sm text-body text-text-secondary">
                   <span className="shrink-0 text-[18px] leading-6" aria-hidden>
@@ -4399,7 +2987,6 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
 
         {(stage === 'closing' || stage === 'done') && (
           <TypedParagraphs
-            fast
             paragraphs={CREATE_AGENT_DRAFT_READY_CLOSING}
             onDone={() => setStage('done')}
           />
@@ -4411,23 +2998,13 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
 
 // Built live when John opts to add a refill procedure. Must match a procedure
 // name in HC_PROCEDURES so the card can open it in the preview panel.
-const REFILL_PROCEDURE_NAME = FRONT_DESK_DRAFT_REFILL_PROCEDURE
+const REFILL_PROCEDURE_NAME = 'Handle prescription refill request'
 
 const CREATE_AGENT_REFILL_THOUGHTS_TEXT = `Refills are 7% of calls — worth building. A typical refill call: a patient says "I need a refill on my lisinopril." The agent has to identify the patient, pull the prescription from the EHR, confirm the medication and pharmacy, then route the refill to the prescriber for approval — it can't approve refills itself.
 
 The blocker: this needs a pharmacy / e-prescribe integration, which isn't connected yet. So I'll build the procedure with the right steps and tool references, but flag the pharmacy tool as "needs connection" so it's clear this can't go live until someone wires it up. Guardrails stay intact — never give dosage or clinical advice, and controlled substances always go to a human.`
 
 const CREATE_AGENT_REVIEW_THOUGHTS_TEXT = `The review cleanly separates "you told me" vs "I defaulted" so nothing mandatory is hidden. Publishing isn't blocked. I'll let John test before he commits — testing must run every tool in mock mode so no real appointment gets booked.`
-
-const FRONTDESK_POST_DRAFT_REPLY =
-  'I have created a Front desk agent for you to answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human.'
-
-const FRONTDESK_POST_DRAFT_PILLS = [
-  "Yes, that's right",
-  'Make changes',
-  'Test agent',
-  'View in agent builder',
-] as const
 
 const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
   "On it — building the refill procedure now. Here's how it'll work:",
@@ -4444,7 +3021,6 @@ function GhostwriterRefillReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
-          fast
           paragraphs={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -4493,7 +3069,6 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
-          fast
           paragraphs={CREATE_AGENT_TEST_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -4502,12 +3077,164 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
   )
 }
 
+// ── Draft review card ("Your draft is ready — here's everything I built") ──
+const DRAFT_TOOLS = ['Appointment scheduler', 'Patient records (EHR)', 'Insurance verification', 'Human handoff']
+
+const DRAFT_SETTINGS: { setting: string; value: string; confirmed: boolean; source: string }[] = [
+  { setting: 'Channels', value: 'Voice + Text', confirmed: true, source: 'From your response' },
+  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'default' },
+  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'default' },
+  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'default' },
+  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'default' },
+  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'default' },
+]
+
 function DraftReviewSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-xs">
       <p className="text-small text-text-tertiary">{label}</p>
       {children}
     </div>
+  )
+}
+
+function DraftReviewCard({
+  refillAdded,
+  openProcedureName,
+  onOpenProcedure,
+}: {
+  refillAdded: boolean
+  openProcedureName: string | null
+  onOpenProcedure: (name: string) => void
+}) {
+  const procedures: { label: string; note: ReactNode; open: string }[] = [
+    {
+      label: 'Book an appointment',
+      note: 'from your transcripts + SOP · verifies insurance eligibility before confirming a new-patient visit (per your SOP)',
+      open: 'Book, cancel, reschedule appointment',
+    },
+    { label: 'Reschedule an appointment', note: 'from your transcripts', open: 'Reschedule appointment' },
+    {
+      label: 'Answer insurance questions',
+      note: (
+        <>
+          answers from{' '}
+          <span className="inline-flex items-center gap-xs text-text-primary">
+            <Icon name="attach_file" size={14} className="text-text-icon" />
+            insurance-faq.pdf
+          </span>
+        </>
+      ),
+      open: 'Verify insurance',
+    },
+    {
+      label: 'Escalate billing disputes',
+      note: 'from your SOP · also escalates any caller who explicitly asks for a human',
+      open: 'Talk to human',
+    },
+  ]
+  if (refillAdded) {
+    procedures.push({
+      label: 'Handle prescription refills',
+      note: 'flagged — needs a pharmacy integration before it can go live',
+      open: REFILL_PROCEDURE_NAME,
+    })
+  }
+
+  return (
+    <>
+      <DraftReviewSection label="What it does">
+        <p className="text-body leading-6 text-text-primary">
+          Answers inbound conversations on voice and text, books and reschedules appointments, answers insurance
+          questions from your FAQ, and hands off billing disputes to a human.
+        </p>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="When it runs">
+        <p className="text-body leading-6 text-text-primary">Whenever a conversation starts on voice or text.</p>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="Procedures — tap to open and read the steps">
+        <div className="flex flex-col gap-xs">
+          {procedures.map((p) => {
+            const pressed = openProcedureName === p.open
+            return (
+              <button
+                key={p.label}
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => onOpenProcedure(p.open)}
+                className={`flex items-start gap-sm rounded-md px-sm py-sm text-left hover:bg-surface-hover ${
+                  pressed ? 'bg-surface-hover' : ''
+                }`}
+              >
+                <span className="flex h-6 shrink-0 items-center">
+                  <Icon name="menu_book" size={16} className="text-text-icon" />
+                </span>
+                <span className="min-w-0 flex-1 text-body leading-6">
+                  <span className="text-text-primary">{p.label}</span>
+                  <span className="text-text-secondary"> — {p.note}</span>
+                </span>
+                <span className="flex h-6 shrink-0 items-center">
+                  <Icon name="chevron_right" size={18} className="text-text-icon" />
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="Tools it can use">
+        <div className="flex flex-col gap-xs">
+          {DRAFT_TOOLS.map((tool) => (
+            <div key={tool} className="flex w-full items-center gap-sm rounded-md px-sm py-sm">
+              <Icon name="build" size={18} className="shrink-0 text-text-icon" />
+              <span className="inline-flex min-w-0 items-center gap-xs text-body text-text-primary">
+                {tool}
+                <Icon name="check_circle" size={16} className="shrink-0 text-accent-positive" />
+              </span>
+            </div>
+          ))}
+        </div>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="Settings">
+        <div className="flex flex-col gap-sm">
+          {DRAFT_SETTINGS.map((row) => (
+            <div key={row.setting} className="flex flex-col">
+              <span className="text-small leading-tight text-text-tertiary">{row.setting}</span>
+              <div className="flex flex-wrap items-center gap-sm">
+                <span className="text-body leading-6 text-text-primary">{row.value}</span>
+                <span
+                  className={`inline-flex shrink-0 items-center gap-xs text-small ${
+                    row.confirmed
+                      ? 'rounded-full bg-chip-success-bg px-sm py-xs text-chip-success-text'
+                      : 'h-5 rounded-sm bg-surface-l2 px-sm text-text-tertiary'
+                  }`}
+                >
+                  {row.confirmed && <Icon name="check_circle" size={14} className="shrink-0" />}
+                  {row.source}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="Still needed before publish">
+        <p className="text-body leading-6 text-text-primary">
+          Nothing — every required setting is filled (some by default).
+        </p>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="What I left out">
+        <p className="text-body leading-6 text-text-primary">
+          {refillAdded
+            ? 'Nothing — I also built the prescription refill procedure, flagged until you connect a pharmacy integration.'
+            : "Prescription refills (needs a pharmacy integration you haven't connected)."}
+        </p>
+      </DraftReviewSection>
+    </>
   )
 }
 
@@ -4551,10 +3278,10 @@ function BuildingProgressPanel({
   useEffect(() => {
     if (persisted) return
     if (step >= BUILD_STEPS.length) {
-      const t = window.setTimeout(() => onComplete?.(), 300)
+      const t = window.setTimeout(() => onComplete?.(), 500)
       return () => window.clearTimeout(t)
     }
-    const t = window.setTimeout(() => setStep((s) => s + 1), 850)
+    const t = window.setTimeout(() => setStep((s) => s + 1), 1300)
     return () => window.clearTimeout(t)
   }, [step, persisted, onComplete])
 
@@ -4562,7 +3289,7 @@ function BuildingProgressPanel({
     if (done) return
     const id = window.setInterval(() => {
       setActivity((a) => (a + 1) % BUILD_ACTIVITY_MESSAGES.length)
-    }, 500)
+    }, 850)
     return () => window.clearInterval(id)
   }, [done])
 
@@ -4641,12 +3368,12 @@ function FrontdeskBuildingCard({
     if (done) {
       if (!completedRef.current) {
         completedRef.current = true
-        const t = window.setTimeout(() => onDone?.(), 200)
+        const t = window.setTimeout(() => onDone?.(), 350)
         return () => window.clearTimeout(t)
       }
       return
     }
-    const t = window.setTimeout(() => setStep((s) => s + 1), 320)
+    const t = window.setTimeout(() => setStep((s) => s + 1), 480)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, done, persisted])
@@ -4674,6 +3401,7 @@ function FrontdeskBuildingCard({
 
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
+          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -4699,7 +3427,7 @@ function FrontdeskBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm">
+          <div className="mt-md flex flex-col gap-sm pl-lg">
             {steps.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -4718,8 +3446,8 @@ function FrontdeskBuildingCard({
             })}
           </div>
         ) : (
-          <div className="agent-build-fade mt-lg">
-            <FrontDeskDraftReviewContent
+          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
+            <DraftReviewCard
               refillAdded={refillAdded}
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -4913,306 +3641,10 @@ export function CreateAiGhostwriterShellHeader({
           type="button"
           onClick={onViewAgentBuilder}
           disabled={viewAgentBuilderDisabled}
-          className="flex h-9 shrink-0 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+          className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
         >
           View agent builder
         </button>
-      </div>
-    </div>
-  )
-}
-
-/** Response agents (exploration): full-page Ghostwriter shell with centered section tabs. */
-/**
- * Ghostwriter top-bar CTAs. Deliberately reuses the canvas's own `ab-header-*` / `ab-publish-*`
- * classes so the cluster is pixel-identical to the one on the Workflow canvas, and fires the
- * real handlers inside AgentBuilder via `onAction` rather than reimplementing them. No error
- * chip here — the canvas keeps that.
- */
-function GhostwriterTopBarActions({
-  onAction,
-}: {
-  onAction: (type: 'run-test' | 'activate' | 'save-draft' | 'delete') => void
-}) {
-  const [publishOpen, setPublishOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const publishRef = useRef<HTMLDivElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!publishOpen && !menuOpen) return undefined
-    const onDown = (e: MouseEvent) => {
-      if (publishRef.current && !publishRef.current.contains(e.target as Node)) setPublishOpen(false)
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [publishOpen, menuOpen])
-
-  return (
-    <div className="ab-header-actions gw-top-actions">
-      <button
-        type="button"
-        className="ab-header-runtest-btn"
-        onClick={() => onAction('run-test')}
-        aria-label="Run test"
-      >
-        {/* Clean stroked triangle — the shared `icon-preview.svg` is a filled grey-blue
-            glyph that reads heavier than the rest of this cluster. */}
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <polygon points="6 3 20 12 6 21 6 3" />
-        </svg>
-        <span>Run test</span>
-      </button>
-      <div className="ab-publish-split" ref={publishRef}>
-        <button
-          type="button"
-          className="ab-publish-split__main"
-          aria-label="Activate"
-          onClick={() => onAction('activate')}
-        >
-          Activate
-        </button>
-        <button
-          type="button"
-          className={`ab-publish-split__chevron${publishOpen ? ' ab-publish-split__chevron--open' : ''}`}
-          aria-label="More activate options"
-          aria-haspopup="menu"
-          aria-expanded={publishOpen}
-          onClick={() => setPublishOpen((open) => !open)}
-        >
-          <span className="material-symbols-outlined">expand_more</span>
-        </button>
-        {publishOpen && (
-          <div className="ab-publish-split__menu" role="menu">
-            <button
-              type="button"
-              className="ab-publish-split__menu-item"
-              role="menuitem"
-              onClick={() => {
-                setPublishOpen(false)
-                onAction('save-draft')
-              }}
-            >
-              Save as draft
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="ab-header-more" ref={menuRef}>
-        <button
-          type="button"
-          className="ab-header-more-btn"
-          aria-label="More options"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          onClick={() => {
-            setPublishOpen(false)
-            setMenuOpen((open) => !open)
-          }}
-        >
-          <span className="material-symbols-outlined" aria-hidden>more_vert</span>
-        </button>
-        {menuOpen && (
-          <div className="ab-header-menu" role="menu">
-            <button
-              type="button"
-              className="ab-header-menu-item ab-header-menu-item--danger"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false)
-                onAction('delete')
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export function CreateAiGhostwriterTabbedShell({
-  title,
-  onBack,
-  activeTab,
-  onTabChange,
-  carded = false,
-  right,
-  disabledTabIds,
-}: {
-  title: string
-  onBack: () => void
-  activeTab: string
-  onTabChange: (tabId: string) => void
-  /** Ghostwriter: single flush top bar with left/centre/right zones. */
-  carded?: boolean
-  /** Right-zone content — Ghostwriter passes the Run test / Activate / kebab cluster. */
-  right?: ReactNode
-  /** Tabs not yet reachable — e.g. before the agent has been created. */
-  disabledTabIds?: string[]
-}) {
-  const nameGroup = (
-    <div className={`z-10 flex min-w-0 items-center gap-xs ${carded ? '' : 'max-w-[40%]'}`}>
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-        aria-label="Back"
-      >
-        <Icon name="arrow_back" size={20} />
-      </button>
-      {/* Ghostwriter bar only — an explicit prompt override of the regular-weight rule.
-          Medium (500). The weight scale is remapped in tailwind.config, so `font-bold` is
-          what lands on 500 — `font-medium` there resolves to 400, i.e. no change at all. */}
-      <h1
-        className={`min-w-0 truncate text-body text-text-primary ${carded ? 'font-bold' : ''}`}
-      >
-        {title}
-      </h1>
-    </div>
-  )
-
-  const tabsGroup = (
-    <Tabs
-      tabs={GHOSTWRITER_SHELL_TABS}
-      activeTab={activeTab}
-      onChange={onTabChange}
-      showBaseline={false}
-      disabledIds={disabledTabIds}
-    />
-  )
-
-  if (!carded) {
-    return (
-      <div className="relative flex h-16 shrink-0 items-center bg-surface px-2xl">
-        {nameGroup}
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-          <div className="pointer-events-auto">{tabsGroup}</div>
-        </div>
-      </div>
-    )
-  }
-
-  /* Ghostwriter: one flush top bar — name left, tabs centred on the page (absolute, so a
-     long name can't shove them off-centre), shell-owned CTAs right. */
-  return (
-    <div className="relative flex h-14 shrink-0 items-center justify-between gap-md border-b border-border bg-surface px-lg">
-      <div className="flex min-w-0 max-w-[32%] items-center">{nameGroup}</div>
-      <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-        <div className="pointer-events-auto">{tabsGroup}</div>
-      </div>
-      {right ? <div className="z-10 flex shrink-0 items-center">{right}</div> : null}
-    </div>
-  )
-}
-
-/** Fullscreen existing-agent Create with AI — shares trail with docked AI Builder panel. */
-function ExistingAgentCompactHelp({
-  agentKey,
-  greeting,
-  quickStarts,
-}: {
-  agentKey: string
-  greeting: string
-  quickStarts: { label: string; prompt: string }[]
-}) {
-  const [prompt, setPrompt] = useState('')
-  const { trail, send, hasMessages } = useAiBuilderTrail(agentKey)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    el.scrollTop = el.scrollHeight
-  }, [trail.length])
-
-  const handleSend = (text?: string) => {
-    const value = (text ?? prompt).trim()
-    if (!value) return
-    send(value)
-    setPrompt('')
-  }
-
-  return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
-      <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
-        <div
-          ref={scrollRef}
-          className={`scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto pb-md ${
-            hasMessages ? '' : 'justify-end'
-          }`}
-        >
-          {!hasMessages ? (
-            <div className="flex items-start gap-sm">
-              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                <SparkleLoader size={14} spinning={false} />
-              </span>
-              <div className="flex min-w-0 flex-col items-start gap-md">
-                <p className="text-body leading-6 text-text-primary">{greeting}</p>
-                <div className="flex flex-col items-start gap-sm">
-                  {quickStarts.map((option) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      onClick={() => handleSend(option.prompt)}
-                      className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-body text-text-primary hover:bg-surface-l2"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-lg pt-md">
-              {trail.map((turn, i) => {
-                if (turn.kind === 'user') {
-                  return (
-                    <div key={i} className="flex justify-end">
-                      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary whitespace-pre-wrap">
-                        {turn.text}
-                      </span>
-                    </div>
-                  )
-                }
-                if (turn.kind === 'agent') {
-                  return (
-                    <div key={i} className="flex items-start gap-sm">
-                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                        <SparkleLoader size={14} spinning={false} />
-                      </span>
-                      <p className="min-w-0 flex-1 text-body leading-6 text-text-primary whitespace-pre-wrap">
-                        {(turn.paragraphs || []).join('\n')}
-                      </p>
-                    </div>
-                  )
-                }
-                return null
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
-          <PromptComposer
-            value={prompt}
-            onChange={setPrompt}
-            onSend={() => handleSend()}
-            placeholder="What would you like to do?"
-          />
-        </div>
       </div>
     </div>
   )
@@ -5223,32 +3655,13 @@ function CreateFlowPageHeader({
   title,
   centered = false,
   inlineProcedureOpen = false,
-  right,
-  boxedBack = false,
-  transparent = false,
 }: {
   onBack: () => void
   title: string
   centered?: boolean
   inlineProcedureOpen?: boolean
-  right?: ReactNode
-  /** Arrow + label collapse into one bordered button (secondary-button chrome). */
-  boxedBack?: boolean
-  /** Drops the white header fill so the page background shows through. */
-  transparent?: boolean
 }) {
-  const row = boxedBack ? (
-    <div className="flex w-full min-w-0 max-w-[720px] items-center">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex h-9 shrink-0 items-center gap-sm rounded-sm bg-surface px-lg text-body text-text-primary shadow-card ring-1 ring-black/[0.04] transition-shadow hover:shadow-dropdown"
-      >
-        <Icon name="arrow_back" size={18} className="text-text-icon" />
-        {title}
-      </button>
-    </div>
-  ) : (
+  const row = (
     <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
       <button
         type="button"
@@ -5279,67 +3692,8 @@ function CreateFlowPageHeader({
   }
 
   return (
-    <div
-      className={`flex h-16 shrink-0 items-center justify-between gap-sm px-2xl ${
-        transparent ? '' : 'bg-surface'
-      }`}
-    >
+    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
       {row}
-      {right ? <div className="shrink-0">{right}</div> : null}
-    </div>
-  )
-}
-
-/** Exploration create landing — switches composer seed text (Option 1 vs Option 2). */
-function ExplorationLandingOptionDropdown({
-  value,
-  onChange,
-}: {
-  value: '1' | '2'
-  onChange: (next: '1' | '2') => void
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        Option {value}
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="text-text-icon" />
-      </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-[105]"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          <div
-            role="listbox"
-            className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
-          >
-            {(['1', '2'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={value === option}
-                className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                onClick={() => {
-                  onChange(option)
-                  setOpen(false)
-                }}
-              >
-                Option {option}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -5363,9 +3717,6 @@ export function HealthcareFrontdeskCreateAgentScreen({
   workflowVisible = false,
   compactGreeting = false,
   existingAgent = false,
-  explorationModeChoice = false,
-  ghostwriterPolish = false,
-  agentCreated = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -5380,7 +3731,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   pageTitle?: string
   /** Hides the in-column back arrow when the shell header already provides navigation. */
   hideHeaderBack?: boolean
-  libraryCards?: CreateLibraryCard[]
+  libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
   autoStart?: boolean
@@ -5395,12 +3746,6 @@ export function HealthcareFrontdeskCreateAgentScreen({
   compactGreeting?: boolean
   /** Already-built agent — help-oriented greeting + contextual follow-ups. */
   existingAgent?: boolean
-  /** Response agents (exploration): live-vs-backlog cards after Ghostwriter SEND. */
-  explorationModeChoice?: boolean
-  /** Ghostwriter-only polished create landing (no Option picker, larger hero). */
-  ghostwriterPolish?: boolean
-  /** True once Create agent has been used, so the chat stops offering it again. */
-  agentCreated?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -5454,9 +3799,6 @@ export function HealthcareFrontdeskCreateAgentScreen({
       workflowVisible={workflowVisible}
       compactGreeting={compactGreeting}
       existingAgent={existingAgent}
-      explorationModeChoice={explorationModeChoice}
-      ghostwriterPolish={ghostwriterPolish}
-      agentCreated={agentCreated}
       onDraftReady={onDraftReady}
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
@@ -5482,9 +3824,6 @@ function HealthcareFrontdeskCreateAgentLive({
   workflowVisible = false,
   compactGreeting = false,
   existingAgent = false,
-  explorationModeChoice = false,
-  ghostwriterPolish = false,
-  agentCreated = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -5498,7 +3837,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
   hideHeaderBack?: boolean
-  libraryCards?: CreateLibraryCard[]
+  libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   autoStart?: boolean
   fromScratchLabel?: string
@@ -5506,11 +3845,6 @@ function HealthcareFrontdeskCreateAgentLive({
   workflowVisible?: boolean
   compactGreeting?: boolean
   existingAgent?: boolean
-  explorationModeChoice?: boolean
-  /** Ghostwriter-only polished create landing (no Option picker, larger hero). */
-  ghostwriterPolish?: boolean
-  /** True once Create agent has been used, so the chat stops offering it again. */
-  agentCreated?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
@@ -5520,38 +3854,10 @@ function HealthcareFrontdeskCreateAgentLive({
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
   const [prompt, setPrompt] = useState('')
-  /** Exploration landing only — Option 1 = rotating placeholders; Option 2 = short seed prompt. */
-  const [landingPromptOption, setLandingPromptOption] = useState<'1' | '2'>('1')
   const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [filesModalOpen, setFilesModalOpen] = useState(false)
   const landingImageInputRef = useRef<HTMLInputElement | null>(null)
-  const [placeholderIndex, setPlaceholderIndex] = useState(0)
-  const rotatingPlaceholders = isReviewFlow
-    ? explorationModeChoice && landingPromptOption === '2'
-      ? null
-      : REVIEW_RESPONSE_PLACEHOLDERS
-    : isReminderFlow
-      ? REMINDER_PLACEHOLDERS
-      : variant === 'frontdesk'
-        ? FRONTDESK_PLACEHOLDERS
-        : null
-  const landingPlaceholder = rotatingPlaceholders
-    ? rotatingPlaceholders[placeholderIndex % rotatingPlaceholders.length]
-    : DEFAULT_CREATE_PLACEHOLDER
-  const { typed: typedPlaceholder, done: placeholderTyped } = useTypewriter(
-    rotatingPlaceholders ? landingPlaceholder : '',
-    { charsPerTick: 1, intervalMs: 28 },
-  )
-
-  useEffect(() => {
-    if (!explorationModeChoice) return
-    if (landingPromptOption === '2') {
-      setPrompt(REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2)
-    } else {
-      setPrompt('')
-    }
-  }, [explorationModeChoice, landingPromptOption])
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
   const [docsAnswer, setDocsAnswer] = useState('')
@@ -5648,12 +3954,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const previewActiveRef = useRef(false)
   const [loaderIndex, setLoaderIndex] = useState<number | null>(null)
   const [followUp, setFollowUp] = useState('')
-  /** Ghostwriter: the plan review panel, opened from the plan card. */
-  const [planPanelOpen, setPlanPanelOpen] = useState(false)
   const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
   const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
   const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
-  const [reviewThreadTrail, setReviewThreadTrail] = useState<CreateChatTurn[]>([])
   const [attachments, setAttachments] = useState<AttachItem[]>([])
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
@@ -5687,9 +3990,7 @@ function HealthcareFrontdeskCreateAgentLive({
       (Boolean(rescheduleAnswer) && !handoffFollowDone) ||
       (connectAnswerContinues && !reminderBuildDone))
   const reviewGenerating =
-    isReviewFlow &&
-    !explorationModeChoice &&
-    (introThinking || !introReplyReady || reviewThreadBusy)
+    isReviewFlow && (introThinking || !introReplyReady || reviewThreadBusy)
   const composerLocked = building || stepThinking || previewLocksComposer || reminderGenerating || reviewGenerating
   const composerPlaceholder = previewLocksComposer
     ? previewActive
@@ -5806,7 +4107,6 @@ function HealthcareFrontdeskCreateAgentLive({
     setReviewComposerFill(null)
     setReviewPendingAnswer('')
     setReviewThreadBusy(true)
-    setReviewThreadTrail([])
     setDocsThoughtsOpen(true)
     setDocsReplyReady(false)
     setDocsReplyDone(false)
@@ -5839,82 +4139,6 @@ function HealthcareFrontdeskCreateAgentLive({
     previewActiveRef.current = false
     setFollowUp('')
   }
-
-  // Keep the docked AI Builder panel in sync with this create-flow transcript.
-  useEffect(() => {
-    if (!submitted) return
-    const draftKey = isReviewFlow
-      ? agentName || REVIEW_RESPONSE_BUILD_CARD.title
-      : isReminderFlow
-        ? agentName || REMINDER_BUILD_CARD.title
-        : agentName || FRONTDESK_BUILD_CARD.title
-
-    if (isReviewFlow) {
-      const trail: CreateChatTurn[] = []
-      const trimmed = prompt.trim()
-      if (trimmed) trail.push({ kind: 'user', text: trimmed })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT })
-      trail.push(...reviewThreadTrail)
-      setCreateAiDraftTrail(draftKey, trail)
-      return
-    }
-
-    if (isReviewGenFlow) return
-
-    const trail = buildCreateChatTrail({
-      variant: isReminderFlow ? 'reminder' : 'frontdesk',
-      prompt,
-      draftTitle: draftKey,
-      draftDescription: isReminderFlow
-        ? REMINDER_BUILD_CARD.description
-        : FRONTDESK_BUILD_CARD.description,
-      docsAnswer,
-      docsFileLabels: docsAttachments.map((f) => f.label),
-      docsProvided,
-      docsBuildComplete,
-      docsDraftReadyDone,
-      refillAnswer,
-      refillProcedureCreated,
-      createAgentAnswer,
-      draftBuildReady,
-      reviewFollowUpAnswer,
-      testReplyDone,
-      testAgentAnswers,
-      timingAnswer,
-      timingFollowDone,
-      rescheduleAnswer,
-      connectAnswer,
-      connectFileLabels: connectAttachments.map((f) => f.label),
-      reminderBuildDone,
-    })
-    setCreateAiDraftTrail(draftKey, trail)
-  }, [
-    submitted,
-    isReviewFlow,
-    isReminderFlow,
-    isReviewGenFlow,
-    agentName,
-    prompt,
-    reviewThreadTrail,
-    docsAnswer,
-    docsAttachments,
-    docsProvided,
-    docsBuildComplete,
-    docsDraftReadyDone,
-    refillAnswer,
-    refillProcedureCreated,
-    createAgentAnswer,
-    draftBuildReady,
-    reviewFollowUpAnswer,
-    testReplyDone,
-    testAgentAnswers,
-    timingAnswer,
-    timingFollowDone,
-    rescheduleAnswer,
-    connectAnswer,
-    connectAttachments,
-    reminderBuildDone,
-  ])
 
   // Advance to the next question behind a short "analyzing / building /
   // getting context" loader; the new agent response stays hidden until done.
@@ -5957,14 +4181,6 @@ function HealthcareFrontdeskCreateAgentLive({
     return () => scrollEl.removeEventListener('scroll', handleScroll)
   }, [submitted])
 
-  useEffect(() => {
-    if (!rotatingPlaceholders || !placeholderTyped) return
-    const id = window.setTimeout(() => {
-      setPlaceholderIndex((i) => (i + 1) % rotatingPlaceholders.length)
-    }, 2200)
-    return () => window.clearTimeout(id)
-  }, [rotatingPlaceholders, placeholderTyped, placeholderIndex])
-
   // Auto-follow: while the conversation is actively being generated (loaders and
   // typed text keep growing the thread), keep it pinned to the bottom. Manual
   // Thoughts toggles set suppressAutoScrollRef so they never move the page.
@@ -5989,7 +4205,7 @@ function HealthcareFrontdeskCreateAgentLive({
     if (!introThinking) return
     setIntroStatusIndex(0)
     let i = 0
-    const rotateMs = 450
+    const rotateMs = isReminderFlow || isReviewFlow ? 550 : 700
     const rotate = window.setInterval(() => {
       i += 1
       if (i >= INTRO_STATUS_LABELS.length) {
@@ -6000,7 +4216,7 @@ function HealthcareFrontdeskCreateAgentLive({
       }
     }, rotateMs)
     return () => window.clearInterval(rotate)
-  }, [introThinking, isReminderFlow, isReviewFlow])
+  }, [introThinking, isReminderFlow])
 
 
   useEffect(() => {
@@ -6012,7 +4228,7 @@ function HealthcareFrontdeskCreateAgentLive({
       } else {
         setStepThinkingPhase(null)
       }
-    }, 500)
+    }, 850)
     return () => clearTimeout(timer)
   }, [stepThinkingPhase, stepThinkingIndex])
 
@@ -6025,14 +4241,14 @@ function HealthcareFrontdeskCreateAgentLive({
         setLoaderIndex(null)
         setPhase('summary')
       }
-    }, 1600)
+    }, 2600)
     return () => clearTimeout(timer)
   }, [loaderIndex])
 
   // Hold on the "Creating the procedure…" loader before revealing the card.
   useEffect(() => {
     if (!refillReplyDone || refillProcedureCreated) return
-    const timer = setTimeout(() => setRefillProcedureCreated(true), 900)
+    const timer = setTimeout(() => setRefillProcedureCreated(true), 1450)
     return () => clearTimeout(timer)
   }, [refillReplyDone, refillProcedureCreated])
 
@@ -6102,38 +4318,10 @@ function HealthcareFrontdeskCreateAgentLive({
     setSubmitted(true)
     onSubmittedChange?.(true)
     setPhase('ask-docs')
-    if (explorationModeChoice) {
-      setIntroThinking(false)
-      setIntroReplyReady(true)
-    } else {
-      setIntroThinking(true)
-    }
+    setIntroThinking(true)
   }
 
   const handleSend = () => startConversation(prompt)
-
-  /** The playbook chip is never cleared, so its presence marks how the thread was opened. */
-  const startedFromPlaybook =
-    ghostwriterPolish
-    && landingAttachments.some((a) => a.id === GHOSTWRITER_PLAYBOOK_ATTACHMENT.id)
-
-  /**
-   * Ghostwriter: attach the playbook and write the sentence that goes with it. Anything the
-   * user typed themselves is left alone — only an empty box or the untouched exploration seed
-   * gets overwritten.
-   */
-  const seedGhostwriterPlaybook = () => {
-    setLandingAttachments((prev) =>
-      prev.some((a) => a.id === GHOSTWRITER_PLAYBOOK_ATTACHMENT.id)
-        ? prev
-        : [...prev, GHOSTWRITER_PLAYBOOK_ATTACHMENT],
-    )
-    setPrompt((prev) =>
-      !prev.trim() || prev === REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2
-        ? GHOSTWRITER_PLAYBOOK_PROMPT
-        : prev,
-    )
-  }
 
   useEffect(() => {
     if (autoStart && initialPrompt) startConversation(initialPrompt)
@@ -6262,10 +4450,8 @@ function HealthcareFrontdeskCreateAgentLive({
   if (submitted) {
     return (
       <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
-        {/* Rendered last in the DOM but ordered after the chat column — a flex sibling, so
-            opening it squeezes the conversation rather than covering it. */}
         <style>{`
-          .agent-build-fade { animation: agent-build-fade-in 0.15s ease-out; }
+          .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
           @keyframes sparkle-twinkle {
             0%, 100% { transform: scale(0.85) rotate(-8deg); opacity: 0.6; }
@@ -6296,23 +4482,11 @@ function HealthcareFrontdeskCreateAgentLive({
             wide screens, but collapses first (shrink-[999]) on narrow ones so the
             chat keeps its width and the panel stays pinned to the right edge.
             When the workflow canvas is open, procedures open on the canvas RHS instead. */}
-        {/* Plan review panel. `order-1` puts it visually right of the chat column (order 0)
-            without needing to sit after it in the DOM — it's a flex sibling, so opening it
-            squeezes the conversation rather than covering it. */}
-        {ghostwriterPolish && planPanelOpen && (
-          <div className="order-1 flex h-full min-h-0 shrink-0 py-lg">
-            <GhostwriterPlanPanel onClose={() => setPlanPanelOpen(false)} />
-          </div>
-        )}
         {((openProcedureName || previewOpen) && !workflowVisible) && (
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
 
-        <div
-          className={`flex h-full min-h-0 w-full min-w-0 flex-col ${
-            explorationModeChoice ? 'max-w-[56rem]' : 'max-w-[720px]'
-          }`}
-        >
+        <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
         <div
           ref={threadScrollRef}
           className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
@@ -6337,47 +4511,34 @@ function HealthcareFrontdeskCreateAgentLive({
           </div>
         )}
         <div className="flex justify-end pt-md">
-          <span className="flex max-w-[80%] flex-col items-end gap-sm rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
-            {/* Ghostwriter only: anything attached on the landing rides along, so the seeded
-                playbook doesn't disappear the moment the message is sent. */}
-            {ghostwriterPolish && landingAttachments.length > 0 && (
-              <span className="flex flex-wrap justify-end gap-sm">
-                {landingAttachments.map((item) => (
-                  <RefChip key={item.id} kind={item.kind} label={item.label} />
-                ))}
-              </span>
-            )}
-            <span>{prompt.trim()}</span>
-          </span>
+          <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
         </div>
 
-        {introThinking && !explorationModeChoice ? (
+        {introThinking ? (
           <IntroThinkingLoaderRow />
         ) : (
           <>
-            {!explorationModeChoice && (
-              <CreateAgentThinkingPanel
-                open={thinkingOpen}
-                onToggle={() => {
-                  suppressAutoScrollBriefly()
-                  setThinkingOpen((prev) => !prev)
-                }}
-                onComplete={() => {
-                  setThinkingOpen(false)
-                  setIntroReplyReady(true)
-                }}
-                text={
-                  isReviewFlow
-                    ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
-                    : isReminderFlow
-                      ? REMINDER_CREATE_THOUGHTS_TEXT
-                      : CREATE_AGENT_THOUGHTS_TEXT
-                }
-                fast
-              />
-            )}
+            <CreateAgentThinkingPanel
+              open={thinkingOpen}
+              onToggle={() => {
+                suppressAutoScrollBriefly()
+                setThinkingOpen((prev) => !prev)
+              }}
+              onComplete={() => {
+                setThinkingOpen(false)
+                setIntroReplyReady(true)
+              }}
+              text={
+                isReviewFlow
+                  ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
+                  : isReminderFlow
+                    ? REMINDER_CREATE_THOUGHTS_TEXT
+                    : CREATE_AGENT_THOUGHTS_TEXT
+              }
+              fast={isReminderFlow || isReviewFlow}
+            />
 
-            {(introReplyReady || explorationModeChoice) && (
+            {introReplyReady && (
               isReviewFlow ? (
                 <ReviewResponseThread
                   onDraftReady={(name) => {
@@ -6388,18 +4549,11 @@ function HealthcareFrontdeskCreateAgentLive({
                   onViewWorkflow={onViewWorkflow}
                   onMakeChanges={resetCreateFlow}
                   workflowVisible={workflowVisible}
-                  explorationModeChoice={explorationModeChoice}
-                  ghostwriterPolish={ghostwriterPolish}
-                  agentCreated={agentCreated}
-                  fromPlaybook={startedFromPlaybook}
-                  onOpenPlan={() => setPlanPanelOpen(true)}
-                  planOpen={planPanelOpen}
                   suppressAutoScrollBriefly={suppressAutoScrollBriefly}
                   pendingAnswer={reviewPendingAnswer}
                   onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
                   onComposerFillChange={setReviewComposerFill}
                   onBusyChange={setReviewThreadBusy}
-                  onTrailChange={setReviewThreadTrail}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -6564,6 +4718,7 @@ function HealthcareFrontdeskCreateAgentLive({
                         </button>
                         <button
                           type="button"
+                          onClick={() => setRefillAnswer("Skip refills for now. Let's keep it to the four")}
                           className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                         >
                           Skip refills for now. Let&apos;s keep it to the four
@@ -6661,6 +4816,7 @@ function HealthcareFrontdeskCreateAgentLive({
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={resetCreateFlow}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
                                   Make changes
@@ -6707,29 +4863,42 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                {FRONTDESK_POST_DRAFT_REPLY}
+                                I have created a Front desk agent for you to answer inbound calls, book and
+                                reschedule appointments, answer basic insurance questions, and hand off anything
+                                about billing disputes to a human.
                               </p>
                             </div>
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
-                              {FRONTDESK_POST_DRAFT_PILLS.filter(
-                                (label) => !(workflowVisible && label === 'View in agent builder'),
-                              ).map((label) => (
+                              <button
+                                type="button"
+                                onClick={onCreateFromScratch}
+                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                              >
+                                Yes, that&apos;s right
+                              </button>
+                              <button
+                                type="button"
+                                onClick={resetCreateFlow}
+                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                              >
+                                Make changes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartTestAgent()}
+                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                              >
+                                Test agent
+                              </button>
+                              {!workflowVisible && (
                                 <button
-                                  key={label}
                                   type="button"
-                                  onClick={() => {
-                                    if (label === 'View in agent builder') onViewWorkflow?.()
-                                    else if (label === 'Test agent') handleStartTestAgent()
-                                  }}
+                                  onClick={onViewWorkflow}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  {label === "Yes, that's right" ? (
-                                    <>Yes, that&apos;s right</>
-                                  ) : (
-                                    label
-                                  )}
+                                  View in agent builder
                                 </button>
-                              ))}
+                              )}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -6753,6 +4922,7 @@ function HealthcareFrontdeskCreateAgentLive({
                                   <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
                                     <button
                                       type="button"
+                                      onClick={resetCreateFlow}
                                       className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                     >
                                       Make changes
@@ -6977,12 +5147,14 @@ function HealthcareFrontdeskCreateAgentLive({
                 <div className="mt-sm flex items-center gap-sm">
                   <button
                     type="button"
+                    onClick={onCreateFromScratch}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Yes, that's right
                   </button>
                   <button
                     type="button"
+                    onClick={resetCreateFlow}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Make changes
@@ -7018,6 +5190,7 @@ function HealthcareFrontdeskCreateAgentLive({
                 <div className="ml-3xl mt-sm flex items-center gap-sm">
                   <button
                     type="button"
+                    onClick={resetCreateFlow}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Make changes
@@ -7086,17 +5259,6 @@ function HealthcareFrontdeskCreateAgentLive({
                 setFollowUp(REMINDER_EMAIL_REPLY)
                 return
               }
-              // Front desk: after being asked for docs, click to attach the demo files.
-              if (
-                !isReminderFlow &&
-                !isReviewFlow &&
-                phase === 'ask-docs' &&
-                introReplyDone &&
-                attachments.length === 0
-              ) {
-                setAttachments(DEMO_DOCS_ATTACHMENTS)
-                return
-              }
               // Review response: click composer to pre-fill the current question's reply.
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
                 setFollowUp(reviewComposerFill)
@@ -7123,16 +5285,6 @@ function HealthcareFrontdeskCreateAgentLive({
               ) {
                 emailPromptFilledRef.current = true
                 setFollowUp(REMINDER_EMAIL_REPLY)
-                return
-              }
-              if (
-                !isReminderFlow &&
-                !isReviewFlow &&
-                phase === 'ask-docs' &&
-                introReplyDone &&
-                attachments.length === 0
-              ) {
-                setAttachments(DEMO_DOCS_ATTACHMENTS)
                 return
               }
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
@@ -7281,9 +5433,9 @@ function HealthcareFrontdeskCreateAgentLive({
     ]
     const frontdeskQuickStarts = [
       {
-        label: 'SMS and Webchat',
+        label: 'Routing and triage',
         prompt:
-          'Create a Front desk agent that handles customer conversations over SMS and webchat using configured skills, procedures, and tools.',
+          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
       },
       {
         label: 'New patient intake',
@@ -7344,16 +5496,6 @@ function HealthcareFrontdeskCreateAgentLive({
     const greeting = existingAgent
       ? "Hi! I'm here to help you. Tell me what you'd like to do"
       : `Hi! I'm here to help you build your ${greetingName}. Tell me what you'd like to build`
-
-    if (existingAgent) {
-      return (
-        <ExistingAgentCompactHelp
-          agentKey={pageTitle?.trim() || greetingName}
-          greeting={greeting}
-          quickStarts={quickStarts}
-        />
-      )
-    }
 
     return (
       <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
@@ -7442,21 +5584,14 @@ function HealthcareFrontdeskCreateAgentLive({
     )
   }
 
-  const landingCards = libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS
-  const { shell: landingShellClass, grid: landingGridClass } = createLibraryGridClasses(landingCards.length)
-
   return (
-    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
-      {/* `explorationModeChoice` also gates the post-send intro + mode-choice conversation,
-          so Ghostwriter keeps that and only skips this Option 1/2 seed picker. */}
-      {explorationModeChoice && !ghostwriterPolish && !submitted && (
-        <div className="fixed right-2xl top-[14px] z-30">
-          <ExplorationLandingOptionDropdown
-            value={landingPromptOption}
-            onChange={setLandingPromptOption}
-          />
-        </div>
-      )}
+    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
+      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+        ? 'max-w-[1280px]'
+        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+          ? 'max-w-[720px]'
+          : 'max-w-[1000px]'
+    }`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
           {!hideHeaderBack && (
@@ -7473,40 +5608,15 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
       )}
 
-      <div className={`flex flex-col items-center text-center ${ghostwriterPolish ? 'gap-md' : 'gap-sm'}`}>
-        <span
-          className={`ai-gradient-icon ${ghostwriterPolish ? 'size-12' : 'size-10'}`}
-          style={{
-            WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
-            maskImage: `url("${iconAgentsTwoStarSparkle}")`,
-          }}
-          aria-hidden
-        />
-        <p
-          className={
-            ghostwriterPolish
-              /* Ghostwriter only — an explicit prompt override of the regular-weight rule.
-                 The weight scale is remapped in tailwind.config (bold=500, extrabold=600,
-                 black=700), so `font-bold` would land on a barely-visible 500. */
-              ? 'text-[24px] leading-[32px] tracking-[-0.5px] font-extrabold text-text-primary'
-              : 'text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary'
-          }
-        >
+      <div className="flex flex-col items-center gap-sm text-center">
+        <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
           Build your <span className="ai-gradient-text">agent</span>
         </p>
-        <p
-          className={
-            ghostwriterPolish
-              ? 'text-[15px] leading-[22px] tracking-[-0.3px] text-text-tertiary'
-              : 'text-[16px] leading-6 tracking-[-0.32px] text-text-secondary'
-          }
-        >
-          Hey John, add an AI agent that gets the work done for you!
-        </p>
+        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI co-worker that gets the work done for you!</p>
       </div>
 
-      <div className={`ai-gradient-border w-full rounded-xl p-px ${ghostwriterPolish ? 'max-w-[720px]' : 'max-w-[640px]'}`}>
-        <div className={`flex flex-col gap-md rounded-xl bg-surface shadow-card ${ghostwriterPolish ? 'px-xl py-lg' : 'px-lg py-md'}`}>
+      <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
+        <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
           {landingAttachments.length > 0 && (
             <div className="flex flex-wrap items-center gap-sm">
               {landingAttachments.map((item) => (
@@ -7523,13 +5633,7 @@ function HealthcareFrontdeskCreateAgentLive({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onFocus={() => {
-              if (prompt.trim()) return
-              // Ghostwriter seeds the same sentence exploration's Option 2 uses.
-              if (ghostwriterPolish || (explorationModeChoice && landingPromptOption === '2')) {
-                setPrompt(REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2)
-                return
-              }
-              setPrompt(initialPrompt ?? JOHN_CREATE_PROMPT)
+              if (!prompt.trim()) setPrompt(initialPrompt ?? JOHN_CREATE_PROMPT)
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -7538,14 +5642,8 @@ function HealthcareFrontdeskCreateAgentLive({
               }
             }}
             rows={3}
-            placeholder={
-              explorationModeChoice && landingPromptOption === '2'
-                ? REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2
-                : rotatingPlaceholders
-                  ? typedPlaceholder
-                  : DEFAULT_CREATE_PLACEHOLDER
-            }
-            className={`scrollbar-light min-h-16 w-full resize-none bg-transparent text-text-primary outline-none placeholder:text-text-tertiary ${ghostwriterPolish ? 'text-[15px] leading-[22px]' : 'text-body'}`}
+            placeholder="Describe the agent you want to build..."
+            className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-xs">
@@ -7553,14 +5651,7 @@ function HealthcareFrontdeskCreateAgentLive({
                 onSelect={(option) => {
                   if (option === 'upload-image') landingImageInputRef.current?.click()
                   else if (option === 'media-library') setMediaLibraryOpen(true)
-                  else if (option === 'files') {
-                    // Ghostwriter skips the file picker and lands straight on the seeded state.
-                    if (ghostwriterPolish) {
-                      seedGhostwriterPlaybook()
-                      return
-                    }
-                    setFilesModalOpen(true)
-                  }
+                  else if (option === 'files') setFilesModalOpen(true)
                 }}
               />
               <input
@@ -7622,7 +5713,7 @@ function HealthcareFrontdeskCreateAgentLive({
         }
       />
 
-      <p className={`m-0 text-center text-body text-text-secondary ${ghostwriterPolish ? 'mt-lg mb-lg' : 'mt-3xl'}`}>
+      <p className="m-0 mt-3xl text-center text-body text-text-secondary">
         <button
           type="button"
           onClick={onCreateFromScratch}
@@ -7631,69 +5722,35 @@ function HealthcareFrontdeskCreateAgentLive({
           {fromScratchLabel}
         </button>
         <span className="text-text-primary">{' or select from '}</span>
-        <button type="button" className="text-body text-text-primary hover:underline">
+        <button type="button" className="text-body text-text-action hover:underline">
           library
         </button>
       </p>
 
-      <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
-        <div className={`grid w-full gap-md ${landingGridClass}`}>
-          {landingCards.map((tpl) => (
+      <div className="@container w-full">
+        <div className={`grid w-full gap-md ${
+          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+            ? 'grid-cols-1 min-[500px]:grid-cols-4'
+            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+              ? 'grid-cols-1 min-[500px]:grid-cols-2'
+              : 'grid-cols-3'
+        }`}>
+          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
             <div
               key={tpl.id}
-              className={
-                ghostwriterPolish
-                  /* Same card, 176px instead of 192px — that's exactly the content height, so
-                     the hover-revealed CTA still fits without the card jumping taller. */
-                  ? INFO_CARD_LAYOUT.root.replace('h-[192px]', 'h-[176px]')
-                  : INFO_CARD_LAYOUT.root
-              }
+              role="button"
+              tabIndex={0}
+              aria-label={`Use agent: ${tpl.title}`}
+              onClick={() => onSelectFromLibrary(tpl.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
+              className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
             >
-              {tpl.glyph && tpl.tone ? (
-                <div className="flex min-w-0 items-center gap-md">
-                  <LibraryCardIcon glyph={tpl.glyph} tone={tpl.tone} />
-                  <h3
-                    className={`min-w-0 flex-1 text-text-primary ${
-                      ghostwriterPolish
-                        ? 'line-clamp-2 text-[15px] leading-[20px] tracking-[-0.3px]'
-                        : 'text-body leading-[22px] tracking-[-0.28px]'
-                    }`}
-                  >
-                    {tpl.title}
-                  </h3>
-                </div>
-              ) : (
-                <h3
-                  className={`min-w-0 shrink-0 line-clamp-2 text-text-primary ${
-                    ghostwriterPolish ? 'text-[15px] leading-[20px] tracking-[-0.3px]' : 'text-body'
-                  }`}
-                >
-                  {tpl.title}
-                </h3>
-              )}
-              <p
-                className={
-                  ghostwriterPolish
-                    ? 'mt-sm min-w-0 shrink-0 line-clamp-2 text-[13px] leading-[18px] text-text-tertiary'
-                    : INFO_CARD_LAYOUT.description
-                }
-              >
-                {tpl.description}
-              </p>
-              <div className={INFO_CARD_LAYOUT.bottomShell}>
-                <div className={INFO_CARD_LAYOUT.ctaShell}>
-                  <div className={INFO_CARD_LAYOUT.ctaInner}>
-                    <div className={INFO_CARD_LAYOUT.ctaWrap}>
-                      <button
-                        type="button"
-                        onClick={() => onSelectFromLibrary(tpl.id)}
-                        className={`${INFO_CARD_LAYOUT.ctaSecondary} max-w-fit flex-none`}
-                      >
-                        Use agent
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
+              <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
+              <div className={INFO_CARD_LAYOUT.ctaWrap}>
+                <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
+                  Use agent
+                </span>
               </div>
             </div>
           ))}
@@ -7801,7 +5858,6 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
             kind: 'draft',
             title: snap.draftTitle,
             description: snap.draftDescription,
-            variant: 'reminder',
           })
         }
       }
@@ -7866,15 +5922,8 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
-      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
-      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
     trail.push({ kind: 'thoughts', text: CREATE_AGENT_REVIEW_THOUGHTS_TEXT })
-    trail.push({
-      kind: 'agent',
-      paragraphs: [FRONTDESK_POST_DRAFT_REPLY],
-      choices: snap.reviewFollowUpAnswer ? undefined : [...FRONTDESK_POST_DRAFT_PILLS],
-    })
   }
 
   if (snap.reviewFollowUpAnswer) {
@@ -7899,32 +5948,11 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
-      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
-      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
   }
 
   return trail
 }
-
-/** Demo: East region Front desk already has the full Create with AI transcript. */
-registerBuiltinCreateAiDraft(
-  'Front desk agent - East region',
-  buildCreateChatTrail({
-    variant: 'frontdesk',
-    prompt: JOHN_CREATE_PROMPT,
-    draftTitle: 'Front desk agent - East region',
-    draftDescription: FRONTDESK_BUILD_CARD.description,
-    docsFileLabels: DEMO_DOCS_ATTACHMENTS.map((f) => f.label),
-    docsProvided: true,
-    docsBuildComplete: true,
-    docsDraftReadyDone: true,
-    refillAnswer: 'Add procedure "Handling refills"',
-    refillProcedureCreated: true,
-    createAgentAnswer: 'Yes, create the agent',
-    draftBuildReady: true,
-  }),
-)
 
 /** Builds a recent-chat entry from a finished full-page co-pilot session. */
 function buildSavedCreateChat(snap: SavedCreateChatSnapshot): ChatHistoryTranscript {
@@ -8178,6 +6206,7 @@ function HistoryChatReplay({
                       </p>
                       <div className="rounded-md border border-border bg-surface p-lg">
                         <div className="flex items-start gap-sm">
+                          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-sm">
                               <span className="text-body text-text-primary">{turn.title}</span>
@@ -8222,6 +6251,7 @@ function HistoryChatReplay({
                   </p>
                   <div className="rounded-md border border-border bg-surface p-lg">
                     <div className="flex items-start gap-sm">
+                      <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-sm">
                           <span className="text-body text-text-primary">{chat.draftTitle}</span>
@@ -8243,39 +6273,13 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange }: AgentDetailScreenProps) {
-  const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
-  const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
-  const isExplorationAgents = isAgentExplorationChrome(navId)
-  /** Sep 1 side-nav ids + production front desk / response agents share the same card grid chrome. */
-  const isSep1Agents = isSep1StyleAgentListNav(navId)
-  /** Full canvas is a duplicate of Sep 1 under its own nav slot — same data, its own page title. */
-  const fullCanvasLabel = fullCanvasVariantLabel(navId)
-  const pageTitle = fullCanvasLabel ? `${agentName} (${fullCanvasLabel})` : agentName
-  const useExplorationOutcomesTab = false
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenBookingTemplates, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
-  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
+  const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [agentFilters, setAgentFilters] = useState<Record<string, string[]>>({})
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  /** Card layout variants remain in the renderer; UI picker removed — always Default. */
-  const cardLayoutOption: ExplorationCardLayout = 'default'
-  const showExplorationAgentsToggle =
-    isExplorationAgents && activeTab === 'agents'
-  /** Full canvas mirrors exploration's card-layout picker — its own design sandbox, not shared
-   *  with Sep 1/coach-cue, which stay locked to the Default layout below. */
-  const isFullCanvasAgents = isFullCanvasStyleNav(navId)
-  const useExplorationGrid =
-    ((isExplorationAgents && !isSep1Agents) || isFullCanvasAgents) && agentsViewMode === 'grid'
-  /** Sep 1 side-nav agents (not Full canvas): same card/table toggle; card view locks to exploration Default layout. */
-  const useSep1AgentGrid =
-    isSep1Agents && !isFullCanvasAgents && activeTab === 'agents' && agentsViewMode === 'grid'
-  const useAgentCardGrid = useExplorationGrid || useSep1AgentGrid
-  const useDefaultAgentCardGrid =
-    useSep1AgentGrid || (useExplorationGrid && cardLayoutOption === 'default')
-  const effectiveCardLayout = useSep1AgentGrid ? 'default' : cardLayoutOption
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -8283,59 +6287,22 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
 
   useEffect(() => {
-    setActiveTab('agents')
-  }, [navId])
-
-  useEffect(() => {
     if (!pendingInstanceView) return
     setSelectedInstance(pendingInstanceView.instanceName)
     setInstanceInitialTab(pendingInstanceView.tab)
-    onDeepRouteChange?.({
-      instanceSlug: instanceSlugFromName(pendingInstanceView.instanceName),
-      tab: pendingInstanceView.tab,
-    })
     onPendingInstanceViewConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
-  const [libraryPreview, setLibraryPreview] = useState<AgentLibraryPreviewData | null>(null)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
   const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
-  /** Review-response: docked AI Builder on the canvas (replaces the left Create with AI floater). */
-  const [createAiBuilderPanelOpen, setCreateAiBuilderPanelOpen] = useState(false)
   const [createAiFullscreen, setCreateAiFullscreen] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
-  /** Response agents (exploration) full-page Ghostwriter shell tab. */
-  const [createGhostwriterTab, setCreateGhostwriterTab] = useState('ghostwriter')
-  /**
-   * Ghostwriter entered the workflow directly, bypassing the chat — from "Create from
-   * scratch" (empty canvas), a library "Use agent", or Edit on an existing agent. Keeps the
-   * shell (top bar + tabs) and lands on the Workflow tab. Separate from `createFlowSubmitted`,
-   * which mirrors the chat child's own submitted state and would overwrite a value set here.
-   *   'scratch'  → empty canvas
-   *   'workflow' → the agent/template's prebuilt canvas
-   */
-  const [ghostwriterDirect, setGhostwriterDirect] = useState<null | 'scratch' | 'workflow'>(null)
-  /** Opens the Ghostwriter shell straight on the Workflow tab, no Create-with-AI panel. */
-  const openGhostwriterWorkflow = (name: string, mode: 'scratch' | 'workflow') => {
-    setCreateDraftAgentName(name)
-    setGhostwriterDirect(mode)
-    setCreateGhostwriterTab('workflow')
-    setShowCreateFlow(true)
-    openCreateWorkflow({ withAiPanel: false })
-  }
-
-  /** Ghostwriter: until "Create agent" is pressed the build isn't real yet, so the other
-   *  tabs stay disabled and the top bar carries no Run test / Activate / kebab. */
-  const [ghostwriterAgentCreated, setGhostwriterAgentCreated] = useState(false)
-  /** Ghostwriter top bar owns the CTAs; this hands the click to AgentBuilder's handler. */
-  const [ghostwriterHeaderAction, setGhostwriterHeaderAction] =
-    useState<{ type: string; nonce: number } | null>(null)
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
   const [, setInlineProcedureOpen] = useState(false)
@@ -8359,8 +6326,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
-    setGhostwriterDirect(null)
-    setCreateGhostwriterTab('ghostwriter')
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
@@ -8374,21 +6339,16 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateWorkflowOpen(false)
     setCreateWorkflowMounted(false)
     setCreateFlowSubmitted(false)
-    setGhostwriterDirect(null)
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
 
-  /** `withAiPanel: false` — "Create from scratch" opens a bare canvas: no Create with AI
-   *  panel, just the Trigger palette the scratch canvas auto-opens. */
-  const openCreateWorkflow = ({ withAiPanel = true }: { withAiPanel?: boolean } = {}) => {
+  const openCreateWorkflow = () => {
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
-    // Floating chrome: Create with AI lives on the canvas (sparkle + LHS panel).
-    setCreateLeftPaneCollapsed(true)
-    setCreateAiBuilderPanelOpen(withAiPanel)
+    setCreateLeftPaneCollapsed(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
@@ -8398,26 +6358,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateWorkflowOpen(false)
     setCreateSideTab('ai')
     setCreateLeftPaneCollapsed(false)
-    setCreateAiBuilderPanelOpen(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
-    setCreateGhostwriterTab('ghostwriter')
   }
 
   const expandCreateAiFullscreen = () => {
     setCreateAiFullscreen(true)
-    setCreateAiBuilderPanelOpen(false)
     closeCreateWorkflow()
-  }
-
-  /** Ghostwriter's "Create agent": unlock the shell and land on the Workflow tab, rather
-   *  than leaving the create flow for the agent instance screen. */
-  const handleGhostwriterCreateAgent = () => {
-    setGhostwriterAgentCreated(true)
-    setCreateGhostwriterTab('workflow')
-    openCreateWorkflow({ withAiPanel: false })
-    setToastMessage('Agent has been created')
-    setToastVisible(true)
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
@@ -8432,24 +6379,118 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setSelectedInstanceDisplayName(
       createDraftAgentName ? `${createDraftAgentName} - North region` : null,
     )
-    onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(`${agentName} - North region`), tab: 'workflow' })
     setToastMessage(
       options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
     )
     setToastVisible(true)
   }
 
-  const regionSourceKey =
-    isSep1Agents && isReviewResponseAgentName(agentName)
-      ? REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
-      : agentName
-  const regions = REGIONS_BY_AGENT[regionSourceKey] ?? DEFAULT_REGIONS
-  const data: AgentInstance[] = regions.map((r, i) => ({
+  const [savingsModalOpen, setSavingsModalOpen] = useState(false)
+  const [savingsSettings, setSavingsSettings] = useState<EstimateSavingsValues>({
+    mode: 'time',
+    minutesPerResolution: 5,
+    wageCurrency: 'USD',
+    hourlyWage: 40,
+  })
+
+  const METRICS_BY_AGENT: Record<string, Metric[]> = {
+    'Front desk agent': [
+      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
+      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
+      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
+      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
+    ],
+    'Reminder agent': [
+      { id: 'bookings', value: '450', label: 'Total bookings', delta: '20%', trend: 'up', info: true, tooltip: 'Total appointments booked across all locations in the selected period.' },
+      { id: 'confirmed', value: '100', label: 'Appointments confirmed', delta: '36.6%', trend: 'up', info: true, tooltip: 'Number of upcoming appointments confirmed by the patient via automated reminder outreach, reducing the likelihood of a no-show.' },
+      { id: 'confirmRate', value: '23.7%', label: 'Confirmation rate', delta: '20%', trend: 'up', info: true, tooltip: 'Percentage of total bookings where the patient confirmed attendance. Calculated as appointments confirmed ÷ total bookings.' },
+      { id: 'timeSaved', value: '8 min', label: 'Time saved', delta: '5.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved per confirmed appointment by automating reminder outreach and follow-up.' },
+    ],
+    'Waitlist agent': [
+      { id: 'outreachSent', value: '5.5K', label: 'Outreach sent', delta: '12%', trend: 'up', info: true, tooltip: 'Total waitlist outreach messages sent by the agent to fill cancelled or open slots.' },
+      { id: 'slotsFilled', value: '7.9K', label: 'Slots filled', delta: '36.6%', trend: 'up', info: true, tooltip: 'Number of open or cancelled slots successfully filled via waitlist outreach.' },
+      { id: 'fillRate', value: '23.7%', label: 'Fill rate', delta: '20%', trend: 'up', info: true, tooltip: 'Percentage of waitlisted patients who booked after receiving outreach. Calculated as slots filled ÷ outreach sent.' },
+      { id: 'timeSaved', value: '2.5 hrs', label: 'Time saved', delta: '20%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved by automating waitlist outreach instead of manually calling through the list.' },
+    ],
+    'Pre-visit agent': [
+      { id: 'outreach',   value: '463',   label: 'Outreach sent',    delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Total intake reminder outreach sent by the agent across all channels in the selected period.' },
+      { id: 'intakes',    value: '2,700', label: 'Intakes completed', delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Number of patient intake forms fully completed following agent outreach.' },
+      { id: 'completion', value: '90%',   label: 'Completion rate',   delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Percentage of outreach that resulted in a completed intake. Calculated as intakes completed ÷ outreach sent.' },
+      { id: 'timeSaved',  value: '1h',    label: 'Time saved',        delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Estimated staff hours saved by automating intake collection instead of manual follow-up calls.' },
+    ],
+    'Outreach agent': [
+      { id: 'leads', value: '2,103', label: 'Leads contacted', info: true, tooltip: 'Total leads the agent reached out to via call or message in the selected period.' },
+      { id: 'response', value: '38%', label: 'Response rate', info: true, tooltip: 'Percentage of contacted leads that replied to the outreach.' },
+      { id: 'appointments', value: '641', label: 'Appointments scheduled', info: true, tooltip: 'Leads that confirmed a visit or test drive after being contacted.' },
+      { id: 'conversion', value: '11%', label: 'Conversion rate', info: true, tooltip: 'Percentage of contacted leads that resulted in a scheduled appointment. Calculated as appointments ÷ leads contacted.' },
+    ],
+    'Recall agent': [
+      { id: 'patientsContacted', value: '3,410', label: 'Patients contacted', delta: '4.2%', trend: 'up', info: true, tooltip: 'Distinct patients who received at least one successfully delivered agent touch in the period. Base population = patients flagged recall-due (hygiene, dormant, or unscheduled treatment).' },
+      { id: 'recallConversion', value: '68%', label: 'Recall conversion rate', delta: '2.1%', trend: 'up', info: true, tooltip: 'Share of contacted patients who booked a recare/recall appointment attributable to the agent within the attribution window.' },
+      { id: 'staffHoursSaved', value: '274h', label: 'Staff hours saved', delta: '8.2%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved by automating recall outreach — based on average time-per-manual-contact across converted patients.' },
+      { id: 'revenueRecovered', value: '$124K', label: 'Revenue recovered', delta: '5.8%', trend: 'up', info: true, tooltip: 'Production value of attributed recare appointments, recognized on completion.' },
+    ],
+    'Revenue agent': [
+      { id: 'balancesContacted', value: '1,820', label: 'Balances contacted', delta: '3.1%', trend: 'up', info: true, tooltip: 'Distinct A/R accounts that received ≥1 delivered agent touch about a balance. Base = balance ≥ threshold and aging ≥ threshold days, excluded (active plan / in collections / disputed).' },
+      { id: 'amountCollected', value: '$142K', label: 'Amount collected', delta: '5.4%', trend: 'up', info: true, tooltip: 'Total payments completed that are attributable to the agent within the window (via agent-sent link or call).' },
+      { id: 'arDaysReduced', value: '-28%', label: 'A/R days reduced', delta: '2.3%', trend: 'up', positiveDown: true, info: true, tooltip: 'Reduction in the balance-weighted average age of outstanding A/R versus baseline. Lower is better.' },
+      { id: 'staffHoursSaved', value: '176h', label: 'Staff hours saved', delta: '6.4%', trend: 'up', info: true, tooltip: 'Staff time avoided by automating outreach touches.' },
+    ],
+    'Treatment plan agent': [
+      { id: 'plansFollowedUp', value: '2,140', label: 'Plans followed up', delta: '6.0%', trend: 'up', info: true, tooltip: 'Distinct treatment plans that received ≥1 delivered agent touch. Base = presented, unscheduled plans aged ≥ T+3 days, not opted out / suppressed.' },
+      { id: 'acceptanceRate', value: '61%', label: 'Acceptance rate', delta: '3.2%', trend: 'up', info: true, tooltip: 'Share of followed-up plans accepted (agreed + booked, or marked accepted) attributable to the agent within the window.' },
+      { id: 'revenueUnlocked', value: '$892K', label: 'Revenue unlocked', delta: '7.1%', trend: 'up', info: true, tooltip: 'Estimated value of accepted + booked plans attributable to the agent.' },
+      { id: 'staffHoursSaved', value: '262h', label: 'Staff hours saved', delta: '7.8%', trend: 'up', info: true, tooltip: 'Staff follow-up time avoided by automating outreach.' },
+    ],
+    'Tagging & routing agent': [
+      { id: 'statusUpdated', value: '2,850', label: 'Statuses updated', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations that received an updated contact status in the selected period.' },
+      { id: 'conversationsAssigned', value: '2000', label: 'Conversations assigned', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations assigned to a team or user by the agent.' },
+      { id: 'conversationsManaged', value: '2500', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations tagged and routed end-to-end by the agent.' },
+      { id: 'timeSaved', value: '40m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing.' },
+    ],
+    'Review response agents': [
+      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+    ],
+    'Review generation agents': [
+      { id: 'reviewsReceived', value: '249', label: 'Reviews received', delta: '16.4%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+      { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+      { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+      { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
+  }
+
+  const DEFAULT_METRICS: Metric[] = [
+    { id: 'interactions', value: '2,850', label: 'Interactions handled', info: true, tooltip: 'Total customer interactions managed by the agent in the selected period.' },
+    { id: 'fcr', value: '92%', label: 'First contact resolution rate', info: true, tooltip: 'Percentage of interactions resolved on the first contact without follow-up.' },
+    { id: 'aht', value: '2m 34s', label: 'Average handle time', info: true, tooltip: 'Average duration of a single interaction from start to resolution.' },
+    { id: 'escalation', value: '11%', label: 'Escalation rate', info: true, tooltip: 'Percentage of interactions escalated to a human agent. Lower is generally better.' },
+  ]
+
+  const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+
+  const isFrontdeskAgent = agentName === 'Front desk agent'
+  const displayMetrics: Metric[] = isFrontdeskAgent
+    ? metrics.map((m) => {
+        if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
+        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const cost = hours * savingsSettings.hourlyWage
+        const formattedCost = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: savingsSettings.wageCurrency,
+          maximumFractionDigits: 0,
+        }).format(cost)
+        return { ...m, value: formattedCost, label: 'Cost saved' }
+      })
+    : metrics
+
+  const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
+  const data: AgentInstance[] = regions.map((r) => ({
     name: r.instanceName ?? `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
-    region: r.region,
-    locationName: REGION_TO_LOCATION[r.region] ?? r.region,
     interactions: r.interactions,
     fcr: r.fcr,
     aht: r.aht,
@@ -8487,26 +6528,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     contactsReached: r.contactsReached,
     clickThroughRate: r.clickThroughRate,
     issues: r.issues,
-    lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
-    updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
-    hasDraft: r.hasDraft,
-    draftUpdatedBy: r.hasDraft
-      ? (r.draftUpdatedBy ?? UPDATED_BY_SAMPLES[(i + 1) % UPDATED_BY_SAMPLES.length])
-      : undefined,
-    draftUpdatedAgo: r.hasDraft
-      ? (r.draftUpdatedAgo ?? DRAFT_AGO_SAMPLES[i % DRAFT_AGO_SAMPLES.length])
-      : undefined,
-    cardDescription: r.cardDescription,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
-
-  const agentGoals = useMemo(() => {
-    const workflows = getAgentWorkflows(product)
-    const workflow =
-      workflows[agentName]
-      ?? workflows['Review response agent']
-      ?? workflows['Review response agents (exploration)']
-    return (workflow?.nodeDetails?.['__start__']?.goals as string | undefined) ?? ''
-  }, [product, agentName])
 
   useEffect(() => {
     if (!initialRecommendationFocus) return
@@ -8520,59 +6542,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecommendationFocus])
 
-  useEffect(() => {
-    if (!routeDeep?.listTab) return
-    const tab =
-      routeDeep.listTab === 'outcomes' && isExplorationAgents && !isSep1Agents
-        ? 'agents'
-        : routeDeep.listTab
-    setActiveTab(tab)
-  }, [routeDeep?.listTab, navId, isExplorationAgents, isSep1Agents])
-
-  useEffect(() => {
-    if (!routeDeep?.instanceSlug) {
-      if (!pendingInstanceView) setSelectedInstance(null)
-      return
-    }
-    const match = data.find((d) => instanceSlugFromName(d.name) === routeDeep.instanceSlug)
-    if (!match) return
-    setSelectedInstance(match.name)
-    if (routeDeep.tab) setInstanceInitialTab(routeDeep.tab)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeDeep?.instanceSlug, routeDeep?.tab, navId, agentName])
-
   const isReminder        = agentName === 'Reminder agent'
-  const isFrontdesk       = isFrontdeskAgentName(agentName)
+  const isFrontdesk       = agentName === 'Front desk agent'
   const isWaitlist        = agentName === 'Waitlist agent'
   const isPreVisit        = agentName === 'Pre-visit agent'
   const isRecall          = agentName === 'Recall agent'
   const isRevenue         = agentName === 'Revenue agent'
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
-  const isReviewResponse  = isReviewResponseAgentName(agentName)
-  /** This screen is the Ghostwriter nav — Edit / Use agent open its own shell. */
-  const isGhostwriterAgent = isGhostwriterNav(navId) && isReviewResponse
+  const isReviewResponse  = agentName === 'Review response agents'
   const isReviewGeneration = agentName === 'Review generation agents'
-  const isReviewTagging   = agentName === 'Review tagging agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
-  /** Illustration + library cards only (no Ghostwriter) — Sep 1 response/reminder, waitlist, pre-visit. */
-  const isLibraryOnlyCreate =
-    isWaitlist ||
-    isPreVisit ||
-    Boolean(navId && LIBRARY_ONLY_CREATE_NAV_IDS.has(navId))
-
-  useEffect(() => {
-    if (!autoOpenCreateFlow) return
-    if (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration) {
-      openCreateFlow()
-    } else {
-      onEditAgent?.('')
-    }
-    onAutoOpenCreateFlowConsumed?.()
-    // Only react to the flag flipping true; the effect itself must not be re-triggered by
-    // openCreateFlow's own state changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpenCreateFlow])
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
 
   useEffect(() => {
     if (!showCreateFlow) setCreateAiFullscreen(false)
@@ -8586,14 +6566,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
     if (selectedInstance) return
-    // Setup wizard / library-only create / review create landings hide L2 while open.
+    // Setup wizard is full-bleed (no SideNav). Review response / review generation create
+    // landings also hide L2 while the create flow is open.
     const isAgentSetupActive =
-      ((isFrontdesk || isReminder || isWaitlist || isPreVisit) && (showCreateFlow || showSetupWizard)) ||
+      ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) ||
       ((isReviewResponse || isReviewGeneration) && showCreateFlow) ||
       instanceSetupActive
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, isWaitlist, isPreVisit, isReviewResponse, isReviewGeneration, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, isReviewResponse, isReviewGeneration, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     {
       key: 'name',
@@ -8601,52 +6582,16 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       width: 230,
       sortable: true,
       locked: true,
-      truncate: false,
-      render: (v, row) => (
-        <div className="flex flex-col gap-xs">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              openAgentInstanceDetails(row)
-            }}
-            className="truncate text-left text-body text-text-primary hover:text-text-action"
-          >
-            {String(v)}
-          </button>
-          {row.hasDraft ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEditAgent?.(
-                  row.name,
-                  undefined,
-                  undefined,
-                  'Draft',
-                )
-              }}
-              className="truncate text-left text-small text-text-secondary hover:text-text-action"
-            >
-              Draft by {row.draftUpdatedBy} · {row.draftUpdatedAgo}
-            </button>
-          ) : null}
-        </div>
-      ),
+      render: (v) => <span className="group-hover/row:text-text-action">{String(v)}</span>,
     },
     {
       key: 'status',
       label: 'Status',
       width: 170,
       sortable: true,
-      truncate: false,
       render: (v, row) => (
-        <div className="flex min-h-5 items-center gap-sm">
-          <Chip
-            label={String(v)}
-            variant={STATUS_VARIANT[String(v)] ?? 'neutral'}
-            showDot={String(v) !== 'Draft'}
-          />
+        <div className="flex items-center gap-sm">
+          <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
           {row.issues ? (
             <span className="flex items-center gap-xs text-small text-text-secondary">
               <Icon name="error" size={14} className="text-chip-danger-text" />
@@ -8717,300 +6662,51 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { key: 'aht' as keyof AgentInstance, label: 'Average handle time', width: 180, sortable: true },
       { key: 'escalation' as keyof AgentInstance, label: 'Escalation rate', width: 150, sortable: true },
     ]),
-    { key: 'lastUpdated', label: 'Last updated', width: 150, sortable: true },
-    { key: 'updatedBy', label: 'Updated by', width: 160, sortable: true },
     { key: 'locations', label: 'Locations', width: 120, sortable: true },
-  ].map((col) => {
-    // Name + Status already render their own content above.
-    if (col.key === 'name' || col.key === 'status') return col
-    return { ...col, truncate: false }
-  })
+  ]
 
   const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
   const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
   // Front desk, Pre-visit, Waitlist, and Reminder each report exactly 4 metrics, so all 4
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
-  const trailingKeys = new Set(['lastUpdated', 'updatedBy', 'locations'])
-  const metricKeys = COLUMN_DEFS
-    .slice(hideChannels ? 2 : 3)
-    .map((c) => String(c.key))
-    .filter((k) => !trailingKeys.has(k))
+  const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
   const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration
-  const DEFAULT_VISIBLE = [
-    'name',
-    'status',
-    ...(hideChannels ? [] : ['channels']),
-    ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)),
-    'lastUpdated',
-    'updatedBy',
-    'locations',
-  ]
+  const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
 
-  // Remount-safe: keep Last updated / Updated by (and the rest of the default set) in sync
-  // when switching between Front desk, Reminder, Waitlist, Pre-visit, Reviews, etc.
-  useEffect(() => {
-    setOrder(DEFAULT_ORDER)
-    setVisible(DEFAULT_VISIBLE)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentName])
-
   const columns = useMemo<Column<AgentInstance>[]>(
     () => order.filter((k) => visible.includes(k)).map((k) => DEF_BY_KEY.get(k)!).filter(Boolean),
-    // DEF_BY_KEY is rebuilt per agent; include agentName so column defs refresh with the row set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [order, visible, agentName],
+    [order, visible],
   )
   const columnOptions = useMemo<ColumnOption[]>(
     () => order.map((k) => ({ key: k, label: DEF_BY_KEY.get(k)!.label, locked: DEF_BY_KEY.get(k)!.locked })),
     [order],
   )
 
-  /**
-   * Row menu → Download: exports this agent instance as a JSON file (metadata + workflow)
-   * the browser saves locally.
-   */
-  const handleDownloadAgent = (row: AgentInstance) => {
-    const workflows = getAgentWorkflows(product)
-    const workflow =
-      workflows[row.name]
-      ?? workflows[agentName]
-      ?? workflows['Review response agent']
-      ?? { nodes: [], nodeDetails: {} }
+  const FILTER_FIELDS: FilterField[] = [
+    { id: 'status', label: 'Status', options: opts('Running', 'Paused', 'Draft') },
+    { id: 'channels', label: 'Channels', options: opts('Voice call', 'Web chat', 'Text', 'Email', 'Facebook'), multi: true },
+    { id: 'region', label: 'Region', options: opts('North region', 'East region', 'South region', 'West region') },
+    { id: 'location', label: 'Location', options: opts('Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale') },
+  ]
 
-    const instanceFields = Object.fromEntries(
-      order
-        .map((key) => {
-          const value = row[key as keyof AgentInstance]
-          return [key, value] as const
-        })
-        .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-    )
-
-    const payload = {
-      name: row.name,
-      agentType: agentName,
-      status: row.status,
-      exportedAt: new Date().toISOString(),
-      instance: instanceFields,
-      nodes: workflow.nodes ?? [],
-      nodeDetails: workflow.nodeDetails ?? {},
-    }
-
-    const fileName = `${row.name.replace(/\s+/g, '-').toLowerCase() || 'agent'}.json`
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
-    )
-    const link = document.createElement('a')
-    link.href = url
-    link.download = fileName
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    // Revoking synchronously can cancel the download in some browsers.
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-
-    setToastMessage(`${fileName} has been downloaded`)
-    setToastVisible(true)
-  }
-
-  const openAgentInstanceDetails = (row: AgentInstance) => {
-    setInstanceInitialTab('outcomes')
-    setSelectedInstanceDisplayName(null)
-    setSelectedInstance(row.name)
-    onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(row.name), tab: 'outcomes' })
-  }
-
-  const openAgentInstanceEditor = (row: AgentInstance) => {
-    // Ghostwriter edits inside its own shell (top bar + tabs) on the Workflow tab.
-    if (isGhostwriterAgent) {
-      openGhostwriterWorkflow(row.name, 'workflow')
-      return
-    }
-    onEditAgent?.(
-      row.name,
-      undefined,
-      undefined,
-      isExplorationAgents ? row.status : undefined,
-    )
-  }
-
-  const openAgentDraftEditor = (row: AgentInstance) => {
-    onEditAgent?.(row.name, undefined, undefined, 'Draft')
-  }
-
-  const openAgentActiveVersion = (row: AgentInstance) => {
-    onEditAgent?.(row.name, undefined, undefined, 'Active')
-  }
-
-  const agentInstanceRowMenuItems = useMemo<RowMenuItem<AgentInstance>[]>(() => [
-    {
-      label: 'Edit draft',
-      onClick: openAgentDraftEditor,
-      visible: (row) => !!row.hasDraft,
-    },
-    {
-      label: 'View active version',
-      onClick: openAgentActiveVersion,
-      visible: (row) => !!row.hasDraft,
-    },
-    {
-      label: 'Edit',
-      onClick: openAgentInstanceEditor,
-      visible: (row) => !row.hasDraft,
-    },
-    {
-      label: 'Deactivate',
-      onClick: () => {},
-      visible: (row) => row.status === 'Active',
-    },
-    { label: 'Duplicate', onClick: () => {} },
-    { label: 'View details', onClick: openAgentInstanceDetails },
-    { label: 'Reports', onClick: () => {} },
-    ...(isExplorationAgents
-      ? [{ label: 'Download agent', onClick: handleDownloadAgent }]
-      : []),
-    { label: 'Delete', onClick: () => {}, variant: 'danger' },
-  ], [isExplorationAgents, onEditAgent])
-
-  const agentInstanceCardOverflowMenuItems = useMemo(
-    () => agentInstanceRowMenuItems.filter(
-      (item) =>
-        item.label !== 'Edit'
-        && item.label !== 'Edit draft'
-        && item.label !== 'View details',
-    ),
-    [agentInstanceRowMenuItems],
-  )
-
-  const FILTER_FIELDS: FilterField[] = useMemo(() => {
-    const statusSet = new Set<string>()
-    const channelSet = new Set<string>()
-    const regionSet = new Set<string>()
-    const locationSet = new Set<string>()
-    const updatedBySet = new Set<string>()
-    for (const row of data) {
-      statusSet.add(row.status)
-      if (row.hasDraft) statusSet.add('Draft')
-      row.channels.split(',').forEach((c) => {
-        const t = c.trim()
-        if (t) channelSet.add(t)
-      })
-      if (row.region) regionSet.add(row.region)
-      if (row.locationName) locationSet.add(row.locationName)
-      if (row.updatedBy) updatedBySet.add(row.updatedBy)
-    }
-    const statusOpts = ['Active', 'Inactive', 'Draft'].filter((s) => statusSet.has(s))
-    const channelOpts = [...channelSet].sort()
-    const regionOpts = [...regionSet].sort()
-    const locationOpts = [...locationSet].sort()
-    const updatedByOpts = [...updatedBySet].sort()
-    return [
-      { id: 'status', label: 'Status', options: opts(...(statusOpts.length ? statusOpts : ['Active', 'Inactive', 'Draft'])) },
-      {
-        id: 'channels',
-        label: 'Channels',
-        options: opts(...(channelOpts.length ? channelOpts : ['Voice call', 'Web chat', 'Text', 'Email', 'Facebook'])),
-        multi: true,
-      },
-      {
-        id: 'region',
-        label: 'Region',
-        options: opts(...(regionOpts.length ? regionOpts : ['North region', 'East region', 'South region', 'West region'])),
-      },
-      {
-        id: 'location',
-        label: 'Location',
-        options: opts(...(locationOpts.length ? locationOpts : ['Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale'])),
-      },
-      {
-        id: 'updatedBy',
-        label: 'Updated by',
-        options: opts(...(updatedByOpts.length ? updatedByOpts : [...UPDATED_BY_SAMPLES])),
-        multi: true,
-      },
-    ]
-  }, [data])
-
-  const librarySource: CreateLibraryCard[] =
-    isReviewResponse
-      ? REVIEW_RESPONSE_CREATE_CARDS
-      : isReviewGeneration
-        ? REVIEW_GENERATION_CREATE_CARDS.map((c) => ({ ...c }))
-        : isReviewTagging
-          ? REVIEW_TAGGING_CREATE_CARDS
-          : isReminder
-            ? REMINDER_CREATE_CARDS
-            : isWaitlist
-              ? WAITLIST_CREATE_CARDS
-              : isPreVisit
-                ? PREVISIT_CREATE_CARDS
-                : isFrontdesk
-                  ? HEALTHCARE_FRONTDESK_CREATE_CARDS
-                  : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
+  const librarySource = DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES
   const libraryCards = librarySource.map((tpl) => ({
     title: tpl.title,
     description: tpl.description,
-    glyph: tpl.glyph,
-    tone: tpl.tone,
-    chipLabel: tpl.valueProp,
-    chipVariant: 'neutral' as const,
-    // Darker than the shared neutral-chip token (#555555) — scoped to this card only.
-    chipClassName: '!text-[#212121]',
-    compact: Boolean(tpl.valueProp),
     actionLabel: 'Use agent' as const,
-    onAction: () =>
-      isGhostwriterAgent
-        ? openGhostwriterWorkflow(tpl.title, 'workflow')
-        : onEditAgent?.(tpl.title),
-    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl, { product, agentName })),
+    onAction: () => onEditAgent?.(tpl.title),
   }))
 
   const searchQ = searchQuery.trim().toLowerCase()
-  const visibleData = useMemo(() => {
-    const filtered = data.filter((row) => {
-      if (searchQ && !row.name.toLowerCase().includes(searchQ)) return false
-      if (!matchesStatusFilter(row, agentFilters.status ?? [])) return false
-      if (!matchesChannelFilter(row.channels, agentFilters.channels ?? [])) return false
-      const regionPicked = agentFilters.region ?? []
-      if (
-        regionPicked.length &&
-        !regionPicked.some((r) => r.toLowerCase() === (row.region ?? '').toLowerCase())
-      ) {
-        return false
-      }
-      const locationPicked = agentFilters.location ?? []
-      if (
-        locationPicked.length &&
-        !locationPicked.some((l) => l.toLowerCase() === (row.locationName ?? '').toLowerCase())
-      ) {
-        return false
-      }
-      const updatedByPicked = agentFilters.updatedBy ?? []
-      if (
-        updatedByPicked.length &&
-        !updatedByPicked.some((u) => u.toLowerCase() === (row.updatedBy ?? '').toLowerCase())
-      ) {
-        return false
-      }
-      return true
-    })
-
-    return [...filtered].sort(
-      (a, b) =>
-        parseAgentsUpdatedMs(b.lastUpdated) - parseAgentsUpdatedMs(a.lastUpdated) ||
-        a.name.localeCompare(b.name),
-    )
-  }, [data, searchQ, agentFilters])
-
+  const visibleData = searchQ ? data.filter((row) => row.name.toLowerCase().includes(searchQ)) : data
   const visibleLibraryCards = searchQ
     ? libraryCards.filter(
         (card) => card.title.toLowerCase().includes(searchQ) || card.description.toLowerCase().includes(searchQ),
       )
     : libraryCards
-  const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -9030,96 +6726,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }
 
 
-  if (showCreateFlow && isLibraryOnlyCreate) {
-    const chatHistoryTitle = isReviewResponse
-      ? 'Reviews AI'
-      : isFrontdesk
-        ? 'Front desk'
-        : isWaitlist
-        ? 'Waitlist'
-        : isPreVisit
-          ? 'Pre-visit'
-          : 'Reminder'
-    const emptyCards = isReviewResponse
-      ? REVIEW_RESPONSE_CREATE_CARDS
-      : isFrontdesk
-        ? HEALTHCARE_FRONTDESK_CREATE_CARDS
-        : isWaitlist
-        ? WAITLIST_CREATE_CARDS
-        : isPreVisit
-          ? PREVISIT_CREATE_CARDS
-          : REMINDER_CREATE_CARDS
-    const scratchName = isReviewResponse
-      ? 'Review response agent 1'
-      : isWaitlist
-        ? 'Waitlist agent 1'
-        : isPreVisit
-          ? 'Pre-visit agent 1'
-          : 'Reminder agent 1'
-    const fallbackLibraryName = isReviewResponse
-      ? 'Review response agent'
-      : isWaitlist
-        ? 'Waitlist agent'
-        : isPreVisit
-          ? 'Pre-visit agent'
-          : 'Reminder agent'
-    return (
-      <div className="flex h-full flex-col">
-        <TopNav title={chatHistoryTitle} initials="S" />
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface">
-          <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
-            <button
-              type="button"
-              onClick={() => setShowCreateFlow(false)}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-              aria-label="Back"
-            >
-              <Icon name="arrow_back" size={20} />
-            </button>
-            <h1 className="text-h3 text-text-primary">Back</h1>
-          </div>
-          <div className="scrollbar-subtle flex min-h-0 flex-1 items-start justify-center overflow-auto px-lg pb-lg">
-            <CreateAgentEmptyState
-              key={createFlowKey}
-              cards={emptyCards}
-              fromScratchLabel={isFrontdesk ? 'Setup manually' : 'Create from scratch'}
-              onCreateFromScratch={() => {
-                if (isFrontdesk) {
-                  setShowSetupWizard(true)
-                  return
-                }
-                setShowCreateFlow(false)
-                onEditAgent?.(scratchName)
-              }}
-              onSelectFromLibrary={(templateId) => {
-                const card = emptyCards.find((c) => c.id === templateId)
-                setShowCreateFlow(false)
-                onEditAgent?.(card?.title ?? fallbackLibraryName)
-              }}
-              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
-            />
-          </div>
-        </div>
-        <AgentLibraryPreviewModal
-          open={libraryPreview != null}
-          data={libraryPreview}
-          onClose={() => setLibraryPreview(null)}
-          onUseAgent={() => {
-            if (!libraryPreview) return
-            const name = libraryPreview.name
-            setLibraryPreview(null)
-            setShowCreateFlow(false)
-            onEditAgent?.(name)
-          }}
-        />
-      </div>
-    )
-  }
-
   if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration)) {
-    /** Ghostwriter-only create polish: grey page, carded top bar, type scale.
-     *  Declared here because `createWorkflowAgentName` below reads it. */
-    const isGhostwriterPolish = isGhostwriterNav(navId) && isReviewResponse
     const isHealthcareFrontdesk = product === 'healthcare'
     const chatHistoryTitle = (isReviewResponse || isReviewGeneration) ? 'Reviews AI' : isReminder ? 'Reminder' : 'Front desk'
     const createVariant = isReminder ? 'reminder' : 'frontdesk'
@@ -9131,12 +6738,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
-    const createWorkflowAgentName = (isGhostwriterPolish && ghostwriterDirect === 'scratch' && isReviewResponse)
-      /* "Create from scratch" — this exact name is what makes the editor start empty
-         (isReviewsScratchCreateName in WorkflowEditorScreen) instead of loading the
-         prebuilt Review response workflow. */
-      ? 'Review response agent 1'
-      : createDraftAgentName
+    const createWorkflowAgentName = createDraftAgentName
       ?? (isReviewResponse
         ? REVIEW_RESPONSE_BUILD_CARD.title
         : isReviewGeneration
@@ -9152,133 +6754,29 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         : null
     const showReviewsCreateInnerTitle =
       isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
-    /** Ghostwriter keeps its tab bar pinned on every tab — including Workflow, where the
-     *  other variants drop the header and let the canvas go full-bleed. */
-    const ghostwriterShellPinned =
-      isGhostwriterPolish && (createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null)
     const showGhostwriterShellHeader =
-      ((createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen) || ghostwriterShellPinned
-    const isExplorationGhostwriterShell =
-      isResponseAgentsExplorationNav(navId) && isReviewResponse && showGhostwriterShellHeader
-    /** Full-bleed exploration create — no in-card Reviews AI TopNav either. */
-    const hideExplorationCreateTopNav =
-      isResponseAgentsExplorationNav(navId) && isReviewResponse
-    /* Library "Use agent" / Edit carry a real agent name, so show it rather than the
-       create flow's generic "Review response agent 1". */
-    const ghostwriterShellTitle =
-      isGhostwriterPolish && ghostwriterDirect === 'workflow' && createDraftAgentName
-        ? createDraftAgentName
-        : isReviewsCreateFlow
-          ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
-          : createWorkflowAgentName
-    // Canvas uses floating chrome — hide the legacy create-flow LHS when the workflow is open.
-    const hideCreateLeftFloater = createWorkflowOpen
-
-    const handleExplorationShellTabChange = (tabId: string) => {
-      // Belt and braces: the tab is already `disabled`, but never act on it either.
-      if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId !== 'ghostwriter') return
-      if (tabId === 'workflow') {
-        setCreateGhostwriterTab('workflow')
-        openCreateWorkflow()
-        return
-      }
-      setCreateGhostwriterTab(tabId)
-      // Without this the canvas stays mounted over the tab you switched to.
-      if (createWorkflowOpen) closeCreateWorkflow()
-    }
+      (createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen
+    const ghostwriterShellTitle = isReviewsCreateFlow
+      ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
+      : createWorkflowAgentName
 
     return (
       <div className="flex h-full">
-        {/* This branch returns before the main render's Toast, so it needs its own —
-            otherwise Save as draft / Agent created would fire into nothing. */}
-        <Toast
-          message={toastMessage}
-          visible={toastVisible}
-          onClose={() => setToastVisible(false)}
-        />
         <div className="flex h-full min-w-0 flex-1 flex-col">
-        {!hideExplorationCreateTopNav && <TopNav title={chatHistoryTitle} initials="S" />}
-        <div
-          className={`relative flex min-h-0 flex-1 overflow-hidden ${
-            !isGhostwriterPolish
-              ? 'bg-surface'
-              : createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null
-                ? /* detail state — flat light grey behind the top bar + tab content */ 'bg-[#f6f7f9]'
-                : 'ghostwriter-create-bg'
-          }`}
-        >
-          {/* Pinned above both the chat pane and the canvas, so the tab bar survives a
-              switch to Workflow (the left section below collapses to 0×0 when the canvas
-              opens, which would take the header with it). */}
-          {ghostwriterShellPinned && (
-            <div className="absolute inset-x-0 top-0 z-30">
-              <CreateAiGhostwriterTabbedShell
-                carded
-                title={ghostwriterShellTitle}
-                activeTab={createGhostwriterTab}
-                onTabChange={handleExplorationShellTabChange}
-                onBack={() => {
-                  if (chatHistorySelectedId) selectAllChats()
-                  else setShowCreateFlow(false)
-                }}
-                disabledTabIds={
-                  ghostwriterAgentCreated
-                    ? undefined
-                    : ['workflow', 'tools', 'knowledge', 'simulation']
-                }
-                right={
-                  !ghostwriterAgentCreated ? (
-                    /* Nothing is built yet, so Run test / Activate would be meaningless —
-                       a single Save as draft is the only sensible action here. */
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setToastMessage('Draft saved')
-                        setToastVisible(true)
-                      }}
-                      className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
-                    >
-                      Save as draft
-                    </button>
-                  ) : (
-                  <GhostwriterTopBarActions
-                    onAction={(type) => {
-                      // These act on the workflow, so surface it first — then fire the
-                      // real handler inside AgentBuilder via a fresh nonce.
-                      setCreateGhostwriterTab('workflow')
-                      openCreateWorkflow()
-                      setGhostwriterHeaderAction((prev) => ({
-                        type,
-                        nonce: (prev?.nonce ?? 0) + 1,
-                      }))
-                    }}
-                  />
-                  )
-                }
-              />
-            </div>
-          )}
+        <TopNav title={chatHistoryTitle} initials="S" />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
             className={`z-10 shrink-0 transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
-              hideCreateLeftFloater
-                ? 'pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0'
-                : createWorkflowOpen
+              createWorkflowOpen
                 ? `lhs-drawer !absolute bottom-lg left-lg top-[calc(52px+theme(spacing.lg))] !h-auto !w-[360px] ${
                     createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
                   }`
-                /* Ghostwriter: stay transparent so the parent's mesh wash shows through —
-                   this pane is full-bleed and would otherwise paint white over all of it. */
-                : `relative flex h-full w-full flex-col overflow-hidden ${
-                    isGhostwriterPolish ? 'bg-transparent' : 'bg-surface'
-                  } ${ghostwriterShellPinned ? 'pt-[56px]' : ''}`
+                : 'relative flex h-full w-full flex-col overflow-hidden bg-surface'
             }`}
-            aria-label={createWorkflowOpen && !hideCreateLeftFloater ? 'Create with AI conversation' : undefined}
-            aria-hidden={hideCreateLeftFloater || (createWorkflowOpen && createLeftPaneCollapsed)}
+            aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
+            aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
-            {/* Ghostwriter's pinned top bar already carries Back + name + tabs + CTAs, so the
-                whole in-section header chain below is skipped — otherwise it stacks a second
-                (and third) header under the bar and shows as a grey band. */}
-            {ghostwriterShellPinned ? null : createWorkflowOpen && !hideCreateLeftFloater ? (
+            {createWorkflowOpen ? (
               // Match agent-builder LHSDrawer tab chrome exactly.
               <div className="lhs-drawer__tabs lhs-drawer__tabs--visible">
                 <div className="lhs-drawer__tabs-list">
@@ -9322,18 +6820,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   </button>
                 </div>
               </div>
-            ) : isExplorationGhostwriterShell && !ghostwriterShellPinned ? (
-              <CreateAiGhostwriterTabbedShell
-                carded={isGhostwriterPolish}
-                title={ghostwriterShellTitle}
-                activeTab={createGhostwriterTab}
-                onTabChange={handleExplorationShellTabChange}
-                onBack={() => {
-                  if (chatHistorySelectedId) selectAllChats()
-                  else setShowCreateFlow(false)
-                }}
-              />
-            ) : showGhostwriterShellHeader && !ghostwriterShellPinned ? (
+            ) : showGhostwriterShellHeader ? (
               <CreateAiGhostwriterShellHeader
                 title={ghostwriterShellTitle}
                 onBack={() => {
@@ -9354,8 +6841,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               <CreateFlowPageHeader
                 onBack={() => setShowCreateFlow(false)}
                 title="Back"
-                boxedBack={isGhostwriterPolish}
-                transparent={isGhostwriterPolish}
               />
             ) : (
               // Landing view — standard flush-left page header.
@@ -9368,7 +6853,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 >
                   <Icon name="arrow_back" size={20} />
                 </button>
-                <h1 className="text-h3 text-text-primary text-left">Back</h1>
+                <h1 className="text-h3 text-text-primary text-left">Create agent</h1>
               </div>
             )}
             <div
@@ -9382,11 +6867,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     ? 'px-0 py-0'
                     : 'min-h-0'
                   : 'justify-center px-lg'
-              } ${
-                /* Ghostwriter / Tools / Knowledge / Simulation get a white content area;
-                   Workflow keeps the canvas. White sits here rather than on the section so
-                   the section's header inset isn't painted over. */
-                ghostwriterShellPinned && createGhostwriterTab !== 'workflow' ? 'bg-surface' : ''
               }`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
@@ -9405,9 +6885,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   className={
                     createWorkflowOpen && createSideTab === 'manual'
                       ? 'hidden'
-                      : isExplorationGhostwriterShell && createGhostwriterTab !== 'ghostwriter'
-                        ? 'hidden'
-                        : 'flex h-full min-h-0 w-full min-w-0 justify-center'
+                      : 'flex h-full min-h-0 w-full min-w-0 justify-center'
                   }
                 >
                   <HealthcareFrontdeskCreateAgentScreen
@@ -9416,10 +6894,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       if (chatHistorySelectedId) selectAllChats()
                       else setShowCreateFlow(false)
                     }}
-                    onSubmittedChange={(submitted) => {
-                      setCreateFlowSubmitted(submitted)
-                      if (submitted) setCreateGhostwriterTab('ghostwriter')
-                    }}
+                    onSubmittedChange={setCreateFlowSubmitted}
                     pageTitle={
                       showGhostwriterShellHeader
                         ? undefined
@@ -9428,15 +6903,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           : undefined
                     }
                     hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
-                    explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
-                    ghostwriterPolish={isGhostwriterPolish}
                     onCreateFromScratch={() => {
-                      // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
-                      // on the Workflow tab, rather than leaving for the standalone editor.
-                      if (isGhostwriterPolish) {
-                        openGhostwriterWorkflow('Review response agent 1', 'scratch')
-                        return
-                      }
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
                         onEditAgent?.('Review response agent 1')
@@ -9452,15 +6919,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     onSelectFromLibrary={(templateId) => {
                       if (isReviewResponse) {
                         const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
-                        const name = card?.title ?? 'Review response agent'
-                        // Ghostwriter keeps the shell and lands on Workflow with the
-                        // template's prebuilt canvas, rather than leaving for the editor.
-                        if (isGhostwriterPolish) {
-                          openGhostwriterWorkflow(name, 'workflow')
-                          return
-                        }
                         setShowCreateFlow(false)
-                        onEditAgent?.(name)
+                        onEditAgent?.(card?.title ?? 'Review response agent')
                         return
                       }
                       if (isReviewGeneration) {
@@ -9472,9 +6932,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setShowCreateFlow(false)
                       onEditAgent?.('')
                     }}
-                    onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
-                    agentCreated={ghostwriterAgentCreated}
-                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
+                    onCreateAgent={handleCreateAgentSuccess}
+                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse) ? openCreateWorkflow : undefined}
                     libraryCards={
                       isReminder
                         ? REMINDER_CREATE_CARDS
@@ -9518,21 +6977,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               ) : (
                 <CreateAgentEmptyState
                   key={createFlowKey}
-                  cards={LIBRARY_TEMPLATES.map((c) => ({ ...c }))}
-                  fromScratchLabel="Set up a new agent"
                   onCreateFromScratch={() => setShowSetupWizard(true)}
                   onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                 />
               )}
-              {isExplorationGhostwriterShell &&
-                createGhostwriterTab !== 'ghostwriter' &&
-                createGhostwriterTab !== 'workflow' && (
-                  <div className="min-h-0 flex-1 w-full bg-surface" aria-hidden />
-                )}
             </div>
           </section>
 
-          {createWorkflowOpen && createLeftPaneCollapsed && !(isReviewResponse || isReviewGeneration || isFrontdesk || isReminder) && (
+          {createWorkflowOpen && createLeftPaneCollapsed && (
             <button
               type="button"
               aria-label="Expand panel"
@@ -9544,13 +6996,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             </button>
           )}
 
-          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) && (
+          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
-                  ? `absolute inset-x-0 bottom-0 translate-x-0 opacity-100 ${
-                      ghostwriterShellPinned ? 'top-[56px]' : 'top-0'
-                    }`
+                  ? 'absolute inset-0 translate-x-0 opacity-100'
                   : 'absolute inset-y-0 right-0 w-0 translate-x-full opacity-0 pointer-events-none'
               }`}
               aria-hidden={!createWorkflowOpen}
@@ -9559,11 +7009,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 agentName={
                   isReviewResponse
                     ? 'Review response agent - North Region'
-                    : isReviewGeneration
-                      ? 'Review generation agent - North Region'
-                      : isReminder
-                        ? 'Reminder agent - North region'
-                        : 'Front desk agent - North region'
+                    : isReminder
+                      ? 'Reminder agent - North region'
+                      : 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
@@ -9571,24 +7019,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 onClose={closeCreateWorkflow}
                 hideLhs
                 existingAgent={false}
-                hideTopIdentity={isExplorationAgents}
-                /* The pinned tab shell already shows Back + the agent name, and owns the
-                   Run test / Activate / kebab cluster. */
-                hideCanvasBackCluster={ghostwriterShellPinned}
-                hideHeaderActions={ghostwriterShellPinned}
-                ghostwriterChrome={ghostwriterShellPinned}
-                externalHeaderAction={ghostwriterShellPinned ? ghostwriterHeaderAction : null}
-                hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
-                explorationChrome={isExplorationAgents}
-                sep1Chrome={isExplorationAgents}
-                llmTaskExplorationLayout={isLlmTaskExplorationLayout(navId)}
-                /* Ghostwriter's create canvas wears the Full canvas card treatment: type
-                   badge floating above each card instead of inside it. */
-                cardBadgeChrome={isGhostwriterPolish}
-                createAiPanelOpen={false}
+                createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
-                aiBuilderPanelOpen={createAiBuilderPanelOpen}
-                onAiBuilderPanelOpenChange={setCreateAiBuilderPanelOpen}
                 previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
                   isReminder
@@ -9615,30 +7047,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     return (
       <>
         <AgentInstanceScreen
-          key={`${selectedInstance}-${selectedInstanceDisplayName ?? ''}`}
+          key={`${selectedInstance}-${selectedInstanceDisplayName ?? ''}-${instanceInitialTab}`}
           instanceName={selectedInstance}
           displayName={selectedInstanceDisplayName ?? undefined}
           status={instanceStatus}
-          initialTab={routeDeep?.tab ?? instanceInitialTab}
-          initialLogSlug={routeDeep?.logSlug}
-          initialPanel={routeDeep?.panel}
-          initialRecommendationIdFromRoute={routeDeep?.recId}
-          onDeepRouteChange={(patch) =>
-            onDeepRouteChange?.({
-              instanceSlug: instanceSlugFromName(selectedInstance),
-              tab: 'outcomes',
-              ...patch,
-            })
-          }
+          initialTab={instanceInitialTab}
           onBack={() => {
             setSelectedInstance(null)
             setSelectedInstanceDisplayName(null)
             setInstanceInitialTab('outcomes')
-            onDeepRouteChange?.({})
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
-          onOpenIntegrationSettings={onOpenIntegrationSettings}
+          onOpenBookingTemplates={onOpenBookingTemplates}
           onFullBleedChange={setInstanceSetupActive}
           onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
           initialRecommendationId={
@@ -9649,9 +7070,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           }
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
-          workflowButtonOpensEditor={isExplorationAgents}
-          hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
-          fullCanvasChrome={isFullCanvasStyleNav(navId)}
         />
         <Toast
           message={toastMessage}
@@ -9669,446 +7087,141 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-auto">
           {/* Header */}
-          <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
-            <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
-            {!isReviewTaggingFirstTime && (
-              <div className="flex items-center gap-sm">
-                <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
-                {activeTab === 'agents' ? (
-                  <>
-                    {showExplorationAgentsToggle && (
-                      <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
-                        <button
-                          type="button"
-                          aria-label="Card view"
-                          onClick={() => setAgentsViewMode('grid')}
-                          className={`flex size-6 items-center justify-center rounded-sm ${
-                            agentsViewMode === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-                          }`}
-                        >
-                          <Icon name="grid_view" size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="List view"
-                          onClick={() => setAgentsViewMode('list')}
-                          className={`flex size-6 items-center justify-center rounded-sm ${
-                            agentsViewMode === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-                          }`}
-                        >
-                          <Icon name="table_rows" size={18} />
-                        </button>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
-                          ? openCreateFlow()
-                          : onEditAgent?.('')
-                      }
-                      className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                    >
-                      Create agent
-                    </button>
-                    {(!isExplorationAgents || !useAgentCardGrid) && (
-                      <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                        <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                      </button>
-                    )}
-                    <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                      <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {isReviewTaggingFirstTime ? (
-            <div className="scrollbar-subtle flex min-h-0 flex-1 items-start justify-center overflow-auto px-lg pb-lg">
-              <CreateAgentEmptyState
-                layout="build"
-                libraryDefaultOpen
-                cards={REVIEW_TAGGING_CREATE_CARDS}
-                fromScratchLabel="Create from scratch"
-                onCreateFromScratch={() => onEditAgent?.('Review tagging agent 1')}
-                onSelectFromLibrary={(templateId) => {
-                  const card = REVIEW_TAGGING_CREATE_CARDS.find((c) => c.id === templateId)
-                  onEditAgent?.(card?.title ?? 'Review tagging agent')
-                }}
-                onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
-              />
-            </div>
-          ) : (
-            <>
-              {/* Tabs */}
-              <div className="px-2xl">
-                <Tabs
-                  tabs={TABS}
-                  activeTab={activeTab}
-                  showBaseline={false}
-                  onChange={(tabId) => {
-                    setActiveTab(tabId)
-                    onDeepRouteChange?.({ listTab: tabId })
-                  }}
-                />
-              </div>
-
-              {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
+          <div className="flex h-16 items-center justify-between bg-surface px-2xl">
+            <h1 className="text-h3 text-text-primary">{agentName}</h1>
+            <div className="flex items-center gap-sm">
+              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+              {activeTab === 'agents' ? (
                 <>
-                  {isReviewResponse ? <ReviewResponseOutcomesCharts /> : null}
-                </>
-              ) : activeTab === 'agents' ? (
-                <>
-                  {useAgentCardGrid ? (
-                    // Dropdown: Default = icon card; R1 = metric-forward; R2 = compact + footer meta.
-                    <div className="grid grid-cols-1 items-stretch gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
-                      {visibleData.map((row) => {
-                        const cardMetrics = isExplorationFrontDeskAgents
-                          ? [
-                              { value: row.interactions ?? '—', label: 'Conversations responded' },
-                              { value: row.fcr ?? '—', label: 'Conversations resolved' },
-                              { value: row.aht ?? '—', label: 'Resolution rate' },
-                              { value: row.escalation ?? '—', label: 'Time saved' },
-                            ]
-                          : effectiveCardLayout === 'default'
-                            ? [
-                                { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
-                                { value: row.responseRate ?? '—', label: 'Response rate' },
-                              ]
-                            : [
-                                { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
-                                { value: row.responseRate ?? '—', label: 'Response rate' },
-                                { value: row.avgResponseTime ?? '—', label: 'Average response time' },
-                                { value: row.timeSaved ?? '—', label: 'Time saved' },
-                              ]
-                        // Default + R1: icon + draft under name. R3: View draft in header (no icon).
-                        const isDefaultIconCard =
-                          effectiveCardLayout === 'default' || effectiveCardLayout === 'r1'
-                        const isR2Card = effectiveCardLayout === 'r2'
-                        // Default: 2 metrics + updated footer (former R3).
-                        const isTwoMetricFooterCard = effectiveCardLayout === 'default'
-                        const updatedMeta = [
-                          row.lastUpdated ? `Updated ${row.lastUpdated}` : null,
-                          row.updatedBy ?? null,
-                        ].filter(Boolean).join(' · ')
-
-                        if (isTwoMetricFooterCard) {
-                          const authorMeta = formatCardAuthorMeta(row.updatedBy, row.lastUpdated)
-                          const locationLabel = formatCardLocationLabel(row.locations)
-                          const cardDescription = row.cardDescription ?? agentGoals
-                          const authorMetaRow = (
-                            <div className="inline-flex max-w-full min-w-0 items-center gap-sm text-small">
-                              <TruncatedTooltipText
-                                text={authorMeta}
-                                tooltipClassName="min-w-0 max-w-full overflow-hidden"
-                                className="min-w-0 truncate text-text-secondary"
-                              />
-                              {row.status === 'Active' && row.hasDraft ? (
-                                <>
-                                  <span aria-hidden className="h-3 w-px shrink-0 bg-border" />
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                    }}
-                                    className="shrink-0 text-text-action hover:underline"
-                                  >
-                                    Draft · John, 2h ago
-                                  </button>
-                                </>
-                              ) : null}
-                            </div>
-                          )
-                          return (
-                            <div
-                              key={`${row.name}-${row.status}`}
-                              role="presentation"
-                              onClick={() => openAgentInstanceDetails(row)}
-                              // One gap for the whole card body instead of per-block
-                              // margins, so title/author/description/footer are evenly spaced.
-                              className="group relative flex h-full min-w-0 cursor-pointer flex-col gap-md overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
-                            >
-                              <div className="flex min-w-0 items-start gap-sm">
-                                <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
-                                <div className="flex min-w-0 flex-1 items-start justify-between gap-sm">
-                                  <div className="min-w-0 flex-1">
-                                    <TruncatedTooltipText
-                                      as="h3"
-                                      text={row.name}
-                                      className="line-clamp-2 min-w-0 text-body leading-[22px] tracking-[-0.28px] text-text-primary"
-                                    />
-                                  </div>
-                                  <Chip
-                                    label={row.status}
-                                    variant={STATUS_VARIANT[row.status] ?? 'neutral'}
-                                    showDot={false}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Always flush to the card edge rather than indented under
-                                  the title, so it gets the full width and stops truncating. */}
-                              <div className="min-w-0">{authorMetaRow}</div>
-
-                              {cardDescription ? (
-                                <TruncatedTooltipText
-                                  as="p"
-                                  text={cardDescription}
-                                  className="line-clamp-2 text-[13px] leading-[20px] text-text-secondary"
-                                />
-                              ) : null}
-
-                              {/* Locations sit left and stay put; the actions live on the
-                                  right and only surface on hover. They keep their space at
-                                  opacity-0 so the card height doesn't shift. */}
-                              <div className="mt-auto flex min-w-0 items-center gap-sm">
-                                <div className="flex min-w-0 flex-1 overflow-hidden">
-                                  {locationLabel ? (
-                                    <TruncatedTooltipText
-                                      text={locationLabel}
-                                      tooltipClassName="min-w-0 max-w-full overflow-hidden"
-                                      className="min-w-0 max-w-full truncate text-small text-text-tertiary"
-                                    />
-                                  ) : null}
-                                </div>
-                                <div
-                                  className="pointer-events-none flex shrink-0 items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceEditor(row)}
-                                    className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceDetails(row)}
-                                    className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                                  >
-                                    View details
-                                  </button>
-                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        }
-
-                        if (isR2Card) {
-                          return (
-                            <div
-                              key={`${row.name}-${row.status}`}
-                              className="group relative flex min-h-[188px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-md transition-colors hover:bg-surface-hover"
-                            >
-                              <div className="flex items-center justify-between gap-sm">
-                                <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} size="sm" />
-                                <div className="flex shrink-0 items-center gap-sm">
-                                  {row.hasDraft ? (
-                                    <>
-                                      <Tooltip content="Draft · Rupa, 2h ago" variant="brief">
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                          }
-                                          className="truncate text-body text-text-action hover:underline"
-                                        >
-                                          View draft
-                                        </button>
-                                      </Tooltip>
-                                      <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
-                                    </>
-                                  ) : null}
-                                  <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} showDot={row.status !== 'Draft'} />
-                                </div>
-                              </div>
-
-                              <h3 className="mt-sm mb-lg line-clamp-2 min-w-0 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
-                                {row.name}
-                              </h3>
-
-                              <div className="flex content-start gap-2xl">
-                                {(isExplorationFrontDeskAgents
-                                  ? [
-                                      { label: 'Conversations responded', value: row.interactions ?? '—' },
-                                      { label: 'Conversations resolved', value: row.fcr ?? '—' },
-                                    ]
-                                  : [
-                                      { label: 'Reviews responded', value: row.reviewsResponded ?? '—' },
-                                      { label: 'Response rate', value: row.responseRate ?? '—' },
-                                    ]
-                                ).map((metric) => (
-                                  <div key={metric.label} className="min-w-0 shrink-0">
-                                    <div className="text-body text-text-primary">{metric.value}</div>
-                                    <div className="text-small text-text-tertiary">{metric.label}</div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div className="relative mt-auto min-h-9 pt-md">
-                                <div className="flex min-w-0 items-center group-hover:invisible">
-                                  <span className="min-w-0 truncate text-small text-text-tertiary">
-                                    {updatedMeta || '—'}
-                                  </span>
-                                </div>
-                                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceDetails(row)}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                                  >
-                                    View details
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceEditor(row)}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                                  >
-                                    Edit
-                                  </button>
-                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <div
-                            key={`${row.name}-${row.status}`}
-                            className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
-                          >
-                            <div className="flex min-w-0 items-start justify-between gap-sm">
-                              <div className="flex min-w-0 flex-1 flex-col gap-xs">
-                                <div className="flex min-w-0 items-start gap-sm">
-                                  {isDefaultIconCard && (
-                                    <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
-                                  )}
-                                  <div className="flex min-w-0 flex-1 flex-col gap-xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => openAgentInstanceDetails(row)}
-                                      className="min-w-0 truncate text-left text-body leading-[22px] tracking-[-0.28px] text-text-primary hover:text-text-action"
-                                    >
-                                      {row.name}
-                                    </button>
-                                    {isDefaultIconCard && row.hasDraft ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                        }
-                                        className="truncate text-left text-small text-text-action hover:underline"
-                                      >
-                                        Draft · Rupa, 2h ago
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-sm">
-                                {!isDefaultIconCard && row.hasDraft ? (
-                                  <>
-                                    <Tooltip content="Draft · Rupa, 2h ago" variant="brief">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                        }
-                                        className="truncate text-body text-text-action hover:underline"
-                                      >
-                                        View draft
-                                      </button>
-                                    </Tooltip>
-                                    <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
-                                  </>
-                                ) : null}
-                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} showDot={row.status !== 'Draft'} />
-                              </div>
-                            </div>
-                            <div
-                              className={
-                                isDefaultIconCard
-                                    ? 'mt-sm grid grid-cols-3 content-start gap-sm'
-                                    : 'mt-md grid grid-cols-3 content-start gap-md'
-                              }
-                            >
-                              {cardMetrics.map((metric) => (
-                                <div key={metric.label} className="min-w-0">
-                                  <div className={isDefaultIconCard ? 'truncate text-body text-text-primary' : 'truncate text-h3 text-text-primary'}>
-                                    {metric.value}
-                                  </div>
-                                  <div className="truncate text-small text-text-tertiary">{metric.label}</div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-surface-hover px-lg pb-lg pt-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => openAgentInstanceDetails(row)}
-                                  className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                                >
-                                  View details
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openAgentInstanceEditor(row)}
-                                  className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                                >
-                                  Edit
-                                </button>
-                                <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
-                              </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="px-lg pb-lg pt-2xl">
-                      <DataTable
-                        columns={columns}
-                        data={visibleData}
-                        scrollOnHover
-                        onRowClick={(row) => {
-                          setInstanceInitialTab('outcomes')
-                          setSelectedInstanceDisplayName(null)
-                          setSelectedInstance(row.name)
-                          onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(row.name), tab: 'outcomes' })
-                        }}
-                        rowMenuItems={agentInstanceRowMenuItems}
-                        rowClassName={(row) =>
-                          // Taller dual-line row for Active + nested Draft; cells grow with content.
-                          row.hasDraft
-                            ? '[&>td]:!h-auto [&>td]:!align-top [&>td]:!pt-lg [&>td]:!pb-lg'
-                            : ''
-                        }
-                      />
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) ? openCreateFlow() : onEditAgent?.('')}
+                    className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  >
+                    Create agent
+                  </button>
+                  <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                    <Icon name="view_column" size={20} />
+                  </button>
+                  <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                    <Icon name="filter_list" size={20} />
+                  </button>
                 </>
               ) : (
-                <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
-                  {visibleLibraryCards.map((card) => (
-                    <InfoCard key={card.title} {...card} />
-                  ))}
+                <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+                  <button
+                    type="button"
+                    aria-label="Grid view"
+                    onClick={() => setLibraryView('grid')}
+                    className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
+                      libraryView === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                    }`}
+                  >
+                    <Icon name="grid_view" size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="List view"
+                    onClick={() => setLibraryView('list')}
+                    className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
+                      libraryView === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                    }`}
+                  >
+                    <Icon name="table_rows" size={18} />
+                  </button>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="px-2xl">
+            <Tabs
+              tabs={TABS}
+              activeTab={activeTab}
+              onChange={(tabId) => {
+                setActiveTab(tabId)
+                if (tabId === 'library') setLibraryView('grid')
+              }}
+            />
+          </div>
+
+          {activeTab === 'agents' ? (
+            <>
+              <div className="px-2xl pt-lg">
+                <MetricTiles
+                  metrics={displayMetrics}
+                  renderTileAction={
+                    isFrontdesk
+                      ? (metric) =>
+                          metric.id === 'timeSaved' ? (
+                            <button
+                              type="button"
+                              aria-label="Estimate savings"
+                              onClick={() => setSavingsModalOpen(true)}
+                              className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                            >
+                              <Icon name="tune" size={18} />
+                            </button>
+                          ) : null
+                      : undefined
+                  }
+                />
+              </div>
+              <EstimateSavingsModal
+                open={savingsModalOpen}
+                onClose={() => setSavingsModalOpen(false)}
+                initialValues={savingsSettings}
+                onSave={(values) => {
+                  setSavingsSettings(values)
+                  setSavingsModalOpen(false)
+                }}
+              />
+              <div className="px-lg py-lg">
+                <DataTable
+                  columns={columns}
+                  data={visibleData}
+                  scrollOnHover
+                  onRowClick={(row) => {
+                    setInstanceInitialTab('outcomes')
+                    setSelectedInstanceDisplayName(null)
+                    setSelectedInstance(row.name)
+                  }}
+                  rowMenuItems={[
+                    { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
+                    {
+                      label: 'Pause',
+                      onClick: () => {},
+                      visible: (row) => row.status === 'Running',
+                    },
+                    { label: 'Duplicate', onClick: () => {} },
+                    { label: 'View details', onClick: (row) => {
+                      setInstanceInitialTab('outcomes')
+                      setSelectedInstanceDisplayName(null)
+                      setSelectedInstance(row.name)
+                    } },
+                    { label: 'Reports', onClick: () => {} },
+                    { label: 'Delete', onClick: () => {}, variant: 'danger' },
+                  ]}
+                />
+              </div>
             </>
+          ) : libraryView === 'grid' ? (
+            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
+              {visibleLibraryCards.map((card) => (
+                <InfoCard key={card.title} {...card} />
+              ))}
+            </div>
+          ) : (
+            <div className="px-2xl py-lg">
+              {visibleLibraryCards.map((card, i) => (
+                <InfoCardListItem key={card.title} first={i === 0} {...card} />
+              ))}
+            </div>
           )}
         </div>
 
-        <FilterPanel
-          open={filterOpen}
-          fields={FILTER_FIELDS}
-          selections={agentFilters}
-          onSelectionsChange={setAgentFilters}
-          onClose={() => setFilterOpen(false)}
-        />
+        <FilterPanel open={filterOpen} fields={FILTER_FIELDS} onClose={() => setFilterOpen(false)} />
       </div>
 
       <CustomizeColumnsDrawer
@@ -10124,28 +7237,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           setOrder(DEFAULT_ORDER)
           setVisible(DEFAULT_VISIBLE)
         }}
-      />
-
-      <AgentLibraryPreviewModal
-        open={libraryPreview != null}
-        data={libraryPreview}
-        onClose={() => setLibraryPreview(null)}
-        onUseAgent={() => {
-          if (!libraryPreview) return
-          const name = libraryPreview.name
-          setLibraryPreview(null)
-          if (isGhostwriterAgent) {
-            openGhostwriterWorkflow(name, 'workflow')
-            return
-          }
-          onEditAgent?.(name)
-        }}
-      />
-
-      <Toast
-        message={toastMessage}
-        visible={toastVisible}
-        onClose={() => setToastVisible(false)}
       />
 
     </div>

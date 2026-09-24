@@ -41,6 +41,9 @@ export interface RowMenuItem<T> {
   onClick: (row: T) => void
   /** When omitted, the item is always shown. */
   visible?: (row: T) => boolean
+  /** When true, the item is non-interactive and shows `disabledTooltip` on hover. */
+  disabled?: (row: T) => boolean
+  disabledTooltip?: string
   variant?: 'default' | 'danger'
   icon?: string
 }
@@ -66,4 +69,8 @@ export interface DataTableProps<T = Record<string, unknown>> {
   rowClassName?: (row: T, index: number) => string
   /** Row height in px. Defaults to 48 (h-12). */
   rowHeight?: number
+  /** Pin the first column(s) while scrolling horizontally. */
+  stickyFirstColumn?: boolean
+  /** Number of leading columns to pin when `stickyFirstColumn` is true (default 1). */
+  stickyLeadingColumnCount?: number
 }

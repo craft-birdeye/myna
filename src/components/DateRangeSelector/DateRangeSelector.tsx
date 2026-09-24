@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { DateRangePickerPanel } from '../DateRangePickerPanel/DateRangePickerPanel'
 import { DateRangeSelectorProps } from './DateRangeSelector.types'
 
-export function DateRangeSelector({ value, options, onChange }: DateRangeSelectorProps) {
+export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -19,24 +20,15 @@ export function DateRangeSelector({ value, options, onChange }: DateRangeSelecto
       {open && (
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[180px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-            {options.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => {
-                  onChange(opt)
-                  setOpen(false)
-                }}
-                className={`block w-full px-md py-sm text-left text-body transition-colors ${
-                  opt === value
-                    ? 'font-medium text-primary'
-                    : 'text-text-primary hover:bg-surface-hover'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+          <div className="absolute right-0 top-full z-[110] mt-xs">
+            <DateRangePickerPanel
+              value={value}
+              onApply={(nextValue) => {
+                onChange(nextValue)
+                setOpen(false)
+              }}
+              onCancel={() => setOpen(false)}
+            />
           </div>
         </>
       )}

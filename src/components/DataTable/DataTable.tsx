@@ -74,6 +74,21 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
 const DEFAULT_WIDTH = 160
 const DEFAULT_MIN_WIDTH = 80
 
+const STICKY_HEAD_CLASS =
+  'sticky z-20 bg-surface transition-[box-shadow,border-color] duration-200 ease-out'
+const STICKY_CELL_CLASS =
+  'sticky z-10 bg-surface transition-[box-shadow,border-color] duration-200 ease-out group-hover/row:bg-surface-hover'
+const STICKY_EDGE_CLASS =
+  'border-r border-border shadow-[8px_0_24px_-10px_rgba(15,23,42,0.1)]'
+
+function sumWidthsBefore<T>(columns: Column<T>[], widths: Record<string, number>, beforeIndex: number) {
+  let sum = 0
+  for (let i = 0; i < beforeIndex; i++) {
+    sum += widths[String(columns[i].key)] ?? DEFAULT_WIDTH
+  }
+  return sum
+}
+
 /** Header label that shows a tooltip only when `line-clamp-2` actually truncates. */
 function HeaderLabel({ label, className }: { label: string; className: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -149,6 +164,8 @@ export function DataTable<T extends Record<string, unknown>>({
   initialSortDir = 'asc',
   rowClassName,
   rowHeight = 48,
+  stickyFirstColumn = false,
+  stickyLeadingColumnCount: stickyLeadingColumnCountProp,
 }: DataTableProps<T>) {
   const [widths, setWidths] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
@@ -162,6 +179,12 @@ export function DataTable<T extends Record<string, unknown>>({
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ rowIndex: number; top: number; left: number } | null>(null)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [stickyHScroll, setStickyHScroll] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const effectiveStickyCount = stickyFirstColumn
+    ? Math.min(stickyLeadingColumnCountProp ?? 1, columns.length)
+    : 0
 
   useEffect(() => {
     setWidths((prev) => {
@@ -232,7 +255,11 @@ export function DataTable<T extends Record<string, unknown>>({
   const hasRowCtas = !!rowAction || !!(rowActions && rowActions.length) || !!(rowMenuItems && rowMenuItems.length)
 
   return (
-    <div className={`overflow-x-auto${scrollOnHover ? ' scroll-on-hover' : ''}`}>
+    <div
+      ref={scrollRef}
+      onScroll={() => setStickyHScroll((scrollRef.current?.scrollLeft ?? 0) > 0)}
+      className={`overflow-x-auto${scrollOnHover ? ' scroll-on-hover' : ''}`}
+    >
       {/* minWidth on an inner wrapper — `min-width` on <table> is ignored, which lets
           columns squeeze and header labels paint into the next column. */}
       <div className="w-full" style={{ minWidth: totalWidth }}>
@@ -249,8 +276,17 @@ export function DataTable<T extends Record<string, unknown>>({
               const sorted = sort.key === key
               const resizable = col.resizable !== false
               const showDivider = i < columns.length - 1
+              const isStickyLeader = effectiveStickyCount > 0 && i < effectiveStickyCount
+              const isLastStickyLeader = isStickyLeader && i === effectiveStickyCount - 1
+              const stickyLeft = isStickyLeader ? sumWidthsBefore(columns, widths, i) : undefined
               return (
-                <th key={key} className="relative min-h-12 min-w-0 overflow-hidden whitespace-normal border-b border-border px-[10px] py-xs align-middle font-normal">
+                <th
+                  key={key}
+                  style={stickyLeft !== undefined ? { left: stickyLeft } : undefined}
+                  className={`relative min-h-12 min-w-0 whitespace-normal border-b border-border px-[10px] py-xs align-middle font-normal ${
+                    isStickyLeader ? STICKY_HEAD_CLASS : 'overflow-hidden'
+                  } ${isLastStickyLeader && stickyHScroll ? STICKY_EDGE_CLASS : ''}`}
+                >
                   {col.headerRender ? (
                     col.headerRender({
                       sorted,
@@ -312,6 +348,10 @@ export function DataTable<T extends Record<string, unknown>>({
             >
               {columns.map((col, ci) => {
                 const isLast = ci === columns.length - 1
+                const isStickyLeader = effectiveStickyCount > 0 && ci < effectiveStickyCount
+                const isLastStickyLeader = isStickyLeader && ci === effectiveStickyCount - 1
+                const stickyLeft = isStickyLeader ? sumWidthsBefore(columns, widths, ci) : undefined
+                const rowHighlighted = menu?.rowIndex === i
                 const rawValue = row[col.key]
                 const content = col.render ? col.render(rawValue, row) : String(rawValue ?? '')
                 const useTruncatedCell = col.truncate !== false
@@ -324,14 +364,17 @@ export function DataTable<T extends Record<string, unknown>>({
                 return (
                   <td
                     key={String(col.key)}
-                    style={
-                      rowClassName?.(row, i)?.includes('h-auto')
-                        ? undefined
-                        : { height: rowHeight }
-                    }
+                    style={{
+                      ...(stickyLeft !== undefined ? { left: stickyLeft } : {}),
+                      ...(rowClassName?.(row, i)?.includes('h-auto') ? {} : { height: rowHeight }),
+                    }}
                   className={`px-[10px] align-middle text-body text-text-primary ${
-                      isLast ? 'relative min-w-0 overflow-hidden' : 'min-w-0 overflow-hidden'
-                    }`}
+                      isStickyLeader
+                        ? `${STICKY_CELL_CLASS}${rowHighlighted ? ' !bg-surface-hover' : ''}`
+                        : isLast
+                          ? 'relative min-w-0 overflow-hidden'
+                          : 'min-w-0 overflow-hidden'
+                    } ${isLastStickyLeader && stickyHScroll ? STICKY_EDGE_CLASS : ''}`}
                   >
                     {cellContent}
 

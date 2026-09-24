@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
+import { BookingTemplateStoreProvider } from './data/BookingTemplateStoreContext'
+import { FallbackFailoverStoreProvider } from './data/FallbackFailoverStoreContext'
 import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
@@ -41,6 +43,8 @@ import { ServiceScreen } from './screens/ServiceScreen'
 import { ProvidersScreen } from './screens/ProvidersScreen'
 import { AppointmentTypeScreen } from './screens/AppointmentTypeScreen'
 import { AvailabilityScreen } from './screens/AvailabilityScreen'
+import { BookingTemplatesScreen } from './screens/BookingTemplatesScreen'
+import { FallbackFailoverScreen } from './screens/FallbackFailoverScreen'
 import { AutoAppointmentTypeScreen } from './screens/AutoAppointmentTypeScreen'
 import { AutoAvailabilityScreen } from './screens/AutoAvailabilityScreen'
 import { HCFrontdeskOverviewScreen } from './screens/HCFrontdeskOverviewScreen'
@@ -184,7 +188,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'auto-appointment-type',  label: 'Appointment type'},
       { id: 'auto-availability',      label: 'Availability'    },
@@ -232,11 +236,13 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'providers',         label: 'Providers'          },
       { id: 'appointment-type',  label: 'Appointment type'   },
       { id: 'availability',      label: 'Availability'       },
+      { id: 'booking-templates', label: 'Booking templates' },
+      { id: 'fallback-failover', label: 'Fallback and failover' },
       { id: 'procedure-library', label: 'Procedures'         },
       { id: 'phone-number',      label: 'Phone number'       },
       { id: 'knowledge-base',    label: 'Knowledge base',    external: true },
@@ -286,11 +292,13 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'providers',         label: 'Providers'        },
       { id: 'appointment-type',  label: 'Appointment type' },
       { id: 'availability',      label: 'Availability'     },
+      { id: 'booking-templates', label: 'Booking templates' },
+      { id: 'fallback-failover', label: 'Fallback and failover' },
       { id: 'procedure-library', label: 'Procedures'       },
       { id: 'phone-number',      label: 'Phone number'     },
       { id: 'knowledge-base',    label: 'Knowledge base', external: true },
@@ -343,7 +351,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'monitoring-sites',   label: 'Monitoring sites' },
       { id: 'generation-sites',   label: 'Generation sites' },
@@ -651,6 +659,14 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
+  const [pendingBookingTemplateId, setPendingBookingTemplateId] = useState<string | null>(null)
+
+  function openBookingTemplates(templateId: string) {
+    setPendingBookingTemplateId(templateId)
+    setSettingsSubScreen(null)
+    setRailActive('frontdesk')
+    setNavActive('booking-templates')
+  }
 
   // Restore rail + L2 from the address bar (path or leftover hash) on back/forward.
   useEffect(() => {
@@ -810,6 +826,8 @@ export function App() {
 
   return (
     <ProcedureStoreProvider>
+    <BookingTemplateStoreProvider>
+    <FallbackFailoverStoreProvider>
       <AgentSystemPromptStoreProvider>
       {/*
         Shell layout (mirrors contenthub 2.0):
@@ -1066,7 +1084,10 @@ export function App() {
                   ) : settingsSubScreen === 'web-widgets' ? (
                     <WebWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : settingsSubScreen === 'appointment-widgets' ? (
-                    <AppointmentWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
+                    <AppointmentWidgetsScreen
+                      onBack={() => setSettingsSubScreen(null)}
+                      onOpenBookingTemplates={openBookingTemplates}
+                    />
                   ) : settingsSubScreen === 'user-experience-improvement' ? (
                     <UserExperienceImprovementScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : (
@@ -1369,6 +1390,13 @@ export function App() {
                   <AppointmentTypeScreen />
                 ) : navActive === 'hc-availability' || navActive === 'availability' ? (
                   <AvailabilityScreen />
+                ) : navActive === 'booking-templates' ? (
+                  <BookingTemplatesScreen
+                    initialEditId={pendingBookingTemplateId}
+                    onInitialEditConsumed={() => setPendingBookingTemplateId(null)}
+                  />
+                ) : navActive === 'fallback-failover' ? (
+                  <FallbackFailoverScreen />
                 ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' ? (
                   <HCFrontdeskOverviewScreen isDental={navActive === 'dental-frontdesk-overview'} />
                 ) : navActive === 'hc-no-shows' || navActive === 'dental-no-shows' || navActive === 'auto-no-shows' ? (
@@ -1390,6 +1418,7 @@ export function App() {
                     onDeepRouteChange={setDeepRoute}
                     onEditAgent={handleEditAgent}
                     onOpenIntegrationSettings={openIntegrationSettings}
+                    onOpenBookingTemplates={openBookingTemplates}
                     onAgentSetupActiveChange={setIsAgentSetupActive}
                     onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
                     onNavigateToInbox={(conversationId) => {
@@ -1435,6 +1464,8 @@ export function App() {
       </RecommendationOverridesStoreProvider>
       </FeedbackRecommendationsStoreProvider>
       </AgentSystemPromptStoreProvider>
+    </FallbackFailoverStoreProvider>
+    </BookingTemplateStoreProvider>
     </ProcedureStoreProvider>
   )
 }

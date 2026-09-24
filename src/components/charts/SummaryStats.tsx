@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export interface SummaryStat {
   id: string
   value: string
@@ -5,6 +7,8 @@ export interface SummaryStat {
   /** e.g. "8.4%" — sign comes from `trend`. */
   delta?: string
   trend?: 'up' | 'down'
+  /** Optional element shown inline after the label (e.g. a configure icon). */
+  labelSuffix?: ReactNode
 }
 
 export interface SummaryStatsProps {
@@ -42,7 +46,10 @@ export function SummaryStats({ title = 'Summary', stats }: SummaryStatsProps) {
                   </span>
                 )}
               </div>
-              <p className="text-body text-text-secondary">{s.label}</p>
+              <p className="flex items-center gap-xs text-body text-text-secondary">
+                {s.label}
+                {s.labelSuffix}
+              </p>
             </div>
           )
         })}

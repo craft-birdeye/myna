@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp, RefreshCw, X } from 'lucide-react'
 import { DataTable, HeaderSearchField, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
+import { APPOINTMENT_TYPES } from '../data/appointmentTypesData'
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 interface ToggleProps { value: boolean; onChange: (v: boolean) => void }
@@ -30,18 +31,20 @@ interface ApptTypeRow {
   [key: string]: string | boolean | undefined
 }
 
+const AT = Object.fromEntries(APPOINTMENT_TYPES.map((t) => [t.id, t]))
+
 const APPT_TYPES: ApptTypeRow[] = [
-  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
-  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Whitening Treatment',      description: 'In-office bleaching session',               duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
-  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
-  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
+  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['whitening-treatment'].name,      description: AT['whitening-treatment'].description,      duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
+  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
+  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
 ]
 
 // ── Dropdown data ─────────────────────────────────────────────────────────────
@@ -88,6 +91,17 @@ const AT_PMS_APPT_OPTIONS: SelectOption[] = [
   { value: 'd9310', label: 'D9310 – Consultation, diagnostic service' },
 ]
 
+const AT_OPERATORY_SEARCH_OPTIONS: SelectOption[] = [
+  { value: 'all', label: 'All available operatories' },
+  { value: 'op1', label: 'Operatory 1' },
+  { value: 'op2', label: 'Operatory 2' },
+  { value: 'op3', label: 'Operatory 3' },
+  { value: 'op4', label: 'Operatory 4' },
+  { value: 'op5', label: 'Operatory 5' },
+]
+
+type RescheduleOperatoryRule = 'same' | 'any'
+
 // ── DropdownField ─────────────────────────────────────────────────────────────
 interface ATDropdownFieldProps {
   label: string
@@ -124,7 +138,7 @@ function ATDropdownField({ label, required, infoIcon, tooltip, options, value, m
     <div className="flex flex-col gap-xs">
       <div className="flex items-center gap-xs">
         <label className="text-small text-text-secondary">
-          {label}{required && <span className="text-danger"> *</span>}
+          {label}{required && <span className="text-chip-danger-text"> *</span>}
         </label>
         {infoIcon && tooltip && <InfoTooltip text={tooltip} />}
       </div>
@@ -165,7 +179,6 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
 
   const [displayName, setDisplayName] = useState(isEdit ? 'New Patient Exam' : '')
   const [description, setDescription] = useState(isEdit ? 'Comprehensive initial exam + X-rays' : '')
-  const [pmsExpanded, setPmsExpanded] = useState(isEdit)
   const [tags, setTags] = useState<string[]>(isEdit ? ['new patient', 'first visit'] : [])
   const [tagInput, setTagInput] = useState('')
 
@@ -174,6 +187,9 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
   const [providers,   setProviders]   = useState<string[]>(isEdit ? ['chen']  : [])
   const [mappingType, setMappingType] = useState<string[]>(isEdit ? ['appt']  : ['none'])
   const [pmsApptType, setPmsApptType] = useState<string[]>(isEdit ? ['d0150'] : [])
+  const [allowReschedule, setAllowReschedule] = useState(false)
+  const [rescheduleOperatoryRule, setRescheduleOperatoryRule] = useState<RescheduleOperatoryRule>('any')
+  const [operatoriesToSearch, setOperatoriesToSearch] = useState<string[]>(['all'])
 
   function handleMappingTypeChange(v: string[]) {
     setMappingType(v)
@@ -210,12 +226,12 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 flex-col gap-lg overflow-auto p-2xl">
+        <div className="flex flex-1 flex-col gap-lg overflow-y-auto p-2xl pb-3xl">
           <ATDropdownField label="Location" required infoIcon tooltip="The locations where this appointment type can be booked. Leave blank to make it available everywhere." options={AT_LOCATION_OPTIONS} value={location} onChange={setLocation} />
 
           {/* Display name */}
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Display name <span className="text-danger">*</span></label>
+            <label className="text-small text-text-secondary">Display name <span className="text-chip-danger-text">*</span></label>
             <input
               className="h-[34px] rounded-md border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
               placeholder="Enter"
@@ -226,7 +242,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
 
           {/* Description */}
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Description <span className="text-danger">*</span></label>
+            <label className="text-small text-text-secondary">Description <span className="text-chip-danger-text">*</span></label>
             <textarea
               className="min-h-[80px] rounded-sm border border-border px-md py-sm text-body text-text-primary focus:border-primary focus:outline-none"
               placeholder="Enter"
@@ -240,7 +256,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
 
           {/* Recognition hints */}
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Recognition hints <span className="text-danger">*</span></label>
+            <label className="text-small text-text-secondary">Recognition hints <span className="text-chip-danger-text">*</span></label>
             <div className="flex min-h-[36px] flex-wrap items-center gap-xs rounded-sm border border-border px-md py-xs focus-within:border-primary">
               {tags.map((tag, i) => (
                 <span key={i} className="flex items-center gap-xs rounded-full bg-surface-selected px-sm py-0.5 text-small text-text-primary">
@@ -261,37 +277,120 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
             <p className="text-xs text-text-tertiary">Phrases that assist the agent in identifying this type</p>
           </div>
 
-          {/* PMS mapping accordion */}
+          {/* PMS mapping */}
           <div className="rounded-sm border border-border">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between px-md py-sm"
-              onClick={() => setPmsExpanded(v => !v)}
-            >
-              <span className="text-body text-text-primary">PMS mapping</span>
-              {pmsExpanded ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
-            </button>
-            {pmsExpanded && (
-              <div className="flex flex-col gap-md border-t border-border p-md">
-                <ATDropdownField
-                  label="Mapping type"
-                  options={AT_MAPPING_TYPE_OPTIONS}
-                  value={mappingType}
-                  onChange={handleMappingTypeChange}
-                />
-                {mappingType[0] === 'appt' && (
-                  <ATDropdownField
-                    label="PMS appointment type"
-                    options={AT_PMS_APPT_OPTIONS}
-                    value={pmsApptType}
-                    onChange={setPmsApptType}
-                    placeholder="Select PMS code"
-                    searchable
-                  />
-                )}
-                <p className="text-small text-text-secondary">Links this type to a code in your PMS. The mapped code's duration sets the maximum allowed below.</p>
+            <div className="flex flex-col gap-md p-md">
+              <div className="flex items-center gap-xs">
+                <span className="text-body text-text-primary">PMS mapping</span>
+                <InfoTooltip text="Links this type to a code in your PMS. The mapped code's duration sets the maximum allowed below." />
               </div>
-            )}
+              <ATDropdownField
+                label="Mapping type"
+                options={AT_MAPPING_TYPE_OPTIONS}
+                value={mappingType}
+                onChange={handleMappingTypeChange}
+              />
+              {mappingType[0] === 'appt' && (
+                <ATDropdownField
+                  label="PMS appointment type"
+                  options={AT_PMS_APPT_OPTIONS}
+                  value={pmsApptType}
+                  onChange={setPmsApptType}
+                  placeholder="Select PMS code"
+                  searchable
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Rescheduling */}
+          <div className="rounded-sm border border-border">
+            <div className="flex flex-col gap-md p-md">
+              <div className="flex items-center gap-xs">
+                <span className="text-body text-text-primary">Rescheduling</span>
+                <InfoTooltip text="For PMS-booked appointments, slot search uses the appointment's duration, provider, and operatory settings instead of this type's fixed duration." />
+              </div>
+              <p className="text-small text-text-secondary">
+                Set whether Myna can reschedule this appointment type and where new slots are offered. Use this for PMS appointments whose duration can vary within the same type.
+              </p>
+              <label className="flex cursor-pointer items-start gap-sm">
+                <input
+                  type="checkbox"
+                  checked={allowReschedule}
+                  onChange={e => setAllowReschedule(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
+                />
+                <div className="flex flex-col gap-xs">
+                  <span className="text-body text-text-primary">Allow rescheduling</span>
+                  <span className="text-small text-text-secondary">
+                    Myna uses the appointment&apos;s current duration and provider to find slots.
+                  </span>
+                </div>
+              </label>
+
+              {allowReschedule && (
+                <>
+                  <div className="border-t border-dashed border-border" />
+                  <div className="flex flex-col gap-sm">
+                    <span className="text-body text-text-primary">Where can the new slot be booked?</span>
+
+                    <label
+                      className={`flex cursor-pointer items-start gap-sm rounded-sm border p-md transition-colors ${
+                        rescheduleOperatoryRule === 'same' ? 'border-primary' : 'border-border'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="reschedule-operatory-rule"
+                        checked={rescheduleOperatoryRule === 'same'}
+                        onChange={() => setRescheduleOperatoryRule('same')}
+                        className="mt-0.5 shrink-0 accent-primary"
+                      />
+                      <div className="flex flex-col gap-xs">
+                        <span className="text-body text-text-primary">Same operatory as before</span>
+                        <span className="text-small text-text-secondary">
+                          Offer new times on the appointment&apos;s current operatory only.
+                        </span>
+                      </div>
+                    </label>
+
+                    <div
+                      className={`flex flex-col gap-md rounded-sm border p-md transition-colors ${
+                        rescheduleOperatoryRule === 'any' ? 'border-primary' : 'border-border'
+                      }`}
+                    >
+                      <label className="flex cursor-pointer items-start gap-sm">
+                        <input
+                          type="radio"
+                          name="reschedule-operatory-rule"
+                          checked={rescheduleOperatoryRule === 'any'}
+                          onChange={() => setRescheduleOperatoryRule('any')}
+                          className="mt-0.5 shrink-0 accent-primary"
+                        />
+                        <div className="flex flex-col gap-xs">
+                          <span className="text-body text-text-primary">Any available operatory</span>
+                          <span className="text-small text-text-secondary">
+                            Offer times on any operatory that matches the provider and current duration.
+                          </span>
+                        </div>
+                      </label>
+                      {rescheduleOperatoryRule === 'any' && (
+                        <div className="pl-2xl">
+                          <ATDropdownField
+                            label="Operatories"
+                            infoIcon
+                            tooltip="Includes every operatory by default. Select specific operatories to narrow the search"
+                            options={AT_OPERATORY_SEARCH_OPTIONS}
+                            value={operatoriesToSearch}
+                            onChange={setOperatoriesToSearch}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -409,8 +508,12 @@ export function AppointmentTypeScreen() {
         </div>
       </div>
 
-      <ApptTypeDrawer open={createDrawerOpen} mode="create" onClose={() => setCreateDrawerOpen(false)} />
-      <ApptTypeDrawer open={editDrawerOpen}   mode="edit"   onClose={() => setEditDrawerOpen(false)}   />
+      {createDrawerOpen && (
+        <ApptTypeDrawer open mode="create" onClose={() => setCreateDrawerOpen(false)} />
+      )}
+      {editDrawerOpen && (
+        <ApptTypeDrawer open mode="edit" onClose={() => setEditDrawerOpen(false)} />
+      )}
     </div>
   )
 }

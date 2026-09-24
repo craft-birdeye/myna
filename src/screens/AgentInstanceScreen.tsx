@@ -1,28 +1,21 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import {
   Chip,
   DataTable,
   EmptyState,
   EstimateSavingsModal,
-  REVIEW_RESPONSE_SAVINGS_COPY,
-  parseTimeSavedHours,
-  FilterPanel,
-  HeaderSearchField,
   Icon,
   MetricTiles,
   Tabs,
-  Toast,
   TopNav,
   type ChipVariant,
   type Column,
-  type FilterField,
   type EstimateSavingsValues,
   type Metric,
   type Tab,
 } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { AgentLogsTab, getLogFilterFields, getNavigableLogRows } from './AgentLogsTab'
+import { AgentLogsTab } from './AgentLogsTab'
 import { OutboundAgentLogsTab } from './OutboundAgentLogsTab'
 import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
@@ -32,8 +25,6 @@ import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
-import { getAgentWorkflows } from '../data/agentWorkflows'
-import { logSlugFromTimestamp, type DeepRoute } from '../appRoutes'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -41,17 +32,10 @@ interface AgentInstanceScreenProps {
   displayName?: string
   status?: string
   onBack: () => void
-  /** `returnTo` tells the host where to navigate back to when the editor closes. */
-  onEditAgent?: (
-    agentName: string,
-    draft?: unknown,
-    returnTo?: { instanceName: string; tab: string },
-    status?: string,
-  ) => void
+  onEditAgent?: (agentName: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
-  /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
-   *  (threaded through to `AgentSettingsTab`'s Integrations section). */
-  onOpenIntegrationSettings?: (integrationId: string) => void
+  /** Settings tab's Booking template "Edit template" link — opens that template's editor. */
+  onOpenBookingTemplates?: (templateId: string) => void
   /** Hide L2 SideNav while a full-bleed view (e.g. View log) is open. */
   onFullBleedChange?: (active: boolean) => void
   product?: string
@@ -67,17 +51,6 @@ interface AgentInstanceScreenProps {
   /** When set alongside `initialRecommendationId`, the recommendation detail page immediately
    *  asks for the feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow). */
   initialFeedbackPrefill?: string | null
-  /** Exploration-only behavior: Workflow action opens editor directly. */
-  workflowButtonOpensEditor?: boolean
-  /** Sep 1 review response flow hides Recommendation. */
-  hideRecommendationTab?: boolean
-  /** Full canvas: log view puts the Outcome/Log panel on the left and lets cards open a
-   *  read-only config panel on the right. */
-  fullCanvasChrome?: boolean
-  initialLogSlug?: string
-  initialPanel?: string
-  initialRecommendationIdFromRoute?: string
-  onDeepRouteChange?: (patch: DeepRoute) => void
 }
 
 interface LocationRow {
@@ -120,21 +93,11 @@ const TABS: Tab[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
-// Exploration keeps Workflow as a separate button-style action.
-// Review response exploration also hides Recommendation/Settings; Front desk keeps both.
-const EXPLORATION_TABS: Tab[] = TABS.filter(
-  (t) => t.id !== 'workflow' && t.id !== 'recommendation' && t.id !== 'settings',
-)
-const EXPLORATION_FRONTDESK_TABS: Tab[] = TABS.filter((t) => t.id !== 'workflow')
-
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
 
 // Review response agents hide Settings.
 const REVIEW_RESPONSE_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings')
-const REVIEW_RESPONSE_NO_RECOMMENDATION_TABS: Tab[] = TABS.filter(
-  (t) => t.id !== 'settings' && t.id !== 'recommendation',
-)
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -190,21 +153,6 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'conversationsAssigned', value: '900', label: 'Conversations assigned', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations assigned to a team or user at this location.' },
     { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
     { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
-  ],
-  // Registered under both the plural (agent-group) and singular (per-instance) keys, matching
-  // the Review generation pattern below. Without a `timeSaved` tile the drilled-in screen would
-  // fall back to DEFAULT_METRICS and have nothing to hang the Configure action on.
-  'Review response agents': [
-    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
-    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
-    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
-    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
-  ],
-  'Review response agent': [
-    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
-    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
-    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
-    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
   ],
   'Review generation agents': [
     { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
@@ -291,15 +239,6 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Las Vegas, NV',    count: '1', reviewsReceived: '20', contactsReached: '10', clickThroughRate: '4.7%', timeSaved: '20m' },
     { location: 'Chicago, IL',      count: '1', reviewsReceived: '7',  contactsReached: '10', clickThroughRate: '4.8%', timeSaved: '20m' },
   ],
-  'Review response agent': [
-    { location: 'Atlanta, GA',       count: '1', reviewsResponded: '19', responseRate: '90%', avgResponseTime: '1h 48m', timeSaved: '4h 20m' },
-    { location: 'Stamford, CT',      count: '1', reviewsResponded: '9',  responseRate: '92%', avgResponseTime: '2h 05m', timeSaved: '2h 10m' },
-    { location: 'Los Angeles, CA',   count: '1', reviewsResponded: '22', responseRate: '90%', avgResponseTime: '2h 22m', timeSaved: '2h 05m' },
-    { location: 'New York City, NY', count: '1', reviewsResponded: '18', responseRate: '90%', avgResponseTime: '2h 10m', timeSaved: '2h 40m' },
-    { location: 'San Diego, CA',     count: '1', reviewsResponded: '7',  responseRate: '95%', avgResponseTime: '2h 40m', timeSaved: '3h 05m' },
-    { location: 'Las Vegas, NV',     count: '1', reviewsResponded: '3',  responseRate: '94%', avgResponseTime: '3h 05m', timeSaved: '2h 10m' },
-    { location: 'Chicago, IL',       count: '1', reviewsResponded: '10', responseRate: '92%', avgResponseTime: '3h 05m', timeSaved: '3h 05m' },
-  ],
 }
 
 const FRONTDESK_COLUMNS: Column<LocationRow>[] = [
@@ -316,7 +255,7 @@ const FRONTDESK_COLUMNS: Column<LocationRow>[] = [
     render: (v) => (
       <span className="inline-flex items-center gap-xs">
         {String(v)}
-        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+        <Icon name="expand_more" size={16} className="text-text-icon" />
       </span>
     ),
   },
@@ -336,15 +275,15 @@ const DEFAULT_COLUMNS: Column<LocationRow>[] = [
     render: (v) => (
       <span className="inline-flex items-center gap-xs">
         {String(v)}
-        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+        <Icon name="expand_more" size={16} className="text-text-icon" />
       </span>
     ),
   },
 ]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
-  Active: 'success',
-  Inactive: 'warning',
+  Running: 'success',
+  Paused: 'warning',
   Draft: 'neutral',
 }
 
@@ -415,22 +354,14 @@ const REVIEW_GENERATION_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
 ]
 
-const REVIEW_RESPONSE_COLUMNS: Column<LocationRow>[] = [
-  { key: 'location', label: 'Location', width: 220, sortable: true },
-  { key: 'reviewsResponded', label: 'Reviews responded', width: 180, sortable: true },
-  { key: 'responseRate', label: 'Response rate', width: 150, sortable: true },
-  { key: 'avgResponseTime', label: 'Average response time', width: 190, sortable: true },
-  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
-]
-
 export function AgentInstanceScreen({
   instanceName,
   displayName,
-  status = 'Active',
+  status = 'Running',
   onBack,
   onEditAgent,
   onNavigateToInbox,
-  onOpenIntegrationSettings,
+  onOpenBookingTemplates,
   onFullBleedChange,
   product,
   initialTab = 'outcomes',
@@ -438,33 +369,13 @@ export function AgentInstanceScreen({
   initialRecommendationId,
   onInitialRecommendationConsumed,
   initialFeedbackPrefill,
-  workflowButtonOpensEditor = false,
-  hideRecommendationTab = false,
-  fullCanvasChrome = false,
-  initialLogSlug,
-  initialPanel,
-  initialRecommendationIdFromRoute,
-  onDeepRouteChange,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
-  const [toastVisible, setToastVisible] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
-
-  // Header search + filters. Outcomes and Logs each keep their own state — the two tabs search
-  // different tables, so a query typed on one would be meaningless on the other.
-  const [outcomesSearchOpen, setOutcomesSearchOpen] = useState(false)
-  const [outcomesQuery, setOutcomesQuery] = useState('')
-  const [outcomesFilterOpen, setOutcomesFilterOpen] = useState(false)
-  const [outcomesFilters, setOutcomesFilters] = useState<Record<string, string[]>>({})
-  const [logsSearchOpen, setLogsSearchOpen] = useState(false)
-  const [logsQuery, setLogsQuery] = useState('')
-  const [logsFilterOpen, setLogsFilterOpen] = useState(false)
-  const [logsFilters, setLogsFilters] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     onFullBleedDetailActiveChange?.(selectedRecommendationId !== null || selectedRun !== null)
@@ -496,39 +407,6 @@ export function AgentInstanceScreen({
   const isReviewGeneration = /review generation agent/i.test(agentName)
   const reviewGenerationKey = 'Review generation agent'
 
-  const handleDownloadAgent = () => {
-    const workflows = getAgentWorkflows(product)
-    const workflow =
-      workflows[instanceName]
-      ?? workflows[agentName]
-      ?? workflows['Review response agent']
-      ?? { nodes: [], nodeDetails: {} }
-
-    const payload = {
-      name: shownName,
-      agentType: agentName,
-      status: instanceStatus,
-      exportedAt: new Date().toISOString(),
-      nodes: workflow.nodes ?? [],
-      nodeDetails: workflow.nodeDetails ?? {},
-    }
-
-    const fileName = `${shownName.replace(/\s+/g, '-').toLowerCase() || 'agent'}.json`
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
-    )
-    const link = document.createElement('a')
-    link.href = url
-    link.download = fileName
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-
-    setToastMessage(`${fileName} has been downloaded`)
-    setToastVisible(true)
-  }
-
   useEffect(() => {
     onFullBleedChange?.(Boolean(selectedRun) && (isReviewResponse || isReviewGeneration))
     return () => onFullBleedChange?.(false)
@@ -539,34 +417,10 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
-
-  useEffect(() => {
-    setActiveTab(initialTab)
-  }, [initialTab])
-
-  useEffect(() => {
-    if (initialRecommendationIdFromRoute) {
-      setActiveTab('recommendation')
-      setSelectedRecommendationId(initialRecommendationIdFromRoute)
-    }
-  }, [initialRecommendationIdFromRoute])
-
-  useEffect(() => {
-    if (!initialLogSlug) {
-      setSelectedRun(null)
-      return
-    }
-    const rows = getNavigableLogRows(agentName, '', {}, { explorationFrontDeskStatus })
-    const match = rows.find((row) => logSlugFromTimestamp(row.timestamp) === initialLogSlug)
-    setSelectedRun(match ?? null)
-    if (match) setActiveTab('logs')
-  }, [initialLogSlug, agentName, explorationFrontDeskStatus])
-  const hideMarketingLogDuration = isReviewResponse || isReviewGeneration
-  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
+  const displayMetrics: Metric[] = isFrontdeskAgent
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseTimeSavedHours(String(m.value))
+        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
         const cost = hours * savingsSettings.hourlyWage
         const formattedCost = new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -586,55 +440,17 @@ export function AgentInstanceScreen({
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
-    : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
     : DEFAULT_COLUMNS
   const locations = (
     isReviewGeneration
       ? LOCATIONS_BY_AGENT[reviewGenerationKey]
-      : isReviewResponse
-        ? LOCATIONS_BY_AGENT['Review response agent']
-        : LOCATIONS_BY_AGENT[agentName]
+      : LOCATIONS_BY_AGENT[agentName]
   ) ?? LOCATIONS_BY_AGENT['Front desk agent']
-
-  /* ─── Header search + filters (Outcomes and Logs tabs only) ─── */
-  // Front desk and the two review agents get the header controls; other agents are unchanged.
-  const supportsHeaderSearch = isFrontdeskAgent || isReviewResponse || isReviewGeneration
-  const isOutcomesTab = activeTab === 'outcomes'
-  const isLogsTab = activeTab === 'logs'
-  const showHeaderSearch = supportsHeaderSearch && (isOutcomesTab || isLogsTab)
-
-  // Outcomes filters by location, sourced from the rows actually on screen.
-  const outcomesFilterFields: FilterField[] = [
-    {
-      id: 'location',
-      label: 'Location',
-      options: Array.from(new Set(locations.map((l) => String(l.location)))).map((v) => ({
-        value: v,
-        label: v,
-      })),
-    },
-  ]
-  const outcomesQ = outcomesQuery.trim().toLowerCase()
-  const visibleLocations = locations.filter((row) => {
-    if (
-      outcomesQ &&
-      !Object.values(row).some((v) => typeof v === 'string' && v.toLowerCase().includes(outcomesQ))
-    ) {
-      return false
-    }
-    const picked = outcomesFilters.location
-    return !picked?.length || picked.includes(String(row.location))
-  })
-
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = workflowButtonOpensEditor
-    ? (isFrontdeskAgent ? EXPLORATION_FRONTDESK_TABS : EXPLORATION_TABS)
-    : isTaggingRouting
+  const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
     : isReviewResponse || isReviewGeneration
-      ? hideRecommendationTab
-        ? REVIEW_RESPONSE_NO_RECOMMENDATION_TABS
-        : REVIEW_RESPONSE_TABS
+      ? REVIEW_RESPONSE_TABS
       : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
@@ -656,9 +472,6 @@ export function AgentInstanceScreen({
   const showEmptyDraftLogs = activeTab === 'logs' && isDraftInstance
 
   if (selectedRun) {
-    const navigableRuns = getNavigableLogRows(agentName, logsQuery, logsFilters, {
-      explorationFrontDeskStatus,
-    })
     return (
       <div className="flex h-full flex-col">
         <TopNav title={topNavTitle} initials="S" />
@@ -666,36 +479,13 @@ export function AgentInstanceScreen({
           <RunDetailView
             row={selectedRun}
             instanceName={instanceName}
-            fullCanvasChrome={fullCanvasChrome}
-            runs={navigableRuns}
-            onSelectRun={(row) => {
-              setSelectedRun(row)
-              onDeepRouteChange?.({
-                tab: 'logs',
-                logSlug: logSlugFromTimestamp(row.timestamp),
-                panel: initialPanel,
-              })
-            }}
-            onBack={() => {
-              setSelectedRun(null)
-              onDeepRouteChange?.({ tab: 'logs' })
-            }}
+            onBack={() => setSelectedRun(null)}
             onEditAgent={() => onEditAgent?.(instanceName)}
-            explorationFrontDeskStatus={explorationFrontDeskStatus}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
               setSelectedRecommendationId(recommendationId)
-              onDeepRouteChange?.({ tab: 'recommendation', recId: recommendationId })
             }}
-            initialPanel={initialPanel}
-            onPanelChange={(panel) =>
-              onDeepRouteChange?.({
-                tab: 'logs',
-                logSlug: logSlugFromTimestamp(selectedRun.timestamp),
-                panel,
-              })
-            }
           />
         </div>
       </div>
@@ -709,10 +499,7 @@ export function AgentInstanceScreen({
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}
-            onBack={() => {
-              setSelectedRecommendationId(null)
-              onDeepRouteChange?.({ tab: 'recommendation' })
-            }}
+            onBack={() => setSelectedRecommendationId(null)}
             autoOpenFeedbackPrefill={pendingFeedbackPrefill}
             onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
           />
@@ -728,13 +515,13 @@ export function AgentInstanceScreen({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-surface px-2xl py-xl">
+          <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
             <div className="flex items-center gap-sm">
               <button
                 type="button"
                 aria-label="Back"
                 onClick={onBack}
-                className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
+                className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
               >
                 <BackArrowIcon />
               </button>
@@ -748,22 +535,18 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
-              {showHeaderSearch && (
-                <HeaderSearchField
-                  open={isOutcomesTab ? outcomesSearchOpen : logsSearchOpen}
-                  value={isOutcomesTab ? outcomesQuery : logsQuery}
-                  onOpenChange={isOutcomesTab ? setOutcomesSearchOpen : setLogsSearchOpen}
-                  onChange={isOutcomesTab ? setOutcomesQuery : setLogsQuery}
-                />
-              )}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setActionsOpen((open) => !open)}
-                  className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
                 >
                   Actions
-                  {actionsOpen ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                  <Icon
+                    name={actionsOpen ? 'expand_less' : 'expand_more'}
+                    size={20}
+                    className="text-text-icon"
+                  />
                 </button>
                 {actionsOpen && (
                   <>
@@ -777,26 +560,11 @@ export function AgentInstanceScreen({
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
                         onClick={() => {
-                          setActionsOpen(false)
-                          onEditAgent?.(
-                            instanceName,
-                            undefined,
-                            { instanceName, tab: activeTab },
-                            workflowButtonOpensEditor ? instanceStatus : undefined,
-                          )
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                        onClick={() => {
-                          setInstanceStatus('Inactive')
+                          setInstanceStatus('Paused')
                           setActionsOpen(false)
                         }}
                       >
-                        Deactivate
+                        Pause
                       </button>
                       <button
                         type="button"
@@ -805,18 +573,6 @@ export function AgentInstanceScreen({
                       >
                         Duplicate
                       </button>
-                      {workflowButtonOpensEditor && (
-                        <button
-                          type="button"
-                          className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                          onClick={() => {
-                            setActionsOpen(false)
-                            handleDownloadAgent()
-                          }}
-                        >
-                          Download agent
-                        </button>
-                      )}
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
@@ -834,22 +590,9 @@ export function AgentInstanceScreen({
               {activeTab === 'settings' && (
                 <button
                   type="button"
-                  className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                 >
                   Save
-                </button>
-              )}
-              {/* Filters always sits last in the header row. */}
-              {showHeaderSearch && (
-                <button
-                  type="button"
-                  aria-label="Filters"
-                  onClick={() =>
-                    isOutcomesTab ? setOutcomesFilterOpen((o) => !o) : setLogsFilterOpen((o) => !o)
-                  }
-                  className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-                >
-                  <Icon name="filter_list" size={20} />
                 </button>
               )}
             </div>
@@ -857,48 +600,13 @@ export function AgentInstanceScreen({
 
           {/* Tabs */}
           <div className="flex shrink-0 items-center justify-between px-2xl">
-            {workflowButtonOpensEditor ? (
-              <div className="flex items-end gap-sm">
-                <Tabs
-                  tabs={tabs}
-                  activeTab={activeTab}
-                  showBaseline={false}
-                  onChange={(tabId) => {
-                    setActiveTab(tabId)
-                    onDeepRouteChange?.({ tab: tabId })
-                  }}
-                />
-                <span aria-hidden="true" className="mb-[10px] h-4 w-px shrink-0 self-end bg-border" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onEditAgent) {
-                      onEditAgent(instanceName, undefined, { instanceName, tab: 'outcomes' }, instanceStatus)
-                      return
-                    }
-                    setActiveTab('workflow')
-                    onDeepRouteChange?.({ tab: 'workflow' })
-                  }}
-                  className={`flex h-[34px] items-center rounded-md px-sm text-body transition-colors ${
-                    isWorkflowTab
-                      ? 'bg-surface-selected text-text-primary'
-                      : 'text-text-secondary hover:bg-surface-hover'
-                  }`}
-                >
-                  Workflow
-                </button>
-              </div>
-            ) : (
-              <Tabs
-                tabs={tabs}
-                activeTab={activeTab}
-                showBaseline={false}
-                onChange={(tabId) => {
-                  setActiveTab(tabId)
-                  onDeepRouteChange?.({ tab: tabId })
-                }}
-              />
-            )}
+            <Tabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={(tabId) => {
+                setActiveTab(tabId)
+              }}
+            />
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -906,24 +614,14 @@ export function AgentInstanceScreen({
             <WorkflowViewerTab
               instanceName={instanceName}
               displayName={shownName}
-              onEdit={() =>
-                onEditAgent?.(
-                  instanceName,
-                  undefined,
-                  { instanceName, tab: workflowButtonOpensEditor ? 'outcomes' : 'workflow' },
-                  workflowButtonOpensEditor ? instanceStatus : undefined,
-                )
-              }
+              onEdit={() => onEditAgent?.(instanceName)}
               product={product}
             />
           ) : isRecommendationTab ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
               <RecommendationsTab
                 agentName={instanceName}
-                onSelect={(id) => {
-                  setSelectedRecommendationId(id)
-                  onDeepRouteChange?.({ tab: 'recommendation', recId: id })
-                }}
+                onSelect={setSelectedRecommendationId}
                 isDraft={isDraftInstance}
                 empty={hideRecommendations}
               />
@@ -936,12 +634,12 @@ export function AgentInstanceScreen({
                     <MetricTiles
                       metrics={displayMetrics}
                       renderTileAction={
-                        isFrontdeskAgent || isReviewResponse
+                        isFrontdeskAgent
                           ? (metric) =>
                               metric.id === 'timeSaved' ? (
                                 <button
                                   type="button"
-                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
+                                  aria-label="Estimate savings"
                                   onClick={() => setSavingsModalOpen(true)}
                                   className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                                 >
@@ -956,23 +654,13 @@ export function AgentInstanceScreen({
                     open={savingsModalOpen}
                     onClose={() => setSavingsModalOpen(false)}
                     initialValues={savingsSettings}
-                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
                     onSave={(values) => {
                       setSavingsSettings(values)
                       setSavingsModalOpen(false)
                     }}
                   />
-                  <div className="px-2xl pb-lg pt-[calc(theme(spacing.lg)+theme(spacing.md))]">
-                    <h2 className="mb-md text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-                      Outcomes by location
-                    </h2>
-                    <DataTable
-                      columns={COLUMNS}
-                      data={visibleLocations}
-                      scrollOnHover
-                      initialSortKey={isReviewResponse ? 'reviewsResponded' : undefined}
-                      initialSortDir={isReviewResponse ? 'desc' : undefined}
-                    />
+                  <div className="px-lg py-lg">
+                    <DataTable columns={COLUMNS} data={locations} scrollOnHover />
                   </div>
                 </>
               ) : showEmptyDraftLogs ? (
@@ -986,25 +674,15 @@ export function AgentInstanceScreen({
                 <AgentLogsTab
                   agentName={agentName}
                   onNavigateToInbox={onNavigateToInbox}
-                  onViewRun={(row) => {
-                    setSelectedRun(row)
-                    onDeepRouteChange?.({
-                      tab: 'logs',
-                      logSlug: logSlugFromTimestamp(row.timestamp),
-                    })
-                  }}
-                  searchQuery={supportsHeaderSearch ? logsQuery : ''}
-                  filters={supportsHeaderSearch ? logsFilters : undefined}
-                  explorationFrontDeskStatus={explorationFrontDeskStatus}
-                  hideLogDuration={hideMarketingLogDuration}
+                  onViewRun={setSelectedRun}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
               ) : activeTab === 'settings' ? (
                 <AgentSettingsTab
                   product={product}
+                  onOpenBookingTemplates={onOpenBookingTemplates}
                   agentName={agentName}
-                  onOpenIntegrationSettings={onOpenIntegrationSettings}
                 />
               ) : (
                 <div className="flex h-64 items-center justify-center text-body text-text-secondary">
@@ -1014,26 +692,7 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
-
-        {/* Push-panel filter, sibling of the content column so it squeezes rather than overlays. */}
-        {showHeaderSearch && (
-          <FilterPanel
-            open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
-            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationFrontDeskStatus })}
-            selections={isOutcomesTab ? outcomesFilters : logsFilters}
-            onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
-            onClose={() =>
-              isOutcomesTab ? setOutcomesFilterOpen(false) : setLogsFilterOpen(false)
-            }
-          />
-        )}
       </div>
-
-      <Toast
-        message={toastMessage}
-        visible={toastVisible}
-        onClose={() => setToastVisible(false)}
-      />
     </div>
   )
 }
