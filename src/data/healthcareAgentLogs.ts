@@ -1,6 +1,6 @@
 import type { Metric } from '../components/MetricTiles/MetricTiles.types'
 
-export type LogStatus = 'Complete' | 'Failed' | 'In progress'
+export type LogStatus = 'Complete' | 'Completed' | 'Failed' | 'In progress' | 'Resolved' | 'Not resolved' | 'Aborted'
 
 export type LogStepId = 'trigger' | 'procedures'
 
@@ -15,7 +15,15 @@ export interface HealthcareLogRow {
   implementedSteps?: LogStepId[]
   /** Explicit canvas node ids to highlight; when set, overrides branch-path inference. */
   executedNodeIds?: string[]
-  [key: string]: string | string[] | LogStepId[] | undefined
+  /** Review-response rows only: star rating and reviewer comment on the underlying review. */
+  rating?: number
+  /** Front desk (sep 1 / exploration) logs: post-call user rating, 1–5. Absent when the caller did not rate. */
+  userRating?: number
+  comment?: string
+  /** Review-response rows only: the platform's review id and the business location reviewed. */
+  reviewId?: string
+  location?: string
+  [key: string]: string | number | string[] | LogStepId[] | undefined
 }
 
 export const HEALTHCARE_LOGS_METRICS: Metric[] = [
@@ -94,7 +102,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Dana Whitfield',
     channel: 'Voice call',
     duration: '0:53',
-    topic: 'Tooth pain screening',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -103,7 +111,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Robert Cho',
     channel: 'Voice call',
     duration: '1:36',
-    topic: 'New patient scheduling',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -112,7 +120,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (628) 555-0110',
     channel: 'Web chat',
     duration: '1:11',
-    topic: 'Appointment reschedule',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -121,7 +129,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (310) 555-0190',
     channel: 'Web chat',
     duration: '1:04',
-    topic: 'Emergency dental concern',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger'],
   },
   {
@@ -188,46 +196,115 @@ export interface ReviewResponseLogRow {
   status: LogStatus
   contact: string
   source: string
+  duration?: string
+  /** Star rating on the underlying review; absent for rows with no rating (e.g. direct feedback). */
+  rating?: number
+  comment?: string
+  /** Review platform's id for the underlying review; shown in the log's Review details tab. */
+  reviewId?: string
+  /** Business location the review was left for; shown in the log's Review details tab. */
+  location?: string
   implementedSteps?: LogStepId[]
   executedNodeIds?: string[]
-  [key: string]: string | string[] | LogStepId[] | undefined
+  [key: string]: string | number | string[] | LogStepId[] | undefined
 }
 
 export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
   {
     timestamp: 'Feb 25, 2024, 5:30 pm',
-    status: 'Complete',
-    contact: 'Dana Whitfield',
-    source: 'Google',
+    status: 'Completed',
+    contact: 'Sarah Chen',
+    source: 'Birdeye',
+    duration: '0:24',
+    rating: 2,
+    comment:
+      'Very disappointed with the service. The wait time was longer than expected and staff seemed rushed when I asked about my appointment.',
+    reviewId: '1730501',
+    location: 'Sunrise Family Medicine',
     implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 22, 2024, 3:47 pm',
+    status: 'Completed',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:09',
+    rating: 5,
+    comment:
+      'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    reviewId: '1730488',
+    location: 'Bright Smile Dental Studio',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 19, 2024, 3:41 pm',
+    status: 'Failed',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:04',
+    reviewId: '1730471',
+    location: 'Bright Smile Dental Studio',
+    implementedSteps: ['trigger'],
+  },
+  {
+    timestamp: 'Feb 15, 2024, 11:02 am',
+    status: 'Completed',
+    contact: 'Priya Anand',
+    source: 'Direct Feedback',
+    duration: '0:15',
+    comment:
+      'Thanks for following up on my billing question — the explanation was clear and I got it sorted the same day.',
+    reviewId: '1730449',
+    location: 'Sunrise Family Medicine',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 12, 2024, 3:36 pm',
+    status: 'Aborted',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:09',
+    reviewId: '1730432',
+    location: 'Bright Smile Dental Studio',
+    implementedSteps: ['trigger'],
   },
   {
     timestamp: 'Feb 09, 2024, 5:30 pm',
-    status: 'Complete',
-    contact: 'Robert Cho',
+    status: 'Completed',
+    contact: 'Elena Vasquez',
     source: 'Yelp',
+    duration: '0:25',
+    rating: 5,
+    comment:
+      'Scheduling was easy online and the hygienist was gentle and thorough. Will definitely recommend to friends.',
+    reviewId: '1730417',
+    location: 'Bright Smile Dental Studio',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
-    timestamp: 'Feb 05, 2024, 5:30 pm',
-    status: 'Failed',
-    contact: '+1 (628) 555-0110',
-    source: 'Facebook',
-    implementedSteps: ['trigger'],
-  },
-  {
-    timestamp: 'Jan 25, 2024, 5:30 pm',
-    status: 'Failed',
-    contact: '+1 (310) 555-0190',
-    source: 'Google',
-    implementedSteps: ['trigger'],
-  },
-  {
-    timestamp: 'Jan 18, 2024, 5:30 pm',
-    status: 'In progress',
-    contact: 'Elena Sokolova',
+    timestamp: 'Feb 05, 2024, 2:47 pm',
+    status: 'Completed',
+    contact: 'Jordan Lee',
     source: 'Birdeye',
-    implementedSteps: ['trigger'],
+    duration: '0:12',
+    rating: 4,
+    comment: 'Appreciated the callback about my test results — saved me a trip to the office.',
+    reviewId: '1730395',
+    location: 'Sunrise Family Medicine',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Jan 25, 2024, 9:05 am',
+    status: 'Completed',
+    contact: 'David Kim',
+    source: 'Birdeye',
+    duration: '0:27',
+    rating: 5,
+    comment:
+      'Smooth check-in, on-time appointment, and the team answered all my insurance questions without making me wait.',
+    reviewId: '1730368',
+    location: 'Sunrise Family Medicine',
+    implementedSteps: ['trigger', 'procedures'],
   },
 ]
 
@@ -238,11 +315,15 @@ export function toHealthcareLogRow(row: ReviewResponseLogRow): HealthcareLogRow 
     status: row.status,
     contact: row.contact,
     channel: row.source,
-    duration: '—',
+    duration: row.duration ?? '-',
     topic: 'Review response',
     implementedSteps: row.implementedSteps,
     executedNodeIds: row.executedNodeIds,
     source: row.source,
+    rating: row.rating,
+    comment: row.comment,
+    reviewId: row.reviewId,
+    location: row.location,
   }
 }
 
@@ -296,7 +377,7 @@ export function toReviewGenerationLogRow(row: ReviewResponseLogRow): HealthcareL
     status: row.status,
     contact: row.contact,
     channel: row.source,
-    duration: '—',
+    duration: '-',
     topic: 'Review request',
     implementedSteps: row.implementedSteps,
     executedNodeIds: row.executedNodeIds,

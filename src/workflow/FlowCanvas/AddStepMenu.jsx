@@ -9,23 +9,30 @@ import './AddStepMenu.css';
 
 const ITEM_DESCRIPTIONS = {
   'Initiate voice call': 'Call the customer',
-  'In-call SMS': 'Send a text message to the caller during the active call',
-  'Send response': 'Sends a voice / text message to the user at the defined point in the conversation',
+  'Send text during call': 'Sends a text message to the caller during an active call',
+  'In-call SMS': 'Sends a text message to the caller during an active call',
+  'Send response': 'Sends the drafted response to the contact',
+  'Update state': 'Update dynamic variables when this step runs',
   'In call text': 'Send a text message during the active call',
-  'Schedule appointment': 'Book a new appointment for the customer',
-  'Book new appointment': 'Book a new appointment for the customer',
-  'Reschedule appointment': 'Change an existing appointment date or time',
-  'Cancel appointment': 'Cancel a scheduled appointment',
-  'Confirm appointment': 'Confirm appointment details with the customer',
+  'Schedule appointment': 'Books a new appointment for the patient',
+  'Book new appointment': 'Books a new appointment for the patient',
+  'Reschedule appointment': 'Changes an existing appointment date or time',
+  'Cancel appointment': 'Cancels a scheduled appointment',
+  'Confirm appointment': 'Confirms appointment details with the patient',
   'Appointment reminder': '3 weeks, 3 days and 24 hours before · Email & text',
-  'Update contact property': 'Update a field on the contact record',
-  'Add contact to list': 'Add the contact to a marketing or CRM list',
-  'Remove contact from list': 'Remove the contact from a list',
+  'Update contact property': 'Updates a field on the contact record',
+  'Add contact to list': 'Adds the contact to a marketing or CRM list',
+  'Remove contact from list': 'Removes the contact from a list',
+  'Create Zendesk ticket': 'Creates a ticket in Zendesk',
+  Zendesk: 'Creates a ticket in Zendesk',
+  FreshDesk: 'FreshDesk CRM tool',
+  'QuickBooks Online': 'QuickBooks tool',
+  ServiceTitan: 'ServiceTitan CRM tool',
   'Send data to external app': 'Push data to a connected external application',
   'Fetch data from external app': 'Retrieve data from a connected external application',
   'Trigger external webhook': 'Fire a webhook to an external system',
   Branch: 'Split the flow based on conditions',
-  Delay: 'Wait for a specific time or event',
+  Delay: 'Waits until a specific time or event',
 };
 
 const AI_ITEMS = new Set(['Triage review', 'Review responder']);
@@ -132,6 +139,8 @@ export default function AddStepMenu({
   agentName = '',
   onClose,
   onSelect,
+  /** Sep 1: one full-width search above both panes instead of one per pane. */
+  singleSearch = false,
 }) {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -182,12 +191,19 @@ export default function AddStepMenu({
   if (!open || !anchorRect) return null;
 
   const q = leftSearch.trim().toLowerCase();
-  const filteredTasks = taskCards.filter((c) => !q || c.label.toLowerCase().includes(q));
-  const filteredControls = controlCards.filter((c) => !q || c.label.toLowerCase().includes(q));
+  // Single-search mode: the open category stays listed even when it doesn't match the
+  // query, so the results on the right are never shown against a blank nav column.
+  const keepsNavRow = (c) =>
+    !q
+    || c.label.toLowerCase().includes(q)
+    || (singleSearch && (c.subKey || c.label) === activeSubKey);
+  const filteredTasks = taskCards.filter(keepsNavRow);
+  const filteredControls = controlCards.filter(keepsNavRow);
 
   const activeCard = taskCards.find((c) => (c.subKey || c.label) === activeSubKey);
   const activeGroup = activeSubKey ? subItemsMap[activeSubKey] : null;
-  const rightQ = rightSearch.trim().toLowerCase();
+  // Single-search mode: the one query filters the detail list too.
+  const rightQ = (singleSearch ? leftSearch : rightSearch).trim().toLowerCase();
   const disabledItems = new Set(['In call text']);
   const detailItems = (activeGroup?.items || []).filter((item) => {
     const label = itemLabel(item);
@@ -218,7 +234,7 @@ export default function AddStepMenu({
   function handleNavClick(card, section) {
     if (card.action === 'chevron') {
       setActiveSubKey(card.subKey || card.label);
-      setRightSearch('');
+      if (!singleSearch) setRightSearch('');
       return;
     }
     const type = section === 'control' ? card.nodeType : 'task';
@@ -249,8 +265,16 @@ export default function AddStepMenu({
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
+      {singleSearch && (
+        <div className="add-step-menu__search-row">
+          <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus />
+        </div>
+      )}
+      <div className="add-step-menu__panes">
       <div className="add-step-menu__pane add-step-menu__pane--nav">
-        <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus={!expanded} />
+        {!singleSearch && (
+          <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus={!expanded} />
+        )}
 
         {filteredTasks.length > 0 && (
           <div className="add-step-menu__section">
@@ -291,7 +315,9 @@ export default function AddStepMenu({
 
       {expanded && (
         <div className="add-step-menu__pane add-step-menu__pane--detail">
-          <SearchField value={rightSearch} onChange={setRightSearch} autoFocus />
+          {!singleSearch && (
+            <SearchField value={rightSearch} onChange={setRightSearch} autoFocus />
+          )}
           <div className="add-step-menu__detail-list">
             {detailItems.map((item) => {
               const label = itemLabel(item);
@@ -314,6 +340,7 @@ export default function AddStepMenu({
           </div>
         </div>
       )}
+      </div>
       </div>
     </>,
     document.body,

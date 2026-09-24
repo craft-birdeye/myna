@@ -1,0 +1,137 @@
+/* Aero DS — node-config RHS side panel */
+
+.rhs-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl — matches agent-builder__rhs / FormDrawer */
+  border: 1px solid #e5e9f0; /* border */
+  box-shadow: none; /* parent .agent-builder__rhs owns elevation */
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
+  box-sizing: border-box;
+}
+
+/* Flush-dock (see FieldPickerModal's `ab-flush-dock`): the Fields popover docks to our
+ * left with its own touching corners already squared, so square ours off to match —
+ * this is the actual rounded white surface, not the plain `.agent-builder__rhs`
+ * positioning wrapper the class lands on. */
+:global(.ab-flush-dock) .rhs-panel {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.rhs-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 16px; /* 2xl horizontal — Aero spacing */
+  box-sizing: border-box;
+}
+
+.rhs-panel__body--inline {
+  flex: 0 1 auto;
+}
+
+/* Full canvas: the header now ends in a separator rule, so the body needs its own top
+   padding — without it the first field/tab row sits right on the line. */
+.rhs-panel__body--badge-header {
+  padding-top: 20px;
+}
+
+.rhs-panel__body--draft-disabled {
+  position: relative;
+}
+
+/* ─── Unified Aero disabled chrome (draft-blocked active version) ─── */
+
+.rhs-panel__body--draft-disabled :global(input:disabled),
+.rhs-panel__body--draft-disabled :global(textarea:disabled),
+.rhs-panel__body--draft-disabled :global(input[readonly]),
+.rhs-panel__body--draft-disabled :global(textarea[readonly]) {
+  background: var(--aero-field-disabled-bg) !important;
+  border-color: var(--aero-field-disabled-border) !important;
+  cursor: not-allowed !important;
+  opacity: 1;
+}
+
+.rhs-panel__body--draft-disabled :global(.tc-dropdown__trigger--readonly),
+.rhs-panel__body--draft-disabled :global(.tc-dropdown__trigger:disabled) {
+  background: var(--aero-field-disabled-bg);
+  border-color: var(--aero-field-disabled-border);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.rhs-panel__body--draft-disabled :global(.trigger-conditions__card--disabled) {
+  background: var(--aero-field-disabled-bg);
+  border: 1px solid var(--aero-field-disabled-border);
+  border-radius: var(--aero-field-radius);
+  cursor: not-allowed;
+}
+
+.rhs-panel__body--draft-disabled :global(.trigger-conditions__card--disabled) :global(.tc-dropdown__trigger) {
+  background: transparent;
+  border-color: transparent;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.rhs-panel__body--draft-disabled :global(.trigger-conditions__add-btn--disabled) {
+  cursor: not-allowed;
+  opacity: 1;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.rhs-panel__body--draft-disabled [class*='locationsFieldDisabled'] [class*='chipsRow'],
+.rhs-panel__body--draft-disabled [class*='locationsFieldDisabled'] [class*='selectBySummary'] {
+  pointer-events: none;
+}
+
+.rhs-panel__body--draft-disabled :global(.aero-control-disabled),
+.rhs-panel__body--draft-disabled [class*='chipContainerDisabled'],
+.rhs-panel__body--draft-disabled [class*='chipContainerReadOnly'],
+.rhs-panel__body--draft-disabled [class*='inputBoxDisabled'],
+.rhs-panel__body--draft-disabled [class*='inputBoxReadOnly'] {
+  background: var(--aero-field-disabled-bg);
+  border-color: var(--aero-field-disabled-border);
+  border-radius: var(--aero-field-radius);
+  cursor: not-allowed;
+}
+
+.rhs-panel__body--draft-disabled [class*='locationsFieldDisabled'] [class*='chipsRow'] {
+  background: var(--aero-field-disabled-bg);
+  border: 1px solid var(--aero-field-disabled-border);
+  border-radius: var(--aero-field-radius);
+  cursor: not-allowed;
+}
+
+.rhs-panel__body--draft-disabled :global(.addBtn),
+.rhs-panel__body--draft-disabled :global(.fieldAddBtn),
+.rhs-panel__body--draft-disabled :global(.addDescriptionBtn) {
+  cursor: not-allowed;
+  opacity: 1;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.rhs-panel__body--draft-disabled [class*='chipContainerDisabled'] [class*='chipWrap'],
+.rhs-panel__body--draft-disabled [class*='inputBoxDisabled'] [class*='editor'],
+.rhs-panel__body--draft-disabled [class*='inputBoxReadOnly'] [class*='editor'] {
+  pointer-events: none;
+}
+
+.rhs-panel__footer-blocked {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.rhs-panel__footer-blocked .draft-blocked-overlay-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

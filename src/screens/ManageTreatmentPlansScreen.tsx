@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Chip, CustomizeColumnsDrawer, FilterPanel, Icon, InfoTooltip, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
+import { Chip, CustomizeColumnsDrawer, FilterPanel, InfoTooltip, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Columns3, ListFilter, MoreVertical, Search, X } from 'lucide-react'
 
 type ProcedureStatus = 'Diagnosed' | 'Accepted' | 'Rejected' | 'Completed'
 
@@ -176,17 +177,17 @@ function ProcedureDrawer({ proc, onClose }: { proc: Procedure | null; onClose: (
 
   return (
     <>
-      <div className="fixed inset-0 z-[200] bg-black/20" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-[201] flex w-[650px] flex-col border-l border-border bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-[201] flex w-[650px] flex-col overflow-hidden rounded-l-2xl bg-surface shadow-modal">
 
         {/* Header */}
         <div className="flex items-center gap-md border-b border-border px-2xl py-lg">
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-sm hover:bg-surface-hover"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
-            <Icon name="arrow_back" size={20} className="text-text-icon" />
+            <ArrowLeft className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
           <span className="text-h3 text-text-primary">Procedure details</span>
         </div>
@@ -241,14 +242,14 @@ function ProcedureDrawer({ proc, onClose }: { proc: Procedure | null; onClose: (
 
             <DetailField label="Is scheduled">
               <span className={`flex items-center gap-xs ${proc.isScheduled ? 'text-chip-success-text' : 'text-text-tertiary'}`}>
-                <Icon name={proc.isScheduled ? 'check' : 'close'} size={15} />
+                {proc.isScheduled ? <Check className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
                 {proc.isScheduled ? 'Yes' : 'No'}
               </span>
             </DetailField>
 
             <DetailField label="Is completed">
               <span className={`flex items-center gap-xs ${proc.isCompleted ? 'text-chip-success-text' : 'text-text-tertiary'}`}>
-                <Icon name={proc.isCompleted ? 'check' : 'close'} size={15} />
+                {proc.isCompleted ? <Check className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
                 {proc.isCompleted ? 'Yes' : 'No'}
               </span>
             </DetailField>
@@ -382,22 +383,22 @@ export function ManageTreatmentPlansScreen() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search patients, codes…"
-                  className="h-9 w-56 rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                  className="h-9 w-56 rounded-md border border-border-selected bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
                 />
               )}
               <button
                 type="button"
                 aria-label="Search"
                 onClick={() => { setSearchOpen(o => !o); if (searchOpen) setSearch('') }}
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Icon name="search" size={20} />
+                <Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
-              <button type="button" onClick={() => setColumnsOpen(true)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="view_column" size={20} />
+              <button type="button" onClick={() => setColumnsOpen(true)} className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
-<button type="button" onClick={() => setFilterOpen(true)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="filter_list" size={20} />
+<button type="button" onClick={() => setFilterOpen(true)} className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           </div>
@@ -472,7 +473,7 @@ export function ManageTreatmentPlansScreen() {
                             onClick={() => toggleGroup(group.patientId)}
                           >
                             <td className="px-md py-sm align-top pt-[14px]">
-                              <Icon name={isOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={18} className="text-text-secondary" />
+                              {isOpen ? <ChevronUp className="size-4 text-text-secondary" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-4 text-text-secondary" strokeWidth={1.6} absoluteStrokeWidth />}
                             </td>
                             <td className="px-md py-sm">
                               <div className="flex items-center gap-sm">
@@ -528,9 +529,9 @@ export function ManageTreatmentPlansScreen() {
                                         const r = e.currentTarget.getBoundingClientRect()
                                         setRowMenu(menuOpen ? null : { procId: proc.id, top: r.bottom + 4, left: r.right - 168 })
                                       }}
-                                      className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                      className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                                     >
-                                      <Icon name="more_vert" size={20} />
+                                      <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                                     </button>
                                   </div>
                                 </td>

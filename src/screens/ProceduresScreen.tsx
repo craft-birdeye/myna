@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { TopNav, Icon, HeaderSearchField } from '../components'
+import { TopNav, HeaderSearchField } from '../components'
+import { LayoutGrid, LayoutList, ListFilter, MoreVertical } from 'lucide-react'
 
 // Uploaded procedure.svg icon
 function ProcedureBookIcon({ size = 24, className = '' }: { size?: number; className?: string }) {
@@ -40,7 +41,7 @@ function ThreeDotMenu({ onDuplicate, onDelete }: { onDuplicate: () => void; onDe
         onClick={handleOpen}
         className="flex size-6 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-selected"
       >
-        <Icon name="more_vert" size={16} />
+        <MoreVertical className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && createPortal(
         <div
@@ -153,7 +154,7 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
             <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} placeholder="Search procedures..." />
 
             {/* View toggle — same chrome as PageHeader's ViewToggle */}
-            <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+            <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-sm">
               <button
                 type="button"
                 aria-label="Grid view"
@@ -162,7 +163,7 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
                   view === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
                 }`}
               >
-                <Icon name="grid_view" size={18} />
+                <LayoutGrid className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"
@@ -172,14 +173,14 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
                   view === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
                 }`}
               >
-                <Icon name="table_rows" size={18} />
+                <LayoutList className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
 
             <button
               type="button"
               onClick={() => setEditing('new')}
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
             >
               Create new
             </button>
@@ -188,9 +189,9 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
               type="button"
               aria-label="Filter"
               onClick={() => setFilterOpen((o) => !o)}
-              className={`flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 ${filterOpen ? 'bg-surface-selected' : ''}`}
+              className={`flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 ${filterOpen ? 'bg-surface-selected' : ''}`}
             >
-              <Icon name="filter_list" size={20} />
+              <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>
@@ -277,7 +278,7 @@ function ProcedureCard({ procedure, onOpen, onDuplicate, onDelete }: CardProps) 
           <button
             type="button"
             onClick={onOpen}
-            className="flex h-8 items-center rounded-sm bg-primary px-md text-small text-white transition-colors hover:bg-primary-hover"
+            className="flex h-8 items-center rounded-md bg-primary px-md text-small text-white transition-colors hover:bg-primary-hover"
           >
             Edit
           </button>

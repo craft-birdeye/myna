@@ -1,14 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
-import { subscribeToCustomTools } from '../../../services/agentService';
+import { subscribeToCustomTools, resolveToolForViewer } from '../../../services/agentService';
+import {
+  HandleResponseForm,
+  isHandleResponseTool,
+  isHandleResponseConfigComplete,
+} from '../../Drawers/HandleResponseDrawer/HandleResponseDrawer';
+import { ToolViewerContent } from '../../Drawers/CustomToolViewer/CustomToolViewer';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import birdeyeLogoUrl from '../../../../assets/birdeye-logo.svg';
+import {
+  getExternalToolConfig,
+  resolveExternalToolId,
+} from '../../../data/externalToolConfigs';
+import ExternalToolDetails from './ExternalToolDetails';
 import styles from './EntityTaskBody.module.css';
 
-export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOpenTool, onSwapTool }) {
+export default function EntityTaskBody({
+  initialValues = {},
+  onFieldChange,
+  onOpenTool,
+  /**
+   * True once this task has been saved with a tool still missing mandatory config. Until
+   * then an unconfigured tool shows no error — just the Configure CTA — so a freshly
+   * dropped tool never looks broken before the user has had a chance to set it up.
+   */
+  showToolErrors = false,
+  viewOnly = false,
+  /** Exploration Option 2: Basic / Tool details stepper accordion. */
+  option2Stepper = false,
+  /** Exploration Option 3: Basic / Tool details as body tabs. */
+  option3Tabs = false,
+  /** Persisted per-tool field values (CustomToolViewer snapshot keyed by tool id). */
+  toolFieldValues = {},
+  onToolFieldValuesChange,
+}) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [selectedTools, setSelectedTools] = useState(initialValues.selectedTools ?? []);
   const [allTools, setAllTools] = useState([]);
+  const [openSteps, setOpenSteps] = useState({ 1: false, 2: true });
+  const [activeBodyTab, setActiveBodyTab] = useState('toolDetails');
+
+  const inlineToolLayout = option2Stepper || option3Tabs;
 
   useEffect(() => {
     const unsub = subscribeToCustomTools((tools) => setAllTools(tools));
@@ -36,93 +70,333 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
     onFieldChange?.('description', val);
   };
 
-  const handleRemoveTool = (toolId) => {
-    const next = selectedTools.filter((id) => id !== toolId);
-    setSelectedTools(next);
-    onFieldChange?.('selectedTools', next);
-  };
+  const externalToolId = useMemo(
+    () => resolveExternalToolId({ selectedTools, taskName }),
+    [selectedTools, taskName],
+  );
+  // Read config fresh each render so field copy/schema edits aren't stuck behind a memoized object.
+  const externalToolConfig = getExternalToolConfig(externalToolId);
 
-  const displayedTools = allTools.filter((t) => selectedTools.includes(t.id));
+  const displayedTools = useMemo(() => {
+    const fromCatalog = allTools.filter((t) => selectedTools.includes(t.id));
+    if (externalToolConfig && !fromCatalog.some((t) => t.id === externalToolConfig.id)) {
+      return [
+        {
+          id: externalToolConfig.id,
+          name: externalToolConfig.name,
+          icon: externalToolConfig.icon,
+          iconBg: externalToolConfig.iconBg,
+        },
+        ...fromCatalog,
+      ];
+    }
+    return fromCatalog.map((t) =>
+      externalToolConfig && t.id === externalToolConfig.id
+        ? { ...t, iconBg: externalToolConfig.iconBg || t.iconBg }
+        : t,
+    );
+  }, [allTools, selectedTools, externalToolConfig]);
+
+  const viewerTools = useMemo(
+    () =>
+      selectedTools
+        .filter((id) => id !== externalToolId)
+        .map((id) => resolveToolForViewer(id))
+        .filter(Boolean),
+    [selectedTools, externalToolId],
+  );
+
+  const handleInlineToolValues = useCallback((toolId, values) => {
+    onToolFieldValuesChange?.(toolId, values);
+  }, [onToolFieldValuesChange]);
+
+  const handleExternalToolValues = useCallback((values) => {
+    if (!externalToolId) return;
+    onToolFieldValuesChange?.(externalToolId, values);
+  }, [externalToolId, onToolFieldValuesChange]);
+
+  /**
+   * Tools with their own mandatory config. Unconfigured → the row offers Configure instead
+   * of edit/swap; the error icon only joins once `showToolErrors` says the task was saved
+   * in that state. `handle-response` is the only such tool today.
+   */
+  const toolNeedsConfig = (toolId) =>
+    isHandleResponseTool(toolId) && !isHandleResponseConfigComplete(initialValues.handleResponse);
+
+  const toggleStep = (id) =>
+    setOpenSteps((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const taskNameField = (
+    <FormInput
+      name="taskName"
+      type="text"
+      label="Action name"
+      placeholder="Enter name"
+      value={taskName}
+      onChange={handleTaskName}
+      required
+    />
+  );
+
+  const descriptionField = (
+    <TextArea
+      name="description"
+      label="Description"
+      placeholder="Enter description"
+      value={description}
+      onChange={handleDescription}
+      required
+      noFloatingLabel
+    />
+  );
+
+  const toolsSection = (
+    <div className={styles.toolsSection}>
+      <div className={styles.toolSelectField}>
+        <span className={styles.sectionLabelText}>Tool</span>
+
+        {displayedTools.length > 0 && (
+          <div className={styles.toolCard}>
+            {displayedTools.map((tool) => (
+              <div
+                key={tool.id}
+                className={styles.toolRow}
+                onClick={() => {
+                  if (inlineToolLayout || externalToolConfig?.id === tool.id) return;
+                  onOpenTool?.(tool.id);
+                }}
+                style={{
+                  cursor:
+                    inlineToolLayout || externalToolConfig?.id === tool.id
+                      ? 'default'
+                      : (onOpenTool ? 'pointer' : 'default'),
+                }}
+              >
+                <div className={styles.toolRowMain}>
+                  <div
+                    className={`${styles.toolIconWrap}${tool.isBirdeye ? ` ${styles.toolIconWrapBirdeye}` : ''}`}
+                    style={tool.iconBg ? { background: tool.iconBg } : undefined}
+                  >
+                    {tool.isBirdeye ? (
+                      <img
+                        src={birdeyeLogoUrl}
+                        alt=""
+                        className={styles.toolIconBirdeye}
+                      />
+                    ) : tool.icon ? (
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontSize: 18,
+                          color: tool.iconBg ? '#fff' : '#555',
+                          fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+                        }}
+                      >
+                        {tool.icon}
+                      </span>
+                    ) : tool.iconDataUrl ? (
+                      <img src={tool.iconDataUrl} alt={tool.name} className={styles.toolIconImg} />
+                    ) : (
+                      <span className={`material-symbols-outlined ${styles.toolIconFallback}`}>build</span>
+                    )}
+                  </div>
+                  <span className={styles.toolName}>{tool.name}</span>
+                  {toolNeedsConfig(tool.id) && showToolErrors && (
+                    <Tooltip content="Missing mandatory fields" variant="brief" side="top">
+                      <span className={styles.toolErrorIcon} role="img" aria-label="Missing mandatory fields">
+                        <span className="material-symbols-outlined" aria-hidden>error</span>
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
+                <div className={styles.toolRowActions}>
+                  {viewOnly ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className={styles.toolViewBtn}
+                      onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onOpenTool?.(tool.id);
+                        }
+                      }}
+                    >
+                      View
+                    </span>
+                  ) : toolNeedsConfig(tool.id) && !inlineToolLayout ? (
+                    <button
+                      type="button"
+                      className={styles.toolConfigureBtn}
+                      onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                    >
+                      Configure
+                    </button>
+                  ) : (
+                    <>
+                      {!inlineToolLayout && externalToolConfig?.id !== tool.id && (
+                        <button
+                          type="button"
+                          className={styles.toolActionBtn}
+                          onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                          title="Edit tool configuration"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                            edit
+                          </span>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {externalToolConfig && (
+        <ExternalToolDetails
+          config={externalToolConfig}
+          values={toolFieldValues?.[externalToolConfig.id] || {}}
+          onChange={handleExternalToolValues}
+          viewOnly={viewOnly}
+        />
+      )}
+
+      {displayedTools.length > 0 && inlineToolLayout && selectedTools.some(isHandleResponseTool) && (
+        <div className={styles.inlineToolConfig}>
+          <HandleResponseForm
+            key="hr-inline"
+            value={initialValues.handleResponse || {}}
+            live
+            embedded
+            onChange={(config) => onFieldChange?.('handleResponse', config)}
+            namePrefix="handle-response-inline"
+            fieldPickerPlacement="dock"
+            fieldPickerZIndex={120}
+          />
+        </div>
+      )}
+      {displayedTools.length > 0 && inlineToolLayout && viewerTools
+        .filter((viewerTool) => !isHandleResponseTool(viewerTool.id))
+        .map((viewerTool) => (
+        <div key={viewerTool.id} className={styles.inlineToolConfig}>
+          <ToolViewerContent
+            tool={viewerTool}
+            embedded
+            initialValues={toolFieldValues?.[viewerTool.id] || {}}
+            onFieldValuesChange={(values) => handleInlineToolValues(viewerTool.id, values)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  const basicFields = (
+    <div className={styles.stepFields}>
+      {taskNameField}
+      {descriptionField}
+    </div>
+  );
+
+  if (option3Tabs) {
+    const TABS = [
+      { id: 'basic', label: 'Basic' },
+      { id: 'toolDetails', label: 'Tool details' },
+    ];
+    return (
+      <div className={styles.tabbedContainer}>
+        <div className={styles.tabTrack} role="tablist" aria-label="Action sections">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              className={`${styles.tabButton}${activeBodyTab === tab.id ? ` ${styles.tabButtonActive}` : ''}`}
+              onClick={() => setActiveBodyTab(tab.id)}
+              aria-selected={activeBodyTab === tab.id}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className={styles.tabContent} role="tabpanel">
+          {activeBodyTab === 'toolDetails' ? toolsSection : basicFields}
+        </div>
+      </div>
+    );
+  }
+
+  if (option2Stepper) {
+    const STEPS = [
+      {
+        id: 1,
+        label: 'Basic',
+        content: basicFields,
+      },
+      {
+        id: 2,
+        label: 'Tool details',
+        content: toolsSection,
+      },
+    ];
+    return (
+      <div className={styles.stepperContainer}>
+        <nav className={styles.stepper} aria-label="Action setup steps">
+          <ol className={styles.stepperList}>
+            {STEPS.map((step) => {
+              const isOpen = !!openSteps[step.id];
+              return (
+                <li key={step.id} className={styles.stepperItem}>
+                  <div className={styles.stepperRail}>
+                    <span
+                      className={`${styles.stepMarker}${isOpen ? ` ${styles.stepMarkerActive}` : ''}`}
+                      aria-hidden
+                    >
+                      {step.id}
+                    </span>
+                    <div className={styles.stepConnector} aria-hidden />
+                  </div>
+                  <div className={styles.stepMain}>
+                    <button
+                      type="button"
+                      className={styles.stepHeader}
+                      onClick={() => toggleStep(step.id)}
+                      aria-expanded={isOpen}
+                    >
+                      <span
+                        className={`${styles.stepLabel}${isOpen ? ` ${styles.stepLabelActive}` : ''}`}
+                      >
+                        {step.label}
+                      </span>
+                      <span
+                        className={`material-symbols-outlined ${styles.stepChevron}${
+                          isOpen ? ` ${styles.stepChevronOpen}` : ''
+                        }`}
+                        aria-hidden
+                      >
+                        expand_more
+                      </span>
+                    </button>
+                    {isOpen && <div className={styles.stepBody}>{step.content}</div>}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.formContainer}>
-      <FormInput
-        name="taskName"
-        type="text"
-        label="Task name"
-        placeholder="Enter name"
-        value={taskName}
-        onChange={handleTaskName}
-        required
-      />
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={description}
-        onChange={handleDescription}
-        noFloatingLabel
-      />
-
-      <div className={styles.toolsSection}>
-        <div className={styles.sectionLabelWrapper}>
-          <span className={styles.sectionLabelText}>Tools</span>
-          <span className={`material-symbols-outlined ${styles.sectionLabelIcon}`}>info</span>
-        </div>
-
-        <div className={styles.addBox}>
-          {displayedTools.map((tool) => (
-            <div
-              key={tool.id}
-              className={styles.toolRow}
-              onClick={() => onOpenTool?.(tool.id)}
-              style={{ cursor: onOpenTool ? 'pointer' : 'default' }}
-            >
-              <div className={styles.toolRowMain}>
-                <div className={styles.toolIconWrap}>
-                  {tool.isBirdeye ? (
-                    <img src={birdeyeLogoUrl} alt="Birdeye" style={{ width: 16, height: 16 }} />
-                  ) : tool.icon ? (
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: 16, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
-                    >
-                      {tool.icon}
-                    </span>
-                  ) : tool.iconDataUrl ? (
-                    <img src={tool.iconDataUrl} alt={tool.name} className={styles.toolIconImg} />
-                  ) : (
-                    <span className={`material-symbols-outlined ${styles.toolIconFallback}`}>build</span>
-                  )}
-                </div>
-                <span className={styles.toolName}>{tool.name}</span>
-              </div>
-              <div className={styles.toolRowActions}>
-                <button
-                  type="button"
-                  className={styles.toolActionBtn}
-                  onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
-                  title="Edit tool configuration"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                    edit
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.toolActionBtn}
-                  onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
-                  title="Replace tool"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                    swap_horiz
-                  </span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {taskNameField}
+      {descriptionField}
+      {toolsSection}
     </div>
   );
 }

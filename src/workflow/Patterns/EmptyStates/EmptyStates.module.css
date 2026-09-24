@@ -46,7 +46,7 @@
 .contentBox {
   flex: 1;
   background: #ebeff6;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px;
   display: flex;
   flex-direction: column;

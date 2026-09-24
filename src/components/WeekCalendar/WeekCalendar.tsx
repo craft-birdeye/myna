@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { Icon } from '../Icon/Icon'
+import { CheckCircle2, AlertTriangle } from 'lucide-react'
 import { Link } from '../Link/Link'
 
 interface CalendarEvent {
@@ -95,7 +95,7 @@ function EventTooltip({ event, pos, onClose, onViewDetails }: { event: CalendarE
         <div className="flex flex-col gap-xs">
           {event.checks.map((label) => (
             <div key={label} className="flex items-center gap-xs">
-              <Icon name="check_circle" size={16} className="shrink-0 text-text-secondary" />
+              <CheckCircle2 className="size-4 shrink-0 text-text-secondary" strokeWidth={1.6} absoluteStrokeWidth />
               <span className="text-small text-text-primary">{label}</span>
             </div>
           ))}
@@ -213,7 +213,7 @@ export function WeekCalendar({ weekStart, visibleColumns = ['name', 'dateTime'],
                   >
                     <div className="flex items-center gap-xs">
                       <span className={`truncate text-small ${c.text}`}>{evt.name}</span>
-                      {evt.warning && <Icon name="warning" size={12} className="shrink-0 text-[#f59e0b]" />}
+                      {evt.warning && <AlertTriangle className="size-4 shrink-0 text-[#f59e0b]" strokeWidth={1.6} absoluteStrokeWidth />}
                     </div>
                     {height >= 40 && (
                       <span className="text-[10px] text-text-secondary">{evt.start} - {evt.end}</span>

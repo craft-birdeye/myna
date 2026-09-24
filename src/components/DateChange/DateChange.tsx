@@ -1,4 +1,4 @@
-import { Icon } from '../Icon/Icon'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateChangeProps } from './DateChange.types'
 
 function formatDate(d: Date) {
@@ -31,18 +31,18 @@ export function DateChange({ date, isToday, timescale = 'day', onPrev, onNext, o
         type="button"
         aria-label={timescale === 'week' ? 'Previous week' : 'Previous day'}
         onClick={onPrev}
-        className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-selected"
+        className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-selected"
       >
-        <Icon name="chevron_left" size={20} />
+        <ChevronLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       <span className="text-h3 text-text-primary">{label}</span>
       <button
         type="button"
         aria-label={timescale === 'week' ? 'Next week' : 'Next day'}
         onClick={onNext}
-        className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-selected"
+        className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-selected"
       >
-        <Icon name="chevron_right" size={20} />
+        <ChevronRight className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {isToday && (
         <button

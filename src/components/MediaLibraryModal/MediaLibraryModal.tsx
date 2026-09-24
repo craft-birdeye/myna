@@ -125,11 +125,11 @@ function FolderCover({
       >
         <div className="grid size-full grid-cols-2 grid-rows-2 gap-sm">
           {folder.images.slice(0, 3).map((src, i) => (
-            <div key={i} className="overflow-hidden rounded-[4px] border border-border bg-surface">
+            <div key={i} className="overflow-hidden rounded-sm border border-border bg-surface">
               <img src={src} alt="" className="size-full object-cover" />
             </div>
           ))}
-          <div className="flex items-center justify-center overflow-hidden rounded-[4px] border border-border bg-surface">
+          <div className="flex items-center justify-center overflow-hidden rounded-sm border border-border bg-surface">
             <span className="text-body text-text-primary">+{folder.overflowCount}</span>
           </div>
         </div>

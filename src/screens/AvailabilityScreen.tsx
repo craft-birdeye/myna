@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Check, ChevronDown, Info, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { Icon, SelectMenu, Toast, TopNav } from '../components'
 import type { SelectOption } from '../components'
 
@@ -174,10 +175,10 @@ function DropdownField({ label, required, options, value, multi, searchable, pla
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex h-9 w-full items-center justify-between rounded-sm border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
+        className="flex h-[34px] w-full items-center justify-between rounded-md border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
       >
         <span className={value.length === 0 ? 'text-text-tertiary' : ''}>{triggerLabel}</span>
-        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute top-full z-[60] mt-xs w-full">
@@ -216,11 +217,11 @@ function LocationDropdown({ value, onChange }: { value: string; onChange: (v: st
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2 focus:outline-none"
+        className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2 focus:outline-none"
       >
         <Icon name="place" size={16} className="shrink-0 text-text-icon" />
         <span>{selectedLabel}</span>
-        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-[60] mt-xs w-[220px]">
@@ -274,10 +275,10 @@ function SourceDropdown({ value, onChange }: SourceDropdownProps) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex h-9 w-full items-center justify-between rounded-sm border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
+        className="flex h-[34px] w-full items-center justify-between rounded-md border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
       >
         <span>{selected.title}</span>
-        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute top-full z-[60] mt-xs w-full min-w-[400px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
@@ -292,7 +293,7 @@ function SourceDropdown({ value, onChange }: SourceDropdownProps) {
                 <span className="text-body text-text-primary">{opt.title}</span>
                 <span className="text-small text-text-secondary">{opt.description}</span>
               </div>
-              {opt.id === value && <Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary" />}
+              {opt.id === value && <Check className="size-5 mt-0.5 shrink-0 text-primary" strokeWidth={1.6} absoluteStrokeWidth />}
             </button>
           ))}
         </div>
@@ -313,13 +314,13 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDia
   if (!open) return null
   return (
     <>
-      <div className="fixed inset-0 z-[200] bg-black/20" onClick={onCancel} />
-      <div className="fixed left-1/2 top-[72px] z-[201] w-[520px] -translate-x-1/2 rounded-sm border border-border bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed left-1/2 top-[72px] z-[201] w-[520px] -translate-x-1/2 rounded-xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-2xl pt-xl pb-md">
           <span className="text-body text-text-primary">{title}</span>
-          <button type="button" onClick={onCancel} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-            <Icon name="close" size={18} />
+          <button type="button" onClick={onCancel} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+            <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
         {/* Body */}
@@ -336,7 +337,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDia
           <button
             type="button"
             onClick={onConfirm}
-            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
           >
             Yes, delete
           </button>
@@ -372,17 +373,17 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: AddWindowDrawerPro
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/20" onClick={onClose} />
-      <div className="flex w-[600px] flex-col bg-surface shadow-modal overflow-y-auto">
+      <div className="flex-1 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex w-[600px] flex-col overflow-y-auto rounded-2xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-xl">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={20} />
+            <button type="button" onClick={onClose} className="flex size-[34px] items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <h2 className="text-[16px] text-text-primary">Add window</h2>
           </div>
-          <button type="button" onClick={handleSave} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
+          <button type="button" onClick={handleSave} className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
             Save
           </button>
         </div>
@@ -400,7 +401,7 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: AddWindowDrawerPro
                   key={opt.id}
                   type="button"
                   onClick={() => setRecurrence(opt.id)}
-                  className={`flex items-start gap-sm rounded-sm border p-md text-left transition-colors ${recurrence === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
+                  className={`flex items-start gap-sm rounded-md border p-md text-left transition-colors ${recurrence === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
                 >
                   <div className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${recurrence === opt.id ? 'border-primary' : 'border-border-selected'}`}>
                     {recurrence === opt.id && <div className="size-2 rounded-full bg-primary" />}
@@ -449,7 +450,7 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: AddWindowDrawerPro
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="eg. Emergency slots only"
-              className="h-9 rounded-sm border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
         </div>
@@ -482,16 +483,16 @@ function AddTimeOffDrawer({ open, onClose, onSave }: AddTimeOffDrawerProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/20" onClick={onClose} />
-      <div className="flex w-[600px] flex-col bg-surface shadow-modal overflow-y-auto">
+      <div className="flex-1 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex w-[600px] flex-col overflow-y-auto rounded-2xl bg-surface shadow-modal">
         <div className="flex items-center justify-between px-2xl py-xl">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={20} />
+            <button type="button" onClick={onClose} className="flex size-[34px] items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <h2 className="text-[16px] text-text-primary">Add time off</h2>
           </div>
-          <button type="button" onClick={handleSave} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
+          <button type="button" onClick={handleSave} className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
             Save
           </button>
         </div>
@@ -499,11 +500,11 @@ function AddTimeOffDrawer({ open, onClose, onSave }: AddTimeOffDrawerProps) {
           <div className="grid grid-cols-2 gap-lg">
             <div className="flex flex-col gap-sm">
               <label className="text-body text-text-primary">From <span className="text-danger">*</span></label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 rounded-sm border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-[34px] rounded-md border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
             </div>
             <div className="flex flex-col gap-sm">
               <label className="text-body text-text-primary">To</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 rounded-sm border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-[34px] rounded-md border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
             </div>
           </div>
 
@@ -519,7 +520,7 @@ function AddTimeOffDrawer({ open, onClose, onSave }: AddTimeOffDrawerProps) {
 
           <div className="flex flex-col gap-sm">
             <label className="text-body text-text-primary">Label <span className="text-danger">*</span></label>
-            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="eg. Independence Day — clinic closed" className="h-9 rounded-sm border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="eg. Independence Day — clinic closed" className="h-[34px] rounded-md border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
           </div>
 
           <div className="flex flex-col gap-md">
@@ -626,7 +627,7 @@ export function AvailabilityScreen() {
           <span className="text-h3 text-text-primary">Availability</span>
           <div className="flex items-center gap-sm">
             <LocationDropdown value={location} onChange={setLocation} />
-            <button type="button" className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
+            <button type="button" className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
               Save
             </button>
           </div>
@@ -659,7 +660,7 @@ export function AvailabilityScreen() {
           {availabilitySource === 'pms' ? (
             /* PMS syncing state */
             <div className="flex items-center gap-sm rounded-sm border border-blue-200 bg-blue-50 px-lg py-md">
-              <Icon name="info" size={18} className="shrink-0 text-blue-500" />
+              <Info className="size-5 shrink-0 text-blue-500" strokeWidth={1.6} absoluteStrokeWidth />
               <p className="text-body text-blue-700">Fetching data from the PMS. This may take some time.</p>
             </div>
           ) : (
@@ -692,7 +693,7 @@ export function AvailabilityScreen() {
                                 onClick={() => requestDeleteWindow(key, win.id)}
                                 className="absolute right-1 top-1 hidden size-5 items-center justify-center rounded text-text-tertiary hover:text-danger group-hover:flex"
                               >
-                                <Icon name="close" size={14} />
+                                <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                               </button>
                               <span className="text-small text-primary">{win.startTime} - {win.endTime}</span>
                               <span className="text-xs text-text-secondary">{win.operatory}</span>
@@ -706,7 +707,7 @@ export function AvailabilityScreen() {
                             onClick={() => setAddWindowDay(key)}
                             className="flex h-8 items-center gap-xs rounded-sm border border-dashed border-border px-sm text-body text-text-secondary hover:border-primary hover:text-primary"
                           >
-                            <Icon name="add" size={16} />
+                            <Plus className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                             Add window
                           </button>
                         </div>
@@ -734,9 +735,9 @@ export function AvailabilityScreen() {
                   <button
                     type="button"
                     onClick={() => setShowTimeOffDrawer(true)}
-                    className="flex h-9 shrink-0 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                    className="flex h-[34px] shrink-0 items-center gap-xs rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
                   >
-                    <Icon name="add" size={16} />
+                    <Plus className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                     Add time off
                   </button>
                 </div>
@@ -755,15 +756,15 @@ export function AvailabilityScreen() {
                         {entry.allLocations && (
                           <span className="rounded-sm bg-chip-warning-bg px-sm py-0.5 text-xs text-chip-warning-text">All locations</span>
                         )}
-                        <button type="button" className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-                          <Icon name="edit" size={18} />
+                        <button type="button" className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+                          <Pencil className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                         </button>
                         <button
                           type="button"
                           onClick={() => requestDeleteTimeOff(entry.id)}
-                          className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover hover:text-danger"
+                          className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover hover:text-danger"
                         >
-                          <Icon name="delete" size={18} />
+                          <Trash2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                         </button>
                       </div>
                     </div>

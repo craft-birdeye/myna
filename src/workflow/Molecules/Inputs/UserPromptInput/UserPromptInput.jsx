@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '../prompt-chip.css';
-import { serializeFrom, deserializeInto, deserializeIntoTyped, insertChipAt } from '../promptChipHelpers.js';
+import { serializeRichFrom, serializeRichFromNormalized, deserializeRichInto, insertChipAt } from '../promptChipHelpers.js';
 import { VariableIcon, BuildIcon, ProcedureIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import ToolbarButton from '../ToolbarButton.jsx';
-import { ToolSlashMenu, getCaretAnchor } from '../ToolSlashMenu/ToolSlashMenu';
+import PromptFormatControl from '../PromptFormatControl/PromptFormatControl.jsx';
+import { ToolSlashMenu, getCaretAnchor, getTriggerAnchor } from '../ToolSlashMenu/ToolSlashMenu';
 import styles from './UserPromptInput.module.css';
 
 /** Nearest scrollable ancestor (e.g. the drawer's own scroll container), or null. */
@@ -26,16 +27,25 @@ export default function UserPromptInput({
   required,
   hideLabel = false,
   readOnly = false,
+  disabled = false,
   autoHeight = false,
   minEditorHeight,
-  placeholder = 'Enter prompt',
+  placeholder = 'Describe what you want this agent to do',
   resolveType = null,
   onOpenToolDrawer,
   onOpenTool,
   showProcedureButton = false,
   enableToolSlash = true,
   showTriggerFields = false,
+  /** Fields-only toolbar: hides Tools + Rephrase, leaving just the `{x}` field picker. */
+  fieldsOnly = false,
+  /** How the Fields picker opens relative to the toolbar icon. */
+  fieldPickerPlacement = 'dock',
+  fieldPickerZIndex,
+  error,
+  errorMessage = 'This field is required',
 }) {
+  const locked = readOnly || disabled;
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -58,11 +68,11 @@ export default function UserPromptInput({
 
   const syncEmpty = useCallback(() => {
     const el = editorRef.current;
-    setIsEmpty(!el || !serializeFrom(el).trim());
+    setIsEmpty(!el || !serializeRichFromNormalized(el).trim());
   }, []);
 
   const emitChange = useCallback(() => {
-    const s = serializeFrom(editorRef.current);
+    const s = serializeRichFromNormalized(editorRef.current);
     lastEmittedRef.current = s;
     setIsEmpty(!s.trim());
     onChangeRef.current?.(s);
@@ -74,11 +84,7 @@ export default function UserPromptInput({
     const newVal = value ?? '';
     if (newVal === lastEmittedRef.current) return;
     lastEmittedRef.current = newVal;
-    if (resolveType) {
-      deserializeIntoTyped(el, newVal, emitChange, resolveType);
-    } else {
-      deserializeInto(el, newVal, emitChange);
-    }
+    deserializeRichInto(el, newVal, emitChange, resolveType || undefined);
     syncEmpty();
   }, [value, emitChange, resolveType, syncEmpty]);
 
@@ -103,10 +109,14 @@ export default function UserPromptInput({
     }
   }, []);
 
-  const handleOpenFieldModal = useCallback(() => {
+  const handleToggleFieldModal = useCallback(() => {
+    if (fieldModalOpen) {
+      setFieldModalOpen(false);
+      return;
+    }
     saveRange();
     setFieldModalOpen(true);
-  }, [saveRange]);
+  }, [fieldModalOpen, saveRange]);
 
   const handleInsertProcedure = useCallback(() => {
     saveRange();
@@ -115,10 +125,10 @@ export default function UserPromptInput({
   }, [saveRange, emitChange]);
 
   const handleFieldSelect = useCallback((fieldValue) => {
-    setFieldModalOpen(false);
     insertChipAt(editorRef.current, savedRangeRef.current, emitChange, 'variable', fieldValue);
-    savedRangeRef.current = null;
-  }, [emitChange]);
+    // Keep picker open; close only via X or Fields icon. Re-save caret for the next insert.
+    saveRange();
+  }, [emitChange, saveRange]);
 
   const closeSlashMenu = useCallback(() => {
     setSlashOpen(false);
@@ -153,7 +163,12 @@ export default function UserPromptInput({
       if (!initialAnchor) return;
       const currentTop = parent ? parent.scrollTop : (window.scrollY || window.pageYOffset || 0);
       const delta = currentTop - initialTop;
-      setSlashAnchor({ top: initialAnchor.top - delta, left: initialAnchor.left });
+      setSlashAnchor({
+        ...initialAnchor,
+        left: initialAnchor.left,
+        ...(initialAnchor.top != null ? { top: initialAnchor.top - delta } : {}),
+        ...(initialAnchor.bottom != null ? { bottom: initialAnchor.bottom + delta } : {}),
+      });
     };
     document.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
@@ -174,14 +189,17 @@ export default function UserPromptInput({
   // @ mention → field picker; / → tool slash menu
   const handleKeyDown = useCallback((e) => {
     if (e.key === '@') {
-      handleOpenFieldModal();
+      if (!fieldModalOpen) {
+        saveRange();
+        setFieldModalOpen(true);
+      }
       return;
     }
     if (enableToolSlash && e.key === '/') {
       e.preventDefault();
       openSlashMenu(() => getCaretAnchor(editorRef.current));
     }
-  }, [handleOpenFieldModal, enableToolSlash, openSlashMenu]);
+  }, [fieldModalOpen, saveRange, enableToolSlash, openSlashMenu]);
 
   return (
     <>
@@ -192,8 +210,10 @@ export default function UserPromptInput({
             {required && <span className={styles.required}>*</span>}
           </div>
         )}
-        <div className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}`}>
-          {!readOnly && isEmpty && (
+        <div
+          className={`${styles.inputBox}${!locked && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}
+        >
+          {!locked && isEmpty && (
             <div className={styles.placeholderOverlay} aria-hidden>
               {placeholder}
             </div>
@@ -201,43 +221,48 @@ export default function UserPromptInput({
           <div
             ref={editorRef}
             className={`${styles.editor}${autoHeight ? ` ${styles.editorAutoHeight}` : ''}`}
-            contentEditable={!readOnly}
+            contentEditable={!locked}
             suppressContentEditableWarning
-            onInput={readOnly ? undefined : emitChange}
-            onKeyDown={readOnly ? undefined : handleKeyDown}
+            onInput={locked ? undefined : emitChange}
+            onKeyDown={locked ? undefined : handleKeyDown}
             style={minEditorHeight ? { minHeight: minEditorHeight } : undefined}
             onClick={onOpenTool ? (e) => {
               const chip = e.target.closest('[data-chip-type="tool"], .prompt-chip--tool');
               if (chip) {
-                const label = chip.querySelector('.prompt-chip-label')?.textContent?.trim();
+                const label = chip.dataset.chip
+                  || chip.querySelector('.prompt-chip-label')?.textContent?.trim();
                 if (label) onOpenTool(label);
               }
             } : undefined}
           />
-          {!readOnly && (
+          {!locked && (
           <div className={styles.toolbar} ref={pickerContainerRef}>
             <div ref={fieldsBtnRef}>
               <ToolbarButton
                 icon={<VariableIcon />}
                 tooltip="Fields"
                 active={fieldModalOpen}
-                onClick={handleOpenFieldModal}
+                onClick={handleToggleFieldModal}
               />
             </div>
-            <ToolbarButton
-              icon={<BuildIcon />}
-              tooltip="Tools"
-              onClick={() => {
-                if (enableToolSlash) {
-                  openSlashMenu(() => {
-                    const rect = editorRef.current?.getBoundingClientRect();
-                    return rect ? { top: rect.bottom - 8, left: rect.left + 12 } : null;
-                  });
-                  return;
-                }
-                onOpenToolDrawer?.();
-              }}
-            />
+            {!fieldsOnly && (
+              <ToolbarButton
+                icon={<BuildIcon />}
+                tooltip="Tools"
+                active={slashOpen}
+                onClick={(e) => {
+                  if (enableToolSlash) {
+                    if (slashOpen) {
+                      closeSlashMenu();
+                      return;
+                    }
+                    openSlashMenu(() => getTriggerAnchor(e.currentTarget));
+                    return;
+                  }
+                  onOpenToolDrawer?.();
+                }}
+              />
+            )}
             {showProcedureButton && (
               <ToolbarButton
                 icon={<ProcedureIcon />}
@@ -245,14 +270,26 @@ export default function UserPromptInput({
                 onClick={handleInsertProcedure}
               />
             )}
-            <ToolbarButton
-              icon={<ExpandIcon />}
-              tooltip="Rephrase"
-              disabled={isEmpty}
-            />
+            {!fieldsOnly && (
+              <>
+                <ToolbarButton
+                  icon={<ExpandIcon />}
+                  tooltip="Rephrase"
+                  disabled={isEmpty}
+                />
+                <PromptFormatControl
+                  getEditor={() => editorRef.current}
+                  onAfterFormat={emitChange}
+                  persistKey="user-prompt-format"
+                />
+              </>
+            )}
           </div>
           )}
         </div>
+        {error && errorMessage && (
+          <span className={styles.errorText}>{errorMessage}</span>
+        )}
       </div>
       {fieldModalOpen && (
         <FieldPickerModal
@@ -260,6 +297,9 @@ export default function UserPromptInput({
           onSelectField={handleFieldSelect}
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
+          placement={fieldPickerPlacement}
+          insertedText={serializeRichFrom(editorRef.current)}
+          {...(fieldPickerZIndex != null ? { overlayZIndex: fieldPickerZIndex } : {})}
         />
       )}
       <ToolSlashMenu

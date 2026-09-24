@@ -63,7 +63,7 @@ export function buildWizardAgentWorkflow(draft: WizardAgentDraft): AgentWorkflow
       '__start__': {
         agentName: draft.agentName,
         goals:
-          'Serves as the first point of contact for inbound calls, texts, and chats, resolving patient inquiries, managing appointments, and escalating complex cases when needed.',
+          'Answer all inbound calls, texts, and chats. Handle general questions, book, cancel, and reschedule appointments, verify insurance, and bring in a human when something is too complex to handle.',
         outcomes: [
           "1. Patient's query is resolved or routed without human intervention",
           '2. Appointment is confirmed, modified, or cancelled and reflected in the system',

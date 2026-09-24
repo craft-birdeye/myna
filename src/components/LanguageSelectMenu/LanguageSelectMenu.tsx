@@ -22,14 +22,14 @@ export function LanguageFlag({
 }: {
   countryCode: string
   label: string
-  size?: 'sm' | 'md'
+  size?: 'xs' | 'sm' | 'md'
 }) {
-  const dim = size === 'sm' ? 20 : 24
+  const dim = size === 'xs' ? 16 : size === 'sm' ? 20 : 24
+  const boxClass =
+    size === 'xs' ? 'size-4' : size === 'sm' ? 'size-5' : 'size-6'
   return (
     <span
-      className={`inline-flex shrink-0 overflow-hidden rounded-full bg-surface-l2 ${
-        size === 'sm' ? 'size-5' : 'size-6'
-      }`}
+      className={`inline-flex shrink-0 overflow-hidden rounded-full bg-surface-l2 ${boxClass}`}
       aria-hidden
     >
       <img

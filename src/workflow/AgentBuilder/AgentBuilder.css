@@ -89,7 +89,6 @@
   flex: 1;
   min-width: 0;
   position: relative;
-  transition: flex 0.2s ease;
 }
 
 /* Reserves the width of the floating "Create with AI" panel (docked over the
@@ -108,14 +107,59 @@
   flex: 1;
 }
 
+
 .agent-builder__rhs {
-  flex-shrink: 0;
-  padding: 0;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  height: calc(100% - 16px);
   overflow: hidden;
-  z-index: 5;
-  height: 100%;
+  z-index: 30;
+  border-radius: 16px; /* Corner Radius/xl — Aero drawer/panel shell */
+  /* Mild floating elevation — lighter than modal scrim panels */
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
   display: flex;
   flex-direction: column;
+}
+
+.agent-builder__rhs--ai {
+  width: 450px;
+}
+
+/* Help center in the node-config RHS slot — matches the node panel width. */
+.agent-builder__rhs--help {
+  width: 450px;
+}
+
+@keyframes agent-builder-rhs-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes agent-builder-rhs-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.agent-builder__rhs--opening {
+  animation: agent-builder-rhs-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.agent-builder__rhs--closing {
+  animation: agent-builder-rhs-slide-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
 }
 
 .agent-builder__ai-assist {
@@ -197,84 +241,644 @@
 .ab-header-actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.ab-resolve-issues {
+  position: relative;
+}
+
+/* Exploration chrome: issue count reads as a red chip after the run-test icon. */
+.ab-error-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px; /* rounded-sm */
+  background: #fef6f5; /* chip-danger bg */
+  color: #de1b0c; /* chip-danger text */
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-error-chip:hover,
+.ab-error-chip[aria-expanded='true'] {
+  background: #fce8e6;
+}
+
+.ab-error-chip .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  color: #de1b0c;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ab-resolve-issues__trigger {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #717182; /* text-secondary */
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-resolve-issues__trigger:hover,
+.ab-resolve-issues__trigger[aria-expanded='true'] {
+  background: #f2f4f7; /* surface-hover */
+}
+
+.ab-resolve-issues__trigger .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #de1b0c;
+}
+
+.ab-resolve-issues__popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 320;
+  width: 320px;
+  padding: 4px 0; /* py-xs */
+  background: #ffffff; /* surface */
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 4px; /* rounded-sm */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); /* shadow-dropdown */
+}
+
+/* Exploration chrome: chip sits top-right — anchor popover to the right edge. */
+.ab-resolve-issues__popover--anchor-right {
+  left: auto;
+  right: 0;
+}
+
+.ab-resolve-issues__heading {
+  padding: 8px 12px 4px; /* py-sm px-md */
+  color: #0d0d12; /* text-primary */
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+.ab-resolve-issues__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ab-resolve-issues__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px; /* gap-sm */
+  width: 100%;
+  margin: 0;
+  padding: 8px 12px; /* py-sm px-md */
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-resolve-issues__item:hover {
+  background: #f2f4f7; /* surface-hover */
+}
+
+.ab-resolve-issues__item-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 18px;
+  line-height: 1;
+  color: #de1b0c; /* chip-danger text */
+}
+
+.ab-resolve-issues__item-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ab-resolve-issues__item-title {
+  color: #0d0d12; /* text-primary */
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+.ab-resolve-issues__item-desc {
+  color: #717182; /* text-secondary */
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+}
+
+.ab-publish-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  height: 36px;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.ab-header-pause-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  color: #212121;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-pause-btn:hover {
+  background: #f2f4f7;
+}
+
+/* Exploration only: version-history chrome swaps Publish for Cancel + Restore. */
+.ab-header-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #1976d2;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-cancel-btn:hover {
+  background: #f2f4f7;
+}
+
+.ab-header-restore-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-restore-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.ab-header-restore-btn:disabled {
+  background: #eceff3;
+  color: #9aa4b2;
+  cursor: not-allowed;
+}
+
+.ab-publish-split__main,
+.ab-publish-split__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-publish-split__main {
+  padding: 0 14px 0 16px;
+  border-radius: 4px 0 0 4px;
+}
+
+.ab-publish-split__main--solo {
+  border-radius: 4px;
+  padding: 0 16px;
+}
+
+.ab-publish-split__chevron {
+  width: 32px;
+  padding: 0;
+  border-radius: 0 4px 4px 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.ab-publish-split__main:hover,
+.ab-publish-split__chevron:hover,
+.ab-publish-split__chevron--open {
+  background: #1565c0;
+}
+
+.ab-publish-split__main:disabled,
+.ab-publish-split__chevron:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
+}
+
+.ab-publish-split__chevron .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  color: #fff;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Same Aero DS dropdown spec as .ab-header-menu — the two menus sit in one header. */
+.ab-publish-split__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 168px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 320;
+}
+
+.ab-publish-split__menu-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  transition: background 0.12s ease;
+}
+
+.ab-publish-split__menu-item:hover {
+  background: #f2f4f7;
+}
+
+.ab-header-cloud-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #303030; /* text/icon */
+  padding: 4px;
+  border-radius: 4px; /* Corner Radius/sm */
+}
+
+.ab-header-cloud-btn:hover {
+  background: #f2f4f7; /* surface/hover */
+  color: #0d0d12;
+}
+
+.ab-header-cloud-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ab-header-cloud-btn:disabled:hover {
+  background: none;
+}
+
+.ab-header-cloud-btn__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.ab-header-cloud-btn__material {
+  font-size: 20px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+
+/* play_arrow has a narrower optical box than edit — scale it up to match. */
+.ab-header-cloud-btn__material--play {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 
 .ab-header-more {
   position: relative;
 }
 
+/* Run test / Preview — same bordered shell as .ab-header-more-btn, widened for its label. */
+.ab-header-runtest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  /* Uniform 8px inset on all four sides. The 18px line-height makes the content row match
+     the 18px icon, so 8 + 18 + 8 + 2px border lands on exactly 36px — level with the
+     Activate split button and the three-dots without needing asymmetric padding. */
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #212121;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+  transition: background 0.12s ease;
+}
+
+.ab-header-runtest-btn:hover:not(:disabled) {
+  background: #f2f4f7;
+}
+
+.ab-header-runtest-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ab-header-runtest-btn__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Sized to match .ab-publish-split (36px / 4px radius) so the two sit level. */
 .ab-header-more-btn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
   cursor: pointer;
-  color: #555;
+  color: #212121;
   padding: 0;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.12s ease;
 }
 
 .ab-header-more-btn:hover {
   background: #f2f4f7;
-  border-color: #b0b8c4;
 }
 
 .ab-header-more-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
+/*
+ * Aero DS dropdown (CLAUDE.md §6.7) — same spec as the AgentInstanceScreen Actions menu:
+ * 168px min-width, 4px radius, 1px borders/primary/1, 4px block padding, shadow-dropdown,
+ * 16px/8px text-body items, surface/hover on hover, chip/danger/text for destructive.
+ * No dividers — the DS list separates items by spacing alone.
+ */
 .ab-header-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
+  min-width: 168px;
+  padding: 4px 0;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  min-width: 160px;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 300;
-  overflow: hidden;
 }
 
 .ab-header-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
   width: 100%;
-  padding: 10px 14px;
+  margin: 0;
+  padding: 8px 16px;
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  color: #212121;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
   text-align: left;
-  transition: background 0.12s;
+  transition: background 0.12s ease;
 }
 
 .ab-header-menu-item:hover {
-  background: #f4f6f7;
+  background: #f2f4f7;
 }
 
-.ab-header-menu-item .material-symbols-outlined {
-  font-size: 16px;
-  color: #666;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
-}
-
-.ab-header-menu-divider {
-  height: 1px;
-  background: #e5e9f0;
+.ab-header-menu-item--danger {
+  color: #de1b0c;
 }
 
 .ab-hidden-input {
   display: none;
+}
+
+/* ─── Publish blocked alert (viewport-fixed — covers L1 + top nav) ─── */
+.ab-publish-blocked-overlay,
+.ab-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 72px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap).
+   Confirm dialogs stay viewport-centered — only publish-blocked follows the RHS. */
+.ab-publish-blocked-overlay--rhs-open {
+  padding-right: 470px;
+}
+
+/* Procedure detail RHS is 500px wide. */
+.ab-publish-blocked-overlay--rhs-wide {
+  padding-right: 520px;
+}
+
+.ab-publish-blocked-dialog,
+.ab-confirm-dialog {
+  width: 420px;
+  max-width: calc(100% - 32px);
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 24px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+
+.ab-publish-blocked-dialog__header,
+.ab-confirm-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ab-publish-blocked-dialog__title,
+.ab-confirm-dialog__title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  color: #0d0d12;
+}
+
+.ab-publish-blocked-dialog__close,
+.ab-confirm-dialog__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #303030;
+  cursor: pointer;
+}
+
+.ab-publish-blocked-dialog__close:hover,
+.ab-confirm-dialog__close:hover {
+  background: #f2f4f7;
+}
+
+.ab-publish-blocked-dialog__close .material-symbols-outlined,
+.ab-confirm-dialog__close .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ab-publish-blocked-dialog__body,
+.ab-confirm-dialog__body {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+}
+
+.ab-publish-blocked-dialog__footer,
+.ab-confirm-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ab-publish-blocked-dialog__cancel,
+.ab-confirm-dialog__cancel {
+  margin: 0;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+  cursor: pointer;
+}
+
+.ab-publish-blocked-dialog__cancel:hover,
+.ab-confirm-dialog__cancel:hover {
+  background: #f2f4f7;
+}
+
+.ab-publish-blocked-dialog__primary,
+.ab-confirm-dialog__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-publish-blocked-dialog__primary:hover,
+.ab-confirm-dialog__primary:hover {
+  background: #1565c0;
+}
+
+/* Destructive confirm (Delete agent) — chip/danger/text. Placement/offsets are inherited
+   from the shared overlay rules above, so it sits at the top like the resolve-errors alert. */
+.ab-confirm-dialog__primary--danger {
+  background: #de1b0c;
+}
+
+.ab-confirm-dialog__primary--danger:hover {
+  background: #b81609;
 }
 
 /* ─── Publish agent modal form ─── */
@@ -368,12 +972,44 @@
   min-width: 0;
 }
 
+.ab-header-title--button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.ab-header-title__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ab-header-title__edit {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: #9e9e9e;
+  pointer-events: none;
+}
+
 .ab-header-status {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 8px; /* xs / sm — Chip */
+  border-radius: 4px; /* Corner Radius/sm */
   font-family: 'Roboto', sans-serif;
   font-size: 12px;
   font-weight: 400;
@@ -381,19 +1017,69 @@
   letter-spacing: -0.24px;
 }
 
-.ab-header-status--running {
-  background: #f1faf0;
-  color: #377e2c;
+.ab-header-status--active {
+  background: #f1faf0; /* chip/success/bg */
+  color: #377e2c; /* chip/success/text */
 }
 
-.ab-header-status--paused {
-  background: #fef3d6;
-  color: #c69204;
+.ab-header-status--inactive {
+  background: #fef3d6; /* chip/warning/bg */
+  color: #c69204; /* chip/warning/text */
 }
 
 .ab-header-status--draft {
-  background: #eaeaea;
-  color: #555555;
+  background: #eaeaea; /* chip/neutral/bg */
+  color: #555555; /* chip/neutral/text */
+}
+
+.ab-header-status--with-live {
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+.ab-header-status__divider {
+  width: 1px;
+  height: 12px;
+  flex-shrink: 0;
+  background: #bdbdbd;
+}
+
+/* Header text CTAs — "View active version" / "View draft" / "Add location". */
+.ab-header-status__view-live,
+.rr-chrome-identity__add-location {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #1976d2;
+}
+
+.ab-header-status__view-live:hover,
+.rr-chrome-identity__add-location:hover {
+  text-decoration: underline;
+}
+
+.rr-chrome-identity__add-location {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.ab-header-status--with-info {
+  gap: 4px;
+}
+
+.ab-header-status__info {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  color: #757575;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .ab-header-spacer {
@@ -401,40 +1087,131 @@
   min-width: 0;
 }
 
-/* ─── View-only mode ─── */
-.ab-view-banner {
+/* ─── Read-only node config (RHS in view-only mode) ─── */
+/* Chips lose their remove cross entirely — there is nothing to remove here. */
+.rhs-readonly [class*="deleteBtn"] {
+  display: none !important;
+}
+
+/* Add / Fields / Tools / Rephrase etc. are disabled by the fieldset — show it. */
+.rhs-readonly button:disabled,
+.rhs-readonly input:disabled,
+.rhs-readonly textarea:disabled,
+.rhs-readonly select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Canvas chrome: View-only/Edit switch + separate Run test ─── */
+.ab-header-actions--view-mode {
+  gap: 8px;
+}
+
+.rr-chrome-mode-switch {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #fff8e1;
-  border-bottom: 1px solid #ffe082;
-  flex-shrink: 0;
+  gap: 2px;
+  height: 44px;
+  padding: 4px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  color: #5d4037;
-  letter-spacing: -0.26px;
-}
-
-.ab-view-banner .material-symbols-outlined {
-  font-size: 16px;
-  color: #f9a825;
-  flex-shrink: 0;
-}
-
-.ab-view-banner__link {
-  margin-left: auto;
-  font-size: 13px;
-  color: #1b72e8;
-  text-decoration: none;
+  font-size: 14px;
   font-weight: 400;
+  letter-spacing: -0.28px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.rr-chrome-mode-btn .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #888;
   flex-shrink: 0;
 }
 
-.ab-view-banner__link:hover {
-  text-decoration: none;
+.rr-chrome-mode-btn:hover {
+  background: #f2f4f7;
+  color: #333;
 }
 
+.rr-chrome-mode-btn:hover .material-symbols-outlined {
+  color: #555;
+}
+
+.rr-chrome-mode-btn--active {
+  background: #e5e9f0;
+  color: #212121;
+  cursor: default;
+}
+
+.rr-chrome-mode-btn--active .material-symbols-outlined {
+  color: #212121;
+}
+
+.rr-chrome-mode-btn--active:hover {
+  background: #e5e9f0;
+  color: #212121;
+}
+
+.rr-chrome-mode-btn--active:hover .material-symbols-outlined {
+  color: #212121;
+}
+
+.rr-chrome-run-test {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.28px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.rr-chrome-run-test .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.rr-chrome-run-test__play {
+  font-size: 20px !important;
+}
+
+.rr-chrome-run-test:hover {
+  background: #f2f4f7;
+  color: #333;
+}
+
+.rr-chrome-run-test:hover .material-symbols-outlined {
+  color: #555;
+}
+
+/* ─── View-only mode ─── */
 .ab-view-badge {
   display: flex;
   align-items: center;
@@ -513,6 +1290,8 @@
   letter-spacing: -0.28px;
 }
 
+/* Legacy flex preview column — Preview now uses the absolute `.agent-builder__rhs`
+ * slot (same inset / radius as trigger & Test details). Kept for any external refs. */
 .agent-builder__preview {
   flex-shrink: 0;
   padding: 10px;
@@ -522,4 +1301,933 @@
   flex-direction: column;
   z-index: 5;
   overflow: hidden;
+}
+
+/* ─── Review response floating chrome ─── */
+/* Canvas: #FAFAFA + Figma grid (scale 240% → ~48px, spacing ~33%, align bottom-center) */
+.faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+.agent-builder--rr-chrome {
+  background-color: #fafafa;
+}
+
+.agent-builder--rr-chrome {
+  position: relative;
+  --rr-chrome-lhs-panel-left: 76px;
+  --rr-chrome-lhs-panel-width: 360px;
+}
+
+.agent-builder--rr-chrome .react-flow__node {
+  overflow: visible;
+}
+
+.agent-builder--rr-chrome .start-node {
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .start-node--selected {
+  border-color: #1976d2;
+}
+
+/* Match top chrome surface (identity / Pause·Publish cards). */
+.agent-builder--rr-chrome .canvas-node {
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--selected {
+  border-color: #1976d2;
+}
+
+.agent-builder--rr-chrome .canvas-node--hover {
+  border-color: #ccd5e4;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--error:not(.canvas-node--selected) {
+  border-color: #d32f2f;
+}
+
+.agent-builder--rr-chrome .cnh__ai-icon {
+  display: none;
+}
+
+.agent-builder--rr-chrome .cnh__more-wrapper {
+  display: none;
+}
+
+/* Match Aero floating panel shell (16px radius + mild elevation) */
+.agent-builder--rr-chrome .agent-builder__rhs {
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+  border-radius: 16px;
+  z-index: 56;
+}
+
+/* Idle canvas +: always grey (white fill). Blue is ONLY while .flow-canvas--lhs-dragging. */
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .flow-canvas__edge-add {
+  background: #fff !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .flow-canvas__edge-add .material-symbols-outlined {
+  color: #555 !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot):hover,
+.agent-builder--rr-chrome .add-step-btn--open:not(.add-step-btn--empty-slot):not(.add-step-btn--paste-active),
+.agent-builder--rr-chrome .flow-canvas__edge-add:hover {
+  background: #f5f5f5 !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--paste-active {
+  background: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--paste-active .material-symbols-outlined {
+  color: #fff !important;
+}
+
+/* Trigger empty-slot idle: outlined blue (not filled) */
+.agent-builder--rr-chrome .add-step-btn--empty-slot {
+  background: #fff !important;
+  border-color: #1976d2 !important;
+  color: #1976d2 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--empty-slot .material-symbols-outlined {
+  color: #1976d2 !important;
+}
+
+/* Keep connector / End + grey while approaching during an LHS drag.
+   No dark-blue oval — the dotted "Drop here" rectangle appears only on hover. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--lhs-drag:not(.add-step-btn--drop-target):not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add--lhs-drag:not(.end-node__add--drop-target) {
+  animation: none !important;
+  background: #fff !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--lhs-drag:not(.add-step-btn--drop-target):not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add--lhs-drag:not(.end-node__add--drop-target) .material-symbols-outlined {
+  color: #555 !important;
+}
+
+/* Trigger empty-slot still fills blue while a trigger is dragged. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--empty-slot.add-step-btn--lhs-drag,
+.agent-builder--rr-chrome .add-step-btn--empty-slot.add-step-btn--drop-target {
+  animation: none !important;
+  background: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--empty-slot.add-step-btn--lhs-drag .material-symbols-outlined,
+.agent-builder--rr-chrome .add-step-btn--empty-slot.add-step-btn--drop-target .material-symbols-outlined {
+  color: #fff !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target {
+  position: relative;
+  z-index: 5;
+  width: auto !important;
+  min-width: 280px;
+  height: auto !important;
+  min-height: 50px;
+  overflow: visible;
+}
+
+/* Old small square drop indicator — replaced by the wide "Drop here" box below. */
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target::before {
+  display: none;
+}
+
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target .add-step-btn {
+  position: relative;
+  z-index: 1;
+  transform: none !important;
+}
+
+/* Connector / end-node drop zone (not the trigger placeholder): a wide
+   dotted-blue "Drop here" box with a pale-blue fill and blue text — no "+" icon.
+   Overrides the blue-fill button rules above. Snaps in (no oval morph). */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) {
+  width: 280px !important;
+  min-width: 280px !important;
+  max-width: none !important;
+  height: 50px !important;
+  flex-shrink: 0;
+  padding: 0 20px;
+  border: 2px dotted #1976d2 !important;
+  border-radius: 12px !important;
+  background: #f5f9ff !important;
+  color: #1976d2 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .material-symbols-outlined {
+  display: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .add-step-btn__drop-label,
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .add-step-btn__drop-label {
+  display: inline;
+  color: #1976d2 !important;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Larger hit area while dragging so the box appears as you approach the +.
+   Excludes --drop-target (and end-slot while it contains one): once active, the
+   wrap/slot must grow so the 280×50 "Drop here" box isn't flex-shrunk. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn-wrap--lhs-drag:not(.add-step-btn-wrap--drop-target),
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add-slot:not(:has(.add-step-btn-wrap--drop-target)) {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add-slot:has(.add-step-btn-wrap--drop-target) {
+  width: auto;
+  min-width: 280px;
+  height: auto;
+  min-height: 50px;
+  overflow: visible;
+}
+
+/* Trigger placeholder: on drag the "+" stays a plain solid-blue circle — no
+   rectangular drop-indicator box, and the dashed placeholder box keeps its
+   height (skip the 56px hit-area growth that would make it taller). */
+.agent-builder--rr-chrome .trigger-placeholder .add-step-btn-wrap--drop-target::before {
+  display: none;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .trigger-placeholder .add-step-btn-wrap--lhs-drag,
+.agent-builder--rr-chrome .trigger-placeholder .add-step-btn-wrap--drop-target {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+}
+
+.agent-builder--rr-chrome .flow-canvas {
+  background-color: #fafafa;
+  background-image: radial-gradient(circle, #d0d0d0 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+  background-position: center bottom;
+}
+
+.rr-chrome-back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px 0 10px;
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 8px; /* Corner Radius/md */
+  background: #ffffff; /* surface */
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12; /* text/primary */
+}
+
+.rr-chrome-back:hover {
+  background: #f2f4f7; /* surface/hover */
+}
+
+.rr-chrome-back-cluster {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* spacing/sm */
+  max-width: calc(50% - 24px);
+}
+
+.rr-chrome-back-cluster .rr-chrome-back {
+  position: static;
+  flex-shrink: 0;
+}
+
+.rr-chrome-back-cluster--identity {
+  gap: 8px;
+  align-items: center;
+  height: 40px;
+  min-width: 300px;
+  padding: 0 12px 0 8px; /* md / sm */
+  border: 1px solid #e5e9f0;
+  border-radius: 8px; /* Corner Radius/md */
+  background: #ffffff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-back-cluster--identity .ab-header-status {
+  flex-shrink: 0;
+}
+
+.rr-chrome-back-cluster--identity .rr-chrome-back {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px; /* Corner Radius/sm — Aero icon button */
+  background: transparent;
+  box-shadow: none;
+  align-self: center;
+  margin-top: 0;
+  justify-content: center;
+  color: #303030; /* text/icon */
+}
+
+.rr-chrome-back-cluster--identity .rr-chrome-back:hover {
+  background: #f2f4f7; /* surface/hover */
+  color: #0d0d12;
+}
+
+.rr-chrome-identity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.rr-chrome-identity__row {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 8px; /* spacing/sm */
+}
+
+.rr-chrome-identity__name-group {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Tooltip wrapper around the title must not block the name's ellipsis. */
+.rr-chrome-identity__name-tip {
+  min-width: 0;
+}
+
+.rr-chrome-identity__title {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: #0d0d12; /* text/primary */
+}
+
+.rr-chrome-identity__title:disabled {
+  cursor: default;
+}
+
+.rr-chrome-identity__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12; /* text/primary */
+}
+
+/* Version-history identity: "Version history · Dec 10, 2025, 10:11 AM" */
+.rr-chrome-identity__version-sep,
+.rr-chrome-identity__version-stamp {
+  flex-shrink: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  white-space: nowrap;
+}
+
+.rr-chrome-identity__version-sep {
+  color: #9ca3af; /* text/tertiary */
+}
+
+.rr-chrome-identity__version-stamp {
+  color: #717182; /* text/secondary */
+}
+
+.rr-chrome-help-wrap {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  /* Below .agent-builder__rhs (56) so node-config / Agent details covers this control. */
+  z-index: 55;
+}
+
+.rr-chrome-help {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: #555;
+}
+
+.rr-chrome-help:hover,
+.rr-chrome-help--active {
+  background: #f2f4f7;
+  color: #212121;
+}
+
+.rr-chrome-help .material-symbols-outlined {
+  font-size: 20px;
+  color: inherit;
+}
+
+.rr-chrome-top {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(720px, calc(100% - 200px));
+  height: 48px;
+  padding: 0 12px 0 16px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+/* ─── Test run: canvas node states ───────────────────────────────────────── */
+/* Per-node borders are injected inline by AgentBuilder (keyed on react-flow's data-id).
+   Only the shared pulse keyframe lives here. */
+
+@keyframes ab-test-run-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node .canvas-node {
+    animation: none !important;
+  }
+}
+
+/* Actions-only: transparent shell so switch + Run test sit as separate controls. */
+/*
+ * Exploration: the actions pill is right-aligned rather than centred, and slides left to
+ * clear whatever opens in the 450px right slot (node config / Help center / Test details /
+ * Front desk Preview). Easing matches `agent-builder-rhs-slide-in` so the pill and the
+ * panel move together.
+ */
+.rr-chrome-top--right {
+  left: auto;
+  right: 16px;
+  transform: none;
+  transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  /* This variant carries only the action buttons — no agent title needing the base 16px
+     left gutter. The 48px shell already leaves a 6px optical inset above/below the 36px
+     buttons (5px + 1px border), so match that on the sides for an even surround. */
+  padding: 0 5px;
+}
+
+/* 450px panel + its 8px inset from the canvas edge + a 12px gap.
+ * Same footprint for trigger / task / branch / Help / Test details / agent details. */
+.rr-chrome-top--right.rr-chrome-top--rhs-open {
+  right: calc(450px + 8px + 12px);
+}
+
+/* Procedure detail RHS is 500px. */
+.rr-chrome-top--right.rr-chrome-top--rhs-open.rr-chrome-top--rhs-wide {
+  right: calc(500px + 8px + 12px);
+}
+
+.rr-chrome-top--actions-only {
+  max-width: none;
+  height: auto;
+  padding: 0;
+  gap: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.rr-chrome-top__title-tip {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: calc(22.5rem + 24px);
+  overflow: visible;
+}
+
+.rr-chrome-top .ab-header-title {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.rr-chrome-top .ab-header-title__text {
+  max-width: 22.5rem;
+}
+
+.rr-chrome-top__spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.rr-chrome-top .ab-header-actions {
+  flex-shrink: 0;
+}
+
+.ab-header-status--dot {
+  gap: 6px;
+}
+
+.ab-header-status--dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Left AI sparkle + Add-nodes floater stack (vertically centered) */
+.rr-chrome-left-stack {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.rr-chrome-left-ai {
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+}
+
+.rr-chrome-left-ai:hover,
+.rr-chrome-left-ai--active {
+  background: #f9f7fd;
+}
+
+/* Figma Agent ARC 15324:293284 — pad/gap + hover chip + right tooltip */
+.rr-chrome-left-floater {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 56px;
+  padding: 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-left-floater__btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.rr-chrome-left-floater__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  line-height: 0;
+}
+
+/* Full canvas: the asset is painted through a mask so `color` (set inline from the node
+   badge) drives it, rather than the stroke colour baked into the .svg file. */
+.rr-chrome-left-floater__icon--mask {
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.rr-chrome-left-floater__icon .material-symbols-outlined {
+  color: inherit;
+}
+
+.rr-chrome-left-floater__icon--ai {
+  width: 20px;
+  height: 20px;
+}
+
+.rr-chrome-left-floater__btn:hover,
+.rr-chrome-left-floater__btn--active {
+  background: #f0f2f5;
+}
+
+/* Sep 1: show a text label under each left-stack icon (AI / Trigger / Procedures / Actions / Controls). */
+.rr-chrome-left-stack--labelled .rr-chrome-left-ai {
+  width: 84px;
+  height: auto;
+  min-height: 64px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+  box-sizing: border-box;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater {
+  width: 84px;
+  padding: 10px;
+  gap: 8px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater__btn {
+  box-sizing: border-box;
+  width: 64px;
+  height: 64px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.rr-chrome-left-label {
+  font-size: 11px;
+  line-height: 14px;
+  color: #8f8f8f;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Sep 1 left stack is wider (84px vs 56px) to fit icon labels — shift everything that
+   anchors off its right edge (node palette, Create with AI panel) so they no longer overlap it. */
+.agent-builder--rr-chrome.agent-builder--lhs-labelled {
+  --rr-chrome-lhs-panel-left: 104px;
+}
+
+/* Palette geometry lives in vars so the bottom-controls shift below can derive from it
+   instead of repeating the numbers. */
+.agent-builder--rr-chrome {
+  --rr-palette-left: 82px;
+  --rr-palette-width: 304px;
+}
+
+.agent-builder--lhs-labelled {
+  --rr-palette-left: 110px;
+}
+
+.rr-chrome-palette {
+  position: absolute;
+  top: 72px;
+  left: var(--rr-palette-left, 82px);
+  bottom: 96px;
+  z-index: 56;
+  width: var(--rr-palette-width, 304px);
+  max-height: calc(100% - 168px);
+  overflow: hidden;
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 16px; /* Corner Radius/xl — Aero overlay panel */
+  background: #ffffff; /* surface */
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06); /* docked RHS elevation */
+  display: flex;
+  flex-direction: column;
+  transition: left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shift node palette right when Create with AI is open so both stay visible */
+.agent-builder--lhs-ai-open .rr-chrome-palette {
+  left: calc(var(--rr-chrome-lhs-panel-left) + var(--rr-chrome-lhs-panel-width) + 12px);
+}
+
+/* Create with AI open: same treatment as version history — panel fills the extra height,
+   the bottom-left zoom pill slides right of it, and the undo/redo pill re-centers in the
+   remaining space so nothing overlaps. */
+.agent-builder--lhs-ai-open .agent-builder__lhs-ai {
+  bottom: 16px;
+  max-height: calc(100% - 88px);
+}
+
+.agent-builder--lhs-ai-open .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+.agent-builder--lhs-ai-open .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px) / 2);
+}
+
+/* Instant swap from Create with AI → Trigger/Tasks/Procedures/Controls (no slide). */
+.agent-builder--palette-instant .rr-chrome-palette,
+.rr-chrome-palette--instant {
+  transition: none !important;
+}
+
+/* Version history open: panel drops its bottom inset to use the full canvas height,
+   and the bottom-left zoom pill slides right of it so the two never overlap. */
+.agent-builder--version-history-open .rr-version-history {
+  bottom: 16px;
+  max-height: calc(100% - 88px);
+}
+
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+.agent-builder--version-history-canvas .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(16px + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+/* Re-center the undo/redo pill within the space actually left of it, rather than the
+   canvas's true center, so it doesn't collide with the now-shifted zoom pill. */
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px) / 2);
+}
+
+.agent-builder--version-history-canvas .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-width, 360px) + 12px) / 2);
+}
+
+/*
+ * Exploration-family combined controls (zoom + undo/redo + help as one bottom-left flex row).
+ * The per-pill rules above offset only `__rr-zoom` via `position: relative`, which slides
+ * the zoom pill out from under the panel but strands undo/redo and help behind it. Here the
+ * whole row shifts instead, so all three clear the panel together.
+ */
+.agent-builder--lhs-ai-open,
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) {
+  --rr-controls-shift: calc(
+    var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px
+  );
+}
+
+.agent-builder--version-history-canvas {
+  --rr-controls-shift: calc(var(--rr-chrome-lhs-panel-width, 360px) + 12px);
+}
+
+/* Three classes deep so it beats the two-class per-pill rules above regardless of which
+   stylesheet loads first (those live here, the combined layout lives in GraphControls.css). */
+.agent-builder--rr-chrome .graph-controls--rr-chrome-combined {
+  padding-left: var(--rr-controls-shift, 0px);
+  transition: padding-left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.agent-builder--rr-chrome .graph-controls--rr-chrome-combined .graph-controls__rr-zoom {
+  position: static;
+  left: auto;
+}
+
+.rr-chrome-palette .lhs-drawer {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+/* Same shell placement as .rr-version-history */
+.agent-builder__lhs-ai {
+  position: absolute;
+  top: 72px;
+  left: var(--rr-chrome-lhs-panel-left);
+  /* Stop short of the bottom so the zoom controls stay visible below (matches .rr-chrome-palette). */
+  bottom: 96px;
+  z-index: 56;
+  box-sizing: border-box;
+  width: var(--rr-chrome-lhs-panel-width);
+  max-height: calc(100% - 168px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes agent-builder-lhs-slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes agent-builder-lhs-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.agent-builder__lhs-ai--opening {
+  animation: agent-builder-lhs-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.agent-builder__lhs-ai--closing {
+  animation: agent-builder-lhs-slide-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.rr-chrome-right-panel {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 56;
+  width: 392px;
+  max-height: calc(100% - 88px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-chrome-right-panel--help {
+  /* Under Help trigger; bottom aligns with canvas chrome / graph-controls inset */
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  width: 450px;
+  max-height: calc(100% - 88px);
+  box-shadow: none;
+}
+
+.rr-chrome-ai-panel {
+  width: 100% !important;
+  height: 100% !important;
+  /* Match RHS floating panel chrome (RHS.jsx shell) */
+  border: 1px solid #e5e9f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06) !important;
+  overflow: hidden !important;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Ghostwriter canvas geometry (`agent-builder--gw`).
+ *
+ * The LHS panels adopt the RHS's dock pattern — 8px inset, full height,
+ * 16px radius, same elevation — so both rails read as the same kind of panel.
+ * Their default `top: 72px` cleared the canvas back/identity cluster and
+ * `bottom: 96px` cleared the bottom-left controls; on Ghostwriter the cluster is
+ * hidden and the controls move right, so neither reservation is needed.
+ * Scoped: these classes are on every other agent's canvas too.
+ * ───────────────────────────────────────────────────────────────────────────── */
+.agent-builder--gw .rr-chrome-palette,
+.agent-builder--gw .agent-builder__lhs-ai,
+.agent-builder--gw.agent-builder--lhs-ai-open .agent-builder__lhs-ai {
+  top: 8px;
+  bottom: 8px;
+  max-height: calc(100% - 16px);
+  /* Matches .agent-builder__rhs exactly. */
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+}
+
+/*
+ * Controls stay bottom-left, but slide clear of an open LHS panel. The AI panel already
+ * drives `--rr-controls-shift` (see above); the Trigger/Actions/Controls palette had no
+ * such rule because its default `bottom: 96px` kept it above the controls — now that it
+ * runs full height here, it needs one. `:not(--lhs-ai-open)` so the wider AI offset wins
+ * when both classes are present.
+ */
+.agent-builder--gw.agent-builder--palette-open:not(.agent-builder--lhs-ai-open) {
+  --rr-controls-shift: calc(
+    var(--rr-palette-left, 82px) + var(--rr-palette-width, 304px) + 12px - 16px
+  );
 }

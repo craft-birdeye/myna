@@ -9,7 +9,7 @@ import {
 
 type SortMode = 'runs' | 'persona' | 'custom'
 
-const STATUS_OPTIONS = ['All agents', 'Running', 'Paused', 'Needs attention']
+const STATUS_OPTIONS = ['All agents', 'Active', 'Inactive', 'Needs attention']
 const DATE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 // Co-worker brand names for the three persona groups — Jay (marketing), Myna
@@ -103,7 +103,7 @@ function TopBarDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {value}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -194,7 +194,7 @@ function SortDropdown({
           setOpen((o) => !o)
           setPersonaOpen(false)
         }}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {label}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -324,7 +324,7 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {value}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -456,11 +456,11 @@ function AgentCard({
           )}
           {agent.running > 0 ? (
             <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-              {agent.running} running
+              {agent.running} active
             </span>
           ) : (
             <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">
-              Paused
+              Inactive
             </span>
           )}
         </div>
@@ -486,12 +486,14 @@ function AgentCard({
 export function AgentDirectoryScreen({
   product = 'healthcare',
   onOpenAgent,
+  onCreateAgent,
 }: {
   product?: string
   onOpenAgent?: (navId: string) => void
+  onCreateAgent?: () => void
 } = {}) {
   const AGENT_DIRECTORY = getAgentDirectory(product)
-  const [statusFilter, setStatusFilter] = useState('Running')
+  const [statusFilter, setStatusFilter] = useState('Active')
   const [dateRange, setDateRange] = useState('Last week')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
@@ -504,8 +506,8 @@ export function AgentDirectoryScreen({
   const showCoworkers = product === 'healthcare'
 
   const statusFiltered = AGENT_DIRECTORY.filter((a) => {
-    if (statusFilter === 'Running') return a.running > 0
-    if (statusFilter === 'Paused') return a.running === 0
+    if (statusFilter === 'Active') return a.running > 0
+    if (statusFilter === 'Inactive') return a.running === 0
     if (statusFilter === 'Needs attention') return !!a.alert
     return true
   })
@@ -557,7 +559,7 @@ export function AgentDirectoryScreen({
 
   const SUMMARY_METRICS: Metric[] = [
     { id: 'coworkers', value: String(PERSONA_GROUPS.length), label: 'Co-workers' },
-    { id: 'running', value: String(runningCount), label: 'Running agents' },
+    { id: 'running', value: String(runningCount), label: 'Active agents' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved', delta: '16%', trend: 'up' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved', delta: '14%', trend: 'up' },
     {
@@ -600,7 +602,8 @@ export function AgentDirectoryScreen({
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
                 type="button"
-                className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                onClick={onCreateAgent}
+                className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Create agent
               </button>

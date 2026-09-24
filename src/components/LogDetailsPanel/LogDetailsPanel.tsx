@@ -1,16 +1,29 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
+import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
+import { AGENT_LANGUAGES } from '../../data/agentLanguages'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
+import { Chip } from '../Chip/Chip'
+import type { ChipVariant } from '../Chip/Chip.types'
 import { Icon } from '../Icon/Icon'
+import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
+import { LanguageFlag } from '../LanguageSelectMenu/LanguageSelectMenu'
 import { RefChip } from '../RefChip/RefChip'
-import { RunDetailsPanel } from '../RunDetailsPanel/RunDetailsPanel'
+import {
+  getUserRatingForLogStatus,
+  RunDetailsPanel,
+  UserRatingDisplay,
+} from '../RunDetailsPanel/RunDetailsPanel'
 import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
+import { REMINDER_CONVERSATION_AI_SUMMARY } from '../../data/reminderInboxConversation'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
+import '../../workflow/Molecules/Inputs/prompt-chip.css'
 import type {
   LogDetailsPanelProps,
   LogToolCall,
@@ -28,58 +41,58 @@ function normalizeChannel(channel: string): Channel {
   return 'Text'
 }
 
-// Logs-tab trigger/task steps for this call — mirrors the same lookup + booking tool calls shown
-// inline in the Conversation tab's transcript, just summarized as a run history.
+// Logs-tab steps for Front desk — mirrors the canvas workflow (Conversation trigger → Procedures)
+// with this call's trigger output / inputs and the procedures that ran.
 export const CALL_LOG_STEPS: RunLogStep[] = [
   {
     id: 'step-1',
+    nodeId: 'trigger',
     type: 'trigger',
     stepNumber: 1,
-    title: 'Conversation started',
+    title: 'Channel',
+    durationMs: 345,
     output: [
       { key: 'Source', value: 'Voice call' },
+      { key: 'Caller', value: '(032) 902 9023' },
       { key: 'Comments', value: 'I am having a very bad headache. I think it is migraine.' },
+    ],
+    inputs: [
+      { key: 'channel', value: 'Voice' },
+      { key: 'condition', value: 'incoming_call' },
+      { key: 'time', value: 'during_business' },
     ],
   },
   {
     id: 'step-2',
-    type: 'task',
+    nodeId: 'procedures',
+    type: 'procedures',
     stepNumber: 2,
-    title: 'Look up patient record',
-    output: [{ key: 'Summary', value: 'Patient record found' }],
-    tool: {
-      name: 'Patient record - Lookup',
-      properties: [
-        { key: 'patientPresent', value: 'true' },
-        { key: 'guarantorPresent', value: 'false' },
-        { key: 'cids', value: '425270500, 563631216, 503143111' },
-        {
-          key: 'patientDetails',
-          properties: [
-            { key: 'PatientFirstName', value: 'Sarah' },
-            { key: 'PatientLastName', value: 'Weiss' },
-            { key: 'phone', value: '919) 747-3001' },
-            { key: 'emailId', value: 'sarahl@xyz.com' },
-            { key: 'patientDob', value: '02-01-1998' },
-            { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
-          ],
-        },
-        { key: 'futureAppointments', value: '-' },
-        { key: 'pastAppointments', value: '-' },
-        { key: 'cancelledAppointments', value: '1' },
-      ],
-    },
-    inputs: [
-      { key: 'phoneNumber', value: '(032) 902 9023' },
-      { key: 'lookupType', value: 'patient' },
+    title: 'Follow procedures',
+    durationMs: 760,
+    output: [
+      { key: 'Procedure path', value: 'General inquiry → Book, cancel, or reschedule appointment' },
+      { key: 'Procedure used', value: 'Book, cancel, or reschedule appointment' },
+      { key: 'Intent detected', value: 'Headache / migraine → appointment booking' },
+      { key: 'Summary', value: "You're all set for Thursday at 2 PM with Dr. Patel." },
+      {
+        key: 'Procedures available',
+        properties: [
+          { key: '1', value: 'General inquiry' },
+          { key: '2', value: 'Talk to human' },
+          { key: '3', value: 'Book, cancel, or reschedule appointment' },
+          { key: '4', value: 'Verify insurance' },
+        ],
+      },
+      {
+        key: 'Patient record - Lookup',
+        properties: [
+          { key: 'patientPresent', value: 'true' },
+          { key: 'PatientFirstName', value: 'Sarah' },
+          { key: 'PatientLastName', value: 'Weiss' },
+          { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
+        ],
+      },
     ],
-  },
-  {
-    id: 'step-3',
-    type: 'task',
-    stepNumber: 3,
-    title: 'Schedule appointment',
-    output: [{ key: 'Summary', value: "You're all set for Thursday at 2 PM with Dr. Patel." }],
     tool: {
       name: 'Schedule Appointment',
       properties: [
@@ -90,6 +103,8 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
       ],
     },
     inputs: [
+      { key: 'utterance', value: 'I am having a very bad headache. I think it is migraine.' },
+      { key: 'phoneNumber', value: '(032) 902 9023' },
       { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
       { key: 'specialistId', value: '1717392' },
       { key: 'start', value: '2026-05-14T14:00:00' },
@@ -437,6 +452,148 @@ function formatDurationLabel(secs: number): string {
   return `${mins}m ${String(rem).padStart(2, '0')}s`
 }
 
+const DEFAULT_TRANSCRIPT_LANGUAGE = {
+  id: 'en',
+  label: 'English',
+  countryCode: 'us',
+} as const
+
+/** Translate targets — English is the original, so it is omitted here. */
+const TRANSLATE_LANGUAGES = [
+  { id: 'af', label: 'Afrikaans', countryCode: 'za' },
+  { id: 'ar', label: 'Arabic', countryCode: 'ae' },
+  { id: 'hy', label: 'Armenian', countryCode: 'am' },
+  { id: 'as', label: 'Assamese', countryCode: 'in' },
+  { id: 'ast', label: 'Asturian', countryCode: 'es' },
+  { id: 'az', label: 'Azerbaijani', countryCode: 'az' },
+  ...AGENT_LANGUAGES.filter(
+    (l) => !['en', 'af', 'ar', 'as'].includes(l.id),
+  ),
+]
+
+function TranscriptLanguagePicker() {
+  const [open, setOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string>(DEFAULT_TRANSCRIPT_LANGUAGE.id)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const selected =
+    selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id
+      ? DEFAULT_TRANSCRIPT_LANGUAGE
+      : TRANSLATE_LANGUAGES.find((l) => l.id === selectedId) ?? DEFAULT_TRANSCRIPT_LANGUAGE
+
+  const triggerLabel =
+    selected.id === DEFAULT_TRANSCRIPT_LANGUAGE.id ? DEFAULT_TRANSCRIPT_LANGUAGE.label : selected.label
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: MouseEvent) {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={`Transcript language: ${triggerLabel}`}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-xs rounded-sm px-xs py-xs hover:bg-surface-hover"
+      >
+        <LanguageFlag countryCode={selected.countryCode} label={triggerLabel} size="xs" />
+        <span className="text-small text-text-action">{triggerLabel}</span>
+        <Icon name="expand_more" size={16} className="shrink-0 text-text-action" />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Available languages"
+          className="absolute left-1/2 top-full z-30 mt-xs flex w-[280px] max-h-[360px] -translate-x-1/2 flex-col overflow-hidden rounded-sm border border-border bg-surface py-sm shadow-dropdown"
+        >
+          <p className="px-md pb-xs text-small text-text-tertiary">Available languages</p>
+          <button
+            type="button"
+            role="option"
+            aria-selected={selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id}
+            onClick={() => {
+              setSelectedId(DEFAULT_TRANSCRIPT_LANGUAGE.id)
+              setOpen(false)
+            }}
+            className={`mx-sm flex items-center gap-sm rounded-sm px-sm py-sm text-left ${
+              selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id
+                ? 'bg-surface-selected'
+                : 'hover:bg-surface-hover'
+            }`}
+          >
+            <LanguageFlag
+              countryCode={DEFAULT_TRANSCRIPT_LANGUAGE.countryCode}
+              label={DEFAULT_TRANSCRIPT_LANGUAGE.label}
+              size="sm"
+            />
+            <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+              {DEFAULT_TRANSCRIPT_LANGUAGE.label}
+            </span>
+            {selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id && (
+              <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+            )}
+          </button>
+
+          <div className="my-sm border-t border-border" />
+
+          <div className="flex items-center gap-xs px-md pb-xs">
+            <span className="text-small text-text-tertiary">Translate to more languages</span>
+            <InfoTooltip
+              text="Choose a language to view a translated version of this transcript."
+              variant="detail"
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-sm pb-xs">
+            {TRANSLATE_LANGUAGES.map((lang) => {
+              const isSelected = selectedId === lang.id
+              return (
+                <button
+                  key={lang.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    setSelectedId(lang.id)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left ${
+                    isSelected ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+                    {lang.label}
+                  </span>
+                  {isSelected && (
+                    <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function startTimeLabel(timestamp: string): string {
   const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
   return match?.[1] ?? timestamp
@@ -446,7 +603,39 @@ function MetaField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="m-0 text-small text-text-tertiary">{label}</p>
-      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
+      <p className="m-0 mt-xs text-small text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+const CALL_END_RESULT_VARIANT: Record<string, ChipVariant> = {
+  Resolved: 'success',
+  'Not resolved': 'danger',
+  'In progress': 'warning',
+  Complete: 'success',
+  Failed: 'danger',
+}
+
+function CallEndReasonField({
+  reason,
+  resultBadge,
+}: {
+  reason: string
+  resultBadge?: string
+}) {
+  if (!resultBadge) {
+    return <MetaField label="Call end reason" value={reason} />
+  }
+  return (
+    <div>
+      <p className="m-0 text-small text-text-tertiary">Call end reason</p>
+      <div className="mt-xs flex flex-col gap-xs items-start">
+        <Chip
+          label={resultBadge}
+          variant={CALL_END_RESULT_VARIANT[resultBadge] ?? 'neutral'}
+        />
+        <p className="m-0 text-small text-text-primary">{reason}</p>
+      </div>
     </div>
   )
 }
@@ -459,6 +648,8 @@ function CallDetailsTab({
   startTime,
   callEndReason,
   routedVia,
+  callEndResultBadge,
+  userRating,
 }: {
   callerNumber: string
   languageDetected: string
@@ -467,18 +658,26 @@ function CallDetailsTab({
   startTime: string
   callEndReason: string
   routedVia: string
+  callEndResultBadge?: string
+  userRating?: string
 }) {
   return (
-    <div className="rounded-sm border border-border px-lg py-lg">
-      <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
-        <MetaField label="Caller number" value={callerNumber} />
-        <MetaField label="Language detected" value={languageDetected} />
-        <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
-        <MetaField label="Call SID" value={sidNumber} />
-        <MetaField label="Start time" value={startTime} />
-        <MetaField label="Call end reason" value={callEndReason} />
-        <MetaField label="Routed via" value={routedVia} />
-      </div>
+    <div className="grid grid-cols-2 gap-x-lg gap-y-md">
+      <MetaField label="Caller number" value={callerNumber} />
+      <MetaField label="Language detected" value={languageDetected} />
+      <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
+      <MetaField label="Call SID" value={sidNumber} />
+      <MetaField label="Start time" value={startTime} />
+      <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
+      <MetaField label="Routed via" value={routedVia} />
+      {userRating ? (
+        <div>
+          <p className="m-0 text-small text-text-tertiary">User rating</p>
+          <div className="mt-xs">
+            <UserRatingDisplay rating={userRating} />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -612,9 +811,19 @@ function NestedObjectBlock({
 
 /** "Show info" dropdown under an agent bubble — reveals LLM response time / TTS / knowledge base
  *  / tool response time meta. Tool calls themselves render separately via `ToolCallLine`. */
-/** A tool call this turn made, rendered as its own centered line (matching the style of system
- *  events like "Routed to appointment booking agent") instead of an inline pill — click to
- *  expand its structured output below it. */
+const TRANSCRIPT_TOOL_CHIP_CLASS =
+  'prompt-chip prompt-chip--tool m-0 h-8 w-fit max-w-[85%] overflow-hidden !bg-surface-muted p-0 pr-xs transition-colors hover:!bg-surface-l2'
+
+function TranscriptToolChipSwatch() {
+  return (
+    <span className="prompt-chip-swatch prompt-chip-swatch--tool !h-full self-stretch">
+      <span className="material-symbols-outlined prompt-chip-mat-icon">build</span>
+    </span>
+  )
+}
+
+/** A tool call this turn made — tool chip (same as procedure prompt chips), right-aligned
+ *  and sized to its label. Expand matches the agent bubble max width. */
 function ToolCallLine({ tool }: { tool: LogToolCall }) {
   const [open, setOpen] = useState(false)
   const [inputsOpen, setInputsOpen] = useState(false)
@@ -633,21 +842,29 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-sm py-sm">
+    <div className="flex flex-col items-end gap-sm py-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-xs text-small text-text-tertiary hover:text-text-secondary"
+        className={`${TRANSCRIPT_TOOL_CHIP_CLASS} cursor-pointer appearance-none outline-none`}
       >
-        <Icon name="build" size={16} className="shrink-0" />
-        {tool.name}
-        <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
-        {tool.durationLabel && <span className="shrink-0 whitespace-nowrap">• {tool.durationLabel}</span>}
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={16} className="shrink-0" />
+        <TranscriptToolChipSwatch />
+        <span className="prompt-chip-label">{tool.name}</span>
+        <Icon name="check_circle" size={14} fill className="shrink-0 text-accent-positive" />
+        {tool.durationLabel && (
+          <span className="shrink-0 whitespace-nowrap text-small text-text-tertiary">
+            • {tool.durationLabel}
+          </span>
+        )}
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={16}
+          className="shrink-0 text-text-tertiary"
+        />
       </button>
 
       {open && (
-        <div className="relative w-[380px] max-w-full rounded-lg bg-surface-l2 px-md py-md">
+        <div className="relative w-[85%] rounded-lg bg-surface-muted px-md py-md shadow-card">
           <div className="absolute right-md top-md z-[1]">
             <Tooltip content="Copy" variant="brief">
               <button
@@ -734,18 +951,29 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
-/** Renders a set of "LABEL : value" segments (each label carrying its own explanatory tooltip),
- *  joined by "•" — optionally followed by a plain trailing segment (e.g. a timestamp) that has no
+/** Renders a set of "LABEL value" segments (each label carrying its own explanatory tooltip),
+ *  joined by " • " — optionally followed by a plain trailing segment (e.g. a timestamp) that has no
  *  tooltip of its own. */
+function formatMetaValue(label: string, value: string): string {
+  if (label === 'TTS' && value.endsWith('ms')) {
+    const ms = Number(value.replace(/ms$/i, ''))
+    if (Number.isFinite(ms)) {
+      const secs = ms / 1000
+      return `${Number.isInteger(secs) ? secs : secs.toFixed(1).replace(/\.0$/, '')}s`
+    }
+  }
+  return value
+}
+
 function MetaLine({ parts, trailing }: { parts: { label: string; value: string }[]; trailing?: string }) {
   if (parts.length === 0 && !trailing) return null
   return (
-    <span className="text-small text-text-tertiary">
+    <span className="text-[11px] text-text-tertiary">
       {parts.map((part, i) => (
         <span key={part.label}>
           {i > 0 && ' • '}
           <MetaLabel label={part.label} />
-          {` : ${part.value}`}
+          {` ${formatMetaValue(part.label, part.value)}`}
         </span>
       ))}
       {trailing && `${parts.length > 0 ? ' • ' : ''}${trailing}`}
@@ -766,6 +994,7 @@ function TranscriptEntry({
   recId,
   onCoachAgent,
   onTrackFeedback,
+  showLanguagePicker = false,
 }: {
   entry: LogTranscriptEntry
   /** Only meaningful for `role: 'agent'` entries — the other roles never show Coach agent. Set
@@ -773,8 +1002,19 @@ function TranscriptEntry({
   recId?: string
   onCoachAgent?: () => void
   onTrackFeedback?: () => void
+  /** Front desk exploration: inline language picker beside "Conversation started". */
+  showLanguagePicker?: boolean
 }) {
   if (entry.role === 'system') {
+    if (showLanguagePicker && entry.text === 'Conversation started') {
+      return (
+        <div className="flex items-center justify-center py-sm">
+          <span className="text-small text-text-tertiary">Conversation started</span>
+          <span className="px-xs text-small text-text-tertiary">•</span>
+          <TranscriptLanguagePicker />
+        </div>
+      )
+    }
     return (
       <div className="py-sm">
         <ChatSystemLabel text={entry.text} />
@@ -788,7 +1028,7 @@ function TranscriptEntry({
       <ChatBubble
         sender="user"
         text={entry.text}
-        gap="gap-sm"
+        gap="gap-0.5"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
         <MetaLine parts={sttParts} trailing={entry.time} />
@@ -803,10 +1043,10 @@ function TranscriptEntry({
       <ChatBubble
         sender="business"
         text={entry.text}
-        gap="gap-sm"
+        gap="gap-0.5"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        <div className="flex w-full max-w-[85%] items-center gap-sm">
+        <div className="flex w-full max-w-[85%] items-center gap-sm text-[11px]">
           <div className="min-w-0 flex-1">
             <MetaLine parts={metaParts} />
           </div>
@@ -815,7 +1055,7 @@ function TranscriptEntry({
               <button
                 type="button"
                 onClick={onTrackFeedback}
-                className="group flex items-center gap-xs text-small text-text-action"
+                className="group flex items-center gap-xs text-text-action"
               >
                 <Icon name="track_changes" size={16} />
                 <span className="group-hover:underline">Track your feedback</span>
@@ -824,16 +1064,16 @@ function TranscriptEntry({
               <button
                 type="button"
                 onClick={onCoachAgent}
-                className="group flex items-center gap-xs text-small text-text-action"
+                className="group flex items-center gap-xs text-text-action"
               >
-                <Icon name="auto_awesome" size={16} />
+                <AiCoachSparkleIcon />
                 <span className="group-hover:underline">Coach agent</span>
               </button>
             )}
             {entry.time && (
               <>
-                <span className="shrink-0 text-small text-text-tertiary">•</span>
-                <span className="shrink-0 text-small text-text-tertiary">{entry.time}</span>
+                <span className="shrink-0 text-text-tertiary">•</span>
+                <span className="shrink-0 text-text-tertiary">{entry.time}</span>
               </>
             )}
           </div>
@@ -848,7 +1088,7 @@ export function LogDetailsPanel({
   row,
   agentName = 'Front desk agent - North region',
   transcript = DEFAULT_TRANSCRIPT,
-  steps = CALL_LOG_STEPS,
+  steps: stepsProp,
   durationSecs,
   audioUrl = voicemailSample,
   onTrackFeedback,
@@ -858,13 +1098,24 @@ export function LogDetailsPanel({
   callEndReason = 'User ended the conversation',
   routedVia = agentName,
   showCallDetails = true,
+  callEndResultBadge,
+  userRating,
+  showTranscriptTranslation = false,
+  onStepFocus,
+  initialTab,
+  onTabChange,
 }: LogDetailsPanelProps) {
+  const baseAgentName = agentName.replace(/ - .+$/, '')
+  const isFrontDesk = baseAgentName === 'Front desk agent'
   const isReminder = agentName.startsWith('Reminder agent')
+  const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
   // A purely text/web-chat conversation never recorded a call — no waveform to show.
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
+  const displayUserRating = userRating
+    ?? (callEndResultBadge ? getUserRatingForLogStatus(callEndResultBadge) : undefined)
 
   // Same "Coach agent" → "Track your feedback" flow as the Inbox transcript view — Coach agent
   // opens the Share-feedback modal; once submitted, that message's link switches to "Track your
@@ -939,6 +1190,7 @@ export function LogDetailsPanel({
     <TranscriptEntry
       key={entry.id}
       entry={entry}
+      showLanguagePicker={showTranscriptTranslation}
       recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
       onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
       onTrackFeedback={
@@ -949,11 +1201,25 @@ export function LogDetailsPanel({
     />
   ))
 
+  const callDetailsTabContent = showCallDetails && hasVoiceCall ? (
+    <CallDetailsTab
+      callerNumber={displayCaller}
+      languageDetected={languageDetected}
+      durationSecs={totalSecs}
+      sidNumber={sidNumber}
+      startTime={startTimeLabel(row.timestamp)}
+      callEndReason={callEndReason}
+      routedVia={routedVia}
+      callEndResultBadge={callEndResultBadge}
+      userRating={displayUserRating}
+    />
+  ) : undefined
+
   const resumeAutoScrollButton = !autoScroll && (
     <button
       type="button"
       onClick={() => setAutoScroll(true)}
-      className="absolute bottom-lg left-1/2 z-10 flex h-9 -translate-x-1/2 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white shadow-modal transition-colors hover:bg-primary-hover"
+      className="absolute bottom-lg left-1/2 z-20 flex h-9 -translate-x-1/2 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white shadow-modal transition-colors hover:bg-primary-hover"
     >
       <Icon name="arrow_downward" size={16} className="text-white" />
       Resume auto scrolling
@@ -966,32 +1232,28 @@ export function LogDetailsPanel({
         steps={steps}
         showHeader={false}
         showCallRecording={hasVoiceCall}
-        callDetailsContent={
-          showCallDetails ? (
-            <CallDetailsTab
-              callerNumber={displayCaller}
-              languageDetected={languageDetected}
-              durationSecs={totalSecs}
-              sidNumber={sidNumber}
-              startTime={startTimeLabel(row.timestamp)}
-              callEndReason={callEndReason}
-              routedVia={routedVia}
-            />
-          ) : undefined
+        conversationTabLabel={
+          isFrontDesk ? (hasVoiceCall ? 'Call transcript' : 'Conversation') : 'Outcome'
         }
+        logsTabLabel="Log"
+        callDetailsContent={callDetailsTabContent}
+        onStepFocus={onStepFocus}
+        initialTab={initialTab}
+        onTabChange={onTabChange}
         conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">
               <div
                 ref={chatScrollRef}
                 onScroll={handleChatScroll}
-                className="min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
+                className="min-h-0 flex-1 overflow-y-auto px-lg pb-2xl [scrollbar-gutter:stable_both-edges]"
               >
-                <div className="flex flex-col gap-3xl">
+                <div className="flex flex-col gap-3xl pt-lg">
+                  <CallAiSummary bullets={REMINDER_CONVERSATION_AI_SUMMARY} className="mt-0" />
                   {/* Top spacing lives here (not on the scroll container) — the sticky waveform
                    *  below anchors to `top: 0` of the scroll container's padding edge, so any
                    *  padding-top on the container itself would leave a permanent gap once stuck. */}
-                  <div className="pt-lg">
+                  <div>
                     <ChatSystemLabel text="Email conversation started" />
                   </div>
                   <AppointmentBookedCard time="08:03 PM" />
@@ -1001,11 +1263,7 @@ export function LogDetailsPanel({
                   {hasVoiceCall && (
                     <>
                       <ChatSystemLabel text="Voice call started" />
-                      {/* Sticky from here down — pins to the top of the scroll area once scrolled
-                       *  past, and releases back to its normal place in the flow once scrolled
-                       *  back up to it, matching the always-pinned waveform on other agents. */}
-                      <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
-                        <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
+                      <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
                         <CallRecordingPlayer
                           audioUrl={audioUrl}
                           durationSecs={totalSecs}
@@ -1013,32 +1271,43 @@ export function LogDetailsPanel({
                           onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
                         />
                       </div>
+                      <div className="flex flex-col gap-2xl">
+                        {transcriptNodes}
+                      </div>
                     </>
                   )}
-                  {transcriptNodes}
+                  {!hasVoiceCall && transcriptNodes}
                 </div>
               </div>
               {resumeAutoScrollButton}
             </div>
           ) : (
             <div className="relative flex h-full flex-col">
-              {hasVoiceCall && (
-                <div className="shrink-0 px-[15px] pt-lg">
-                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
-                  <CallRecordingPlayer
-                    audioUrl={audioUrl}
-                    durationSecs={totalSecs}
-                    padded={false}
-                    onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-                  />
-                </div>
-              )}
               <div
                 ref={chatScrollRef}
                 onScroll={handleChatScroll}
-                className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges] ${hasVoiceCall ? 'mt-3xl' : 'pt-lg'}`}
+                className="min-h-0 flex-1 overflow-y-auto pb-sm [scrollbar-gutter:stable_both-edges]"
               >
-                <div className="flex flex-col gap-3xl">{transcriptNodes}</div>
+                {hasVoiceCall && (
+                  <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
+                    <CallRecordingPlayer
+                      audioUrl={audioUrl}
+                      durationSecs={totalSecs}
+                      padded={false}
+                      onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                    />
+                  </div>
+                )}
+                <div className={`flex flex-col gap-3xl${hasVoiceCall ? '' : ' pt-lg'}`}>
+                  {hasVoiceCall && <CallAiSummary className="mt-0" />}
+                  {hasVoiceCall ? (
+                    <div className="flex flex-col gap-2xl">
+                      {transcriptNodes}
+                    </div>
+                  ) : (
+                    transcriptNodes
+                  )}
+                </div>
               </div>
               {resumeAutoScrollButton}
             </div>

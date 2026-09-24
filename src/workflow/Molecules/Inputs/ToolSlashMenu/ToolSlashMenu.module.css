@@ -1,6 +1,6 @@
 .menu {
   position: fixed;
-  z-index: 200;
+  z-index: 5200;
   width: 360px;
   max-width: calc(100vw - 24px);
   max-height: min(420px, calc(100vh - 24px));
@@ -32,7 +32,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   box-sizing: border-box;
   flex-shrink: 0;
@@ -83,7 +83,7 @@
   width: 100%;
   padding: 10px 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: transparent;
   text-align: left;
   cursor: pointer;

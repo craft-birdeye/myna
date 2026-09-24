@@ -25,7 +25,7 @@ export function RatingBarChart({ data, height = 300 }: RatingBarChartProps) {
         <CartesianGrid stroke="#eaeaea" vertical={false} horizontal={false} />
         <XAxis
           dataKey="label"
-          tick={{ fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }}
+          tick={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
           tickLine={false}
           axisLine={{ stroke: '#eaeaea' }}
         />
@@ -52,7 +52,7 @@ export function RatingBarChart({ data, height = 300 }: RatingBarChartProps) {
             dataKey="value"
             position="top"
             formatter={kFormat}
-            style={{ fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }}
+            style={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
           />
         </Bar>
       </BarChart>

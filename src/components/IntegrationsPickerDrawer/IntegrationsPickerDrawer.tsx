@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
-import { Icon } from '../Icon/Icon'
 import { IntegrationListCard } from '../IntegrationListCard/IntegrationListCard'
 import type { IntegrationsPickerDrawerProps } from './IntegrationsPickerDrawer.types'
+import { Search } from 'lucide-react'
 
 export function IntegrationsPickerDrawer({
   open,
@@ -41,12 +41,12 @@ export function IntegrationsPickerDrawer({
     <div className={`fixed inset-0 z-[100] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
 
       <aside
-        className={`absolute right-0 top-0 flex h-full w-[650px] max-w-[92vw] flex-col bg-surface shadow-dropdown transition-transform duration-200 ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute right-2 top-2 flex h-[calc(100%-16px)] w-[650px] max-w-[calc(92vw-8px)] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-200 ${
+          open ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
         }`}
       >
         <div className="flex shrink-0 items-center justify-between px-2xl pb-lg pt-2xl">
@@ -55,7 +55,7 @@ export function IntegrationsPickerDrawer({
               type="button"
               aria-label="Back"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
               <BackArrowIcon />
             </button>
@@ -67,7 +67,7 @@ export function IntegrationsPickerDrawer({
               onSave({ selectedId: draftSelectedId, connectedIds: draftConnectedIds })
             }
             disabled={!canSave}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               canSave
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
@@ -78,8 +78,8 @@ export function IntegrationsPickerDrawer({
         </div>
 
         <div className="flex flex-1 flex-col gap-md overflow-hidden px-2xl pb-2xl">
-          <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-input bg-surface px-md">
-            <Icon name="search" size={20} className="shrink-0 text-text-icon" />
+          <div className="flex h-[34px] shrink-0 items-center gap-sm rounded-md border border-border-input bg-surface px-md">
+            <Search className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}

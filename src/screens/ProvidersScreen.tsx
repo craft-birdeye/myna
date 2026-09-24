@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { DataTable, HeaderSearchField, Icon, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
+import { ArrowLeft, ChevronDown, ChevronUp, Info, RefreshCw, X } from 'lucide-react'
+import { DataTable, HeaderSearchField, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
 
 // ── Toggle ───────────────────────────────────────────────────────────────────
 interface ToggleProps {
@@ -158,7 +159,7 @@ function DropdownField({ label, required, infoIcon, tooltip, options, value, mul
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setOpen(o => !o)}
-          className={`flex h-9 w-full items-center justify-between rounded-sm border px-md text-body transition-colors ${
+          className={`flex h-[34px] w-full items-center justify-between rounded-md border px-md text-body transition-colors ${
             disabled
               ? 'cursor-not-allowed border-border bg-surface-subtle text-text-tertiary'
               : open
@@ -167,7 +168,7 @@ function DropdownField({ label, required, infoIcon, tooltip, options, value, mul
           }`}
         >
           <span className={value.length === 0 ? 'text-text-tertiary' : ''}>{displayLabel}</span>
-          <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="shrink-0 text-text-icon" />
+          {open ? <ChevronUp className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
         </button>
         {open && (
           <div className="absolute left-0 top-[calc(100%+4px)] z-[60] w-full">
@@ -216,17 +217,17 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[650px] flex-col bg-surface shadow-modal">
+      <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-50 flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-lg">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={18} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">Edit</span>
           </div>
-          <button type="button" className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
+          <button type="button" className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
             Save
           </button>
         </div>
@@ -238,7 +239,7 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
             <div className="flex flex-col gap-xs">
               <label className="text-small text-text-secondary">First name <span className="text-danger">*</span></label>
               <input
-                className="h-9 rounded-sm border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
+                className="h-[34px] rounded-md border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
                 value={firstName}
                 onChange={e => setFirstName(e.target.value)}
               />
@@ -246,7 +247,7 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
             <div className="flex flex-col gap-xs">
               <label className="text-small text-text-secondary">Last name <span className="text-danger">*</span></label>
               <input
-                className="h-9 rounded-sm border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
+                className="h-[34px] rounded-md border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
                 value={lastName}
                 onChange={e => setLastName(e.target.value)}
               />
@@ -275,7 +276,7 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
               onClick={() => setPmsExpanded(v => !v)}
             >
               <span className="text-body text-text-primary">PMS mapping</span>
-              <Icon name={pmsExpanded ? 'expand_less' : 'expand_more'} size={18} className="text-text-icon" />
+              {pmsExpanded ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
             </button>
             {pmsExpanded && (
               <div className="flex flex-col gap-md border-t border-border p-md">
@@ -296,7 +297,7 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
                 </div>
                 {selectedProviderLabel && (
                   <div className="flex items-center gap-sm rounded-sm border border-blue-200 bg-blue-50 px-md py-sm">
-                    <Icon name="info" size={16} className="text-blue-500" />
+                    <Info className="size-4 text-blue-500" strokeWidth={1.6} absoluteStrokeWidth />
                     <span className="text-small text-blue-700">Mapped to {selectedProviderLabel}</span>
                   </div>
                 )}
@@ -426,9 +427,9 @@ export function ProvidersScreen() {
             <button
               type="button"
               onClick={() => setToastVisible(true)}
-              className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
             >
-              <Icon name="refresh" size={18} />
+              <RefreshCw className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               Sync from PMS
             </button>
           </div>
@@ -438,12 +439,12 @@ export function ProvidersScreen() {
           {/* Banner */}
           {!bannerDismissed && (
             <div className="flex items-start gap-sm rounded-sm border border-primary/30 bg-primary/5 px-md py-sm">
-              <Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" />
+              <Info className="size-5 mt-0.5 shrink-0 text-primary" strokeWidth={1.6} absoluteStrokeWidth />
               <p className="flex-1 text-small text-text-primary">
                 Update the display name, map operatories, set bookable status, and assign appointment types. To add or remove a provider, do it in your PMS and click Sync.
               </p>
               <button type="button" onClick={() => setBannerDismissed(true)} className="shrink-0 text-text-icon hover:text-text-primary">
-                <Icon name="close" size={16} />
+                <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           )}

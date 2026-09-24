@@ -46,7 +46,7 @@ body {
 
 .el-single-select .el-ss-filter-dropdown {
   top: 0 !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
 }
 
 #root {
@@ -90,7 +90,7 @@ code,
 .counter {
   font-family: var(--mono);
   display: inline-flex;
-  border-radius: 4px;
+  border-radius: 8px;
   color: var(--text-h);
 }
 

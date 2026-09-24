@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FilterPanel, HeaderSearchField, Icon, Tooltip, TopNav } from '../components'
+import { FilterPanel, HeaderSearchField, Icon, ReviewCardBody, StarRating, Tooltip, TopNav } from '../components'
 import type { FilterField } from '../components'
 import iconAgentsPurple from '../assets/icon-agents-purple.svg'
 import { ALL_REVIEWS, type Review } from '../data/reviewsData'
@@ -105,7 +105,7 @@ function ReviewsSortDropdown({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
       >
         {selectedLabel}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -156,7 +156,7 @@ function ReviewsMoreMenu() {
         aria-label="More options"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+        className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
       >
         <Icon name="more_vert" size={20} />
       </button>
@@ -211,105 +211,24 @@ function ReviewsMoreMenu() {
   )
 }
 
-function StarRating({ rating, size = 18 }: { rating: number; size?: number }) {
-  const boxClass = size <= 16 ? 'size-4' : 'size-[18px]'
-
-  return (
-    <span className="flex items-center">
-      {Array.from({ length: 5 }, (_, i) => {
-        const filled = rating - i
-        if (filled >= 1) {
-          return (
-            <Icon
-              key={i}
-              name="star"
-              size={size}
-              fill
-              className="text-rating-star"
-            />
-          )
-        }
-        if (filled > 0) {
-          return (
-            <span key={i} className={`relative inline-flex ${boxClass}`}>
-              <Icon name="star" size={size} fill className="text-rating-empty" />
-              <span
-                className="absolute inset-y-0 left-0 overflow-hidden"
-                style={{ width: `${filled * 100}%` }}
-              >
-                <Icon name="star" size={size} fill className="text-rating-star" />
-              </span>
-            </span>
-          )
-        }
-        return (
-          <Icon
-            key={i}
-            name="star"
-            size={size}
-            fill
-            className="text-rating-empty"
-          />
-        )
-      })}
-    </span>
-  )
-}
-
 function ReviewCard({ review }: { review: Review }) {
   return (
     <article className="relative px-2xl py-2xl after:absolute after:inset-x-2xl after:bottom-0 after:border-b after:border-border">
-      <div className="flex items-start justify-between gap-lg">
-        <div className="flex items-center gap-md">
-          <span className="flex size-[35px] shrink-0 items-center justify-center rounded-full bg-primary text-body text-white">
-            B
-          </span>
-          <div className="flex flex-col gap-xs">
-            <StarRating rating={review.rating} />
-            <div className="flex items-center gap-sm text-body">
-              <span className="text-text-primary">{review.reviewerName}</span>
-              <span className="text-text-tertiary">•</span>
-              <span className="text-text-secondary">{review.date}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-lg text-body text-text-tertiary">
-          <span className="flex items-center gap-xs">
-            <Icon name="sell" size={16} className="text-text-tertiary" />
-            {review.reviewId}
-          </span>
-          <span className="flex items-center gap-xs">
-            <Icon name="location_on" size={16} className="text-text-tertiary" />
-            {review.location}
-          </span>
-        </div>
-      </div>
-
-      <p className="mt-lg text-body text-text-primary">{review.text}</p>
+      <ReviewCardBody review={review} />
 
       {review.reply ? (
         <>
-          <div className="mt-lg rounded-md bg-surface-l2 p-xl">
-            <div className="flex flex-wrap items-center gap-xs text-body text-text-secondary">
-              <span>Posted on</span>
-              <span className="text-text-action">{review.reply.channel}</span>
-              <span>by {review.reply.agentName}</span>
-              <span className="text-text-tertiary">•</span>
-              <span>{review.reply.postedAt}</span>
-            </div>
-            <p className="mt-sm text-body text-text-primary">{review.reply.text}</p>
-          </div>
           <div className="mt-lg flex items-center justify-end gap-sm">
             <button
               type="button"
-              className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-9 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
             >
               Edit reply
             </button>
             <button
               type="button"
               aria-label="More options"
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
             >
               <Icon name="more_vert" size={20} />
             </button>
@@ -319,21 +238,21 @@ function ReviewCard({ review }: { review: Review }) {
         <div className="mt-lg flex items-center justify-end gap-sm">
           <button
             type="button"
-            className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+            className="flex h-9 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
           >
             Reply
           </button>
           <button
             type="button"
             aria-label="Comment"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="chat_bubble" size={20} />
           </button>
           <button
             type="button"
             aria-label="More options"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="more_vert" size={20} />
           </button>
@@ -407,7 +326,7 @@ export function AllReviewsScreen({
                 <button
                   type="button"
                   aria-label="Summarize using BirdAI"
-                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface hover:bg-surface-l2"
+                  className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface hover:bg-surface-l2"
                 >
                   <img src={iconAgentsPurple} alt="" className="size-6" />
                 </button>
@@ -417,7 +336,7 @@ export function AllReviewsScreen({
                 type="button"
                 aria-label="Filters"
                 onClick={() => setFilterOpen((current) => !current)}
-                className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
+                className={`flex size-9 items-center justify-center rounded-md border border-border-selected text-text-icon hover:bg-surface-l2 ${
                   filterOpen ? 'bg-surface-selected' : 'bg-surface'
                 }`}
               >

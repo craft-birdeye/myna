@@ -1,162 +1,312 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { DataTypeIcon } from '../../../Molecules/Inputs/VariableChip/VariableChip';
+import {
+  BASE_CATEGORIES,
+  WORKFLOW_CATEGORIES,
+  SAMPLE_COLOR,
+  normalizeCategory,
+  filterTrees,
+  formatSample,
+  countLeaves,
+} from './fieldPickerData';
 import styles from './FieldPickerModal.module.css';
 
-const SAMPLE_COLOR = {
-  number: '#1976d2',
-  string: '#37a248',
-};
-
-const BASE_CATEGORIES = [
-  {
-    id: 'business',
-    label: 'Business',
-    sectionLabel: 'Business fields',
-    fields: [
-      { name: 'Business name', value: 'Business.name', sample: 'Aspen Dental', valueType: 'string' },
-      { name: 'Business phone', value: 'Business.phone', sample: '+1 415-555-0100', valueType: 'string' },
-      { name: 'Business email', value: 'Business.email', sample: 'frontdesk@aspendental.com', valueType: 'string' },
-      { name: 'Business address', value: 'Business.address', sample: '720 Castro St', valueType: 'string' },
-      { name: 'Business hours', value: 'Business.hours', sample: '9:00 AM – 6:00 PM', valueType: 'string' },
-      { name: 'Business website', value: 'Business.website', sample: 'www.aspendental.com', valueType: 'string' },
-      { name: 'Business category', value: 'Business.category', sample: 'Healthcare', valueType: 'string' },
-      { name: 'Business rating', value: 'Business.rating', sample: '4.6', valueType: 'number' },
-      { name: 'Total reviews', value: 'Business.totalReviews', sample: '1284', valueType: 'number' },
-      { name: 'Response rate', value: 'Business.responseRate', sample: '92%', valueType: 'string' },
-      { name: 'NPS score', value: 'Business.npsScore', sample: '68', valueType: 'number' },
-      { name: 'Active since', value: 'Business.activeSince', sample: '2018', valueType: 'number' },
-      { name: 'Owner name', value: 'Business.ownerName', sample: 'Jane Smith', valueType: 'string' },
-      { name: 'Owner email', value: 'Business.ownerEmail', sample: 'jane@aspendental.com', valueType: 'string' },
-      { name: 'Region', value: 'Business.region', sample: 'West', valueType: 'string' },
-      { name: 'Tax ID', value: 'Business.taxId', sample: '94-1234567', valueType: 'string' },
-      { name: 'License number', value: 'Business.licenseNumber', sample: 'HC-88421', valueType: 'string' },
-      { name: 'EHR provider', value: 'Business.ehrProvider', sample: 'Epic', valueType: 'string' },
-      { name: 'Timezone', value: 'Business.timezone', sample: 'America/Los_Angeles', valueType: 'string' },
-      { name: 'Locale', value: 'Business.locale', sample: 'en-US', valueType: 'string' },
-    ],
-  },
-  {
-    id: 'location',
-    label: 'Location',
-    sectionLabel: 'Location fields',
-    fields: [
-      { name: 'Location name', value: 'Location.name', sample: 'Downtown clinic', valueType: 'string' },
-      { name: 'Location address', value: 'Location.address', sample: '100 Main St', valueType: 'string' },
-      { name: 'Location phone', value: 'Location.phone', sample: '+1 650-555-0110', valueType: 'string' },
-      { name: 'Location email', value: 'Location.email', sample: 'downtown@aspendental.com', valueType: 'string' },
-      { name: 'Location hours', value: 'Location.hours', sample: 'Mon–Sat 8–7', valueType: 'string' },
-      { name: 'Exam rooms', value: 'Location.examRooms', sample: '12', valueType: 'number' },
-      { name: 'Staff count', value: 'Location.staffCount', sample: '18', valueType: 'number' },
-      { name: 'Manager name', value: 'Location.managerName', sample: 'Alex Rivera', valueType: 'string' },
-      { name: 'Manager email', value: 'Location.managerEmail', sample: 'alex@aspendental.com', valueType: 'string' },
-      { name: 'City', value: 'Location.city', sample: 'San Mateo', valueType: 'string' },
-      { name: 'State', value: 'Location.state', sample: 'CA', valueType: 'string' },
-      { name: 'Zip code', value: 'Location.zipCode', sample: '94401', valueType: 'number' },
-    ],
-  },
-  {
-    id: 'contacts',
-    label: 'Contacts',
-    sectionLabel: 'Contact fields',
-    fields: [
-      { name: 'Contact first name', value: 'Contact.firstName', sample: 'John', valueType: 'string' },
-      { name: 'Contact last name', value: 'Contact.lastName', sample: 'Doe', valueType: 'string' },
-      { name: 'Contact phone', value: 'Contact.phone', sample: '+1 415-555-0199', valueType: 'string' },
-      { name: 'Contact email', value: 'Contact.email', sample: 'john.doe@example.com', valueType: 'string' },
-      { name: 'Patient ID', value: 'Contact.patientId', sample: '27679', valueType: 'number' },
-      { name: 'Date of birth', value: 'Contact.dateOfBirth', sample: '1988-04-12', valueType: 'string' },
-      { name: 'Insurance plan', value: 'Contact.insurancePlan', sample: 'Aetna PPO', valueType: 'string' },
-      { name: 'Preferred provider', value: 'Contact.preferredProvider', sample: 'Dr.John', valueType: 'string' },
-      { name: 'Last visit date', value: 'Contact.lastVisitDate', sample: '2026-03-12', valueType: 'string' },
-      { name: 'Last visit reason', value: 'Contact.lastVisitReason', sample: 'Cleaning', valueType: 'string' },
-      { name: 'Patient since', value: 'Contact.patientSince', sample: '2021', valueType: 'number' },
-      { name: 'Preferred channel', value: 'Contact.preferredChannel', sample: '"SMS"', valueType: 'string' },
-    ],
-  },
-];
-
-const TRIGGER_CATEGORY = {
-  id: 'trigger',
-  label: '1. Trigger: Generate res…',
-  sectionLabel: 'Trigger output',
-  fields: [
-    { name: 'Appointment id', value: 'Trigger.appointmentId', sample: '545043398', valueType: 'number' },
-    { name: 'patientID', value: 'Trigger.patientId', sample: '27679', valueType: 'number' },
-    { name: 'Provider', value: 'Trigger.provider', sample: 'Dr.John', valueType: 'string' },
-    { name: 'diagnosisCode', value: 'Trigger.diagnosisCode', sample: '9651531', valueType: 'number' },
-    { name: 'Priority', value: 'Trigger.priority', sample: '"High"', valueType: 'string' },
-    { name: 'Order', value: 'Trigger.order', sample: '219', valueType: 'string' },
-  ],
-};
-
-const POPOVER_WIDTH = 600;
-const POPOVER_MAX_HEIGHT = 400;
+const POPOVER_WIDTH = 630;
+const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
+const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
+/** "Partial" preview — the only two categories kept, each trimmed to one field. */
+const PARTIAL_CATEGORY_IDS = ['business', 'trigger'];
+
+/** Trim a normalized category down to its first field, so Partial reads as sparse. */
+function firstFieldOnlyCategory(cat) {
+  const tree = cat.trees?.[0];
+  const kids = tree?.children || [];
+  const firstLeaf = kids.find((k) => k.type === 'field') ?? kids[0];
+  return {
+    ...cat,
+    trees: tree && firstLeaf ? [{ ...tree, children: [firstLeaf] }] : [],
+    count: firstLeaf ? 1 : 0,
+  };
+}
+
+const FIELDS_LEARN_MORE_HREF =
+  'https://support.birdeye.com/en/articles/16880538-ai-agent-variables-glossary'
+
+const WORKFLOW_SECTION_HEADING = 'Output fields from previous steps';
+
+/**
+ * Spacious body height for the docked Fields card: 3 base categories + section
+ * heading + 5 workflow steps. A 6th step scrolls into view below this.
+ */
+const SPACIOUS_BODY_HEIGHT_PX = 460;
+const SIDEBAR_VISIBLE_WORKFLOW_COUNT = 5;
 
 function FieldChip({ name }) {
   return (
     <span className={styles.chip}>
-      <span className={styles.chipSwatch}>{'{}'}</span>
+      <span className={styles.chipSwatch} aria-hidden>
+        <DataTypeIcon />
+      </span>
       <span className={styles.chipLabel}>{name}</span>
     </span>
   );
 }
 
-function FieldRow({ field, onClick }) {
+/** Two-line sidebar label; full text in a tooltip only when clamped.
+ *  Numbered workflow steps (`2. Action: …`) hang-indent so wrapped lines align under the type label. */
+function CatLabel({ text }) {
+  const ref = useRef(null);
+  const [truncated, setTruncated] = useState(false);
+  const numbered = String(text ?? '').match(/^(\d+\.)(.*)$/);
+  const prefix = numbered?.[1] ?? null;
+  const body = numbered?.[2] ?? text;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => {
+      setTruncated(el.scrollHeight > el.clientHeight + 1);
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [text]);
+
+  return (
+    <Tooltip
+      content={text}
+      variant="detail"
+      side="top"
+      disabled={!truncated}
+      className={styles.catLabelWrap}
+    >
+      {prefix ? (
+        <span className={styles.catLabelNumbered}>
+          <span className={styles.catLabelPrefix}>{prefix}</span>
+          <span ref={ref} className={styles.catLabelBody}>
+            {body}
+          </span>
+        </span>
+      ) : (
+        <span ref={ref} className={styles.catLabel}>
+          {text}
+        </span>
+      )}
+    </Tooltip>
+  );
+}
+
+/**
+ * Detect whether a field token is present in the prompt text.
+ * Callers insert tokens keyed by either the human name (`{{Business name}}`) or the
+ * raw dotted value (`{{Business.name}}`) depending on the surface, so check both.
+ */
+function isFieldInsertedIn(field, insertedText) {
+  if (!insertedText) return false;
+  return (
+    (field.name && insertedText.includes(`{{${field.name}}}`))
+    || (field.value && insertedText.includes(`{{${field.value}}}`))
+  );
+}
+
+const ADDED_FLASH_MS = 3000;
+
+function FieldLeaf({ field, onSelect, insertedText = '' }) {
+  const isInserted = isFieldInsertedIn(field, insertedText);
+  const wasInsertedRef = useRef(isInserted);
+  const [showCheck, setShowCheck] = useState(false);
+  const sample = formatSample(field.sample, field.valueType);
+
+  // Flash the green tick for 3s after a new insert, then revert to "+".
+  useEffect(() => {
+    if (isInserted && !wasInsertedRef.current) {
+      wasInsertedRef.current = true;
+      setShowCheck(true);
+      const t = window.setTimeout(() => setShowCheck(false), ADDED_FLASH_MS);
+      return () => window.clearTimeout(t);
+    }
+    if (!isInserted) {
+      wasInsertedRef.current = false;
+      setShowCheck(false);
+    }
+    return undefined;
+  }, [isInserted]);
+
   return (
     <button
       type="button"
-      className={styles.fieldRow}
-      onClick={() => onClick?.(field.value, field.name)}
+      className={`${styles.fieldRow}${showCheck ? ` ${styles.fieldRowAdded}` : ''}`}
+      onClick={() => onSelect?.(field.value, field.name, field)}
+      aria-label={showCheck ? `${field.name} added` : `Add ${field.name}`}
     >
       <FieldChip name={field.name} />
       <span
         className={styles.sample}
         style={{ color: SAMPLE_COLOR[field.valueType] ?? '#555' }}
-        title={field.sample}
+        title={sample}
       >
-        {field.sample}
+        {sample}
+      </span>
+      <span className={styles.fieldAction} aria-hidden>
+        <span
+          className={`material-symbols-outlined ${styles.fieldActionIcon} ${
+            showCheck ? styles.fieldActionIconCheck : styles.fieldActionIconAdd
+          }`}
+        >
+          {showCheck ? 'check' : 'add'}
+        </span>
       </span>
     </button>
   );
 }
 
-/**
- * Positions the popover to the LEFT of the nearest ancestor <aside> (a slide-in
- * drawer, e.g. the New procedure drawer) so it never overlaps the drawer's own
- * content. Falls back to anchoring near the triggering icon when there's no
- * enclosing drawer (e.g. the standalone Procedures page).
- */
-function computePosition(anchorEl) {
+function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, insertedText = '' }) {
+  const [open, setOpen] = useState(true);
+  const isGroup = node.type === 'group';
+  const isObject = node.type === 'object';
+  const kids = node.children || [];
+  const propertyCount = node.propertyCount ?? kids.length;
+  const showCount = isObject || (isGroup && node.showPropertyCount);
+  /** Only leaf fields under this node — no nested groups/objects. */
+  const isSingleLevel = kids.length > 0 && kids.every((child) => child.type === 'field');
+
+  if (node.type === 'field') {
+    return (
+      <FieldLeaf
+        field={node}
+        onSelect={onSelect}
+        insertedText={insertedText}
+      />
+    );
+  }
+
+  const label = isGroup ? node.label : node.name;
+
+  // No accordion when: flat catalogs, or a lone root section with only leaf fields.
+  const skipAccordion = isSingleLevel && (node.flat || (depth === 0 && !allowCollapse));
+
+  if (skipAccordion) {
+    const showStaticTitle = !node.flat && depth === 0;
+    return (
+      <div className={styles.treeBranch}>
+        {showStaticTitle && (
+          <div className={styles.treeHeader}>
+            {isObject ? (
+              <FieldChip name={label} />
+            ) : (
+              <span className={styles.treeGroupLabel}>{label}</span>
+            )}
+            {showCount && (
+              <span className={styles.treePropCount}>{`{ ${propertyCount} properties }`}</span>
+            )}
+          </div>
+        )}
+        <div className={node.flat ? styles.treeFlatList : styles.treeChildrenSingle}>
+          {kids.map((child) => (
+            <FieldLeaf
+              key={child.id || child.value || child.name}
+              field={child}
+              onSelect={onSelect}
+              insertedText={insertedText}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Multiple root sections (e.g. Action outputs + Tool) or nested trees — collapsible.
+  return (
+    <div className={styles.treeBranch}>
+      <button
+        type="button"
+        className={styles.treeToggle}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span
+          className={`material-symbols-outlined ${styles.treeChevron}`}
+          aria-hidden
+        >
+          {open ? 'expand_more' : 'chevron_right'}
+        </span>
+        {isObject ? (
+          <FieldChip name={label} />
+        ) : (
+          <span className={styles.treeGroupLabel}>{label}</span>
+        )}
+        {showCount && (
+          <span className={styles.treePropCount}>{`{ ${propertyCount} properties }`}</span>
+        )}
+      </button>
+      {open && kids.length > 0 && (
+        <div className={depth > 0 ? styles.treeChildrenNested : styles.treeChildren}>
+          {kids.map((child) => (
+            <TreeBranch
+              key={child.id || child.value || child.name}
+              node={child}
+              onSelect={onSelect}
+              depth={depth + 1}
+              allowCollapse
+              insertedText={insertedText}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Panels the picker docks to the left of — slide-in drawers and the workflow node-config RHS. */
+const PANEL_SELECTOR = 'aside, .agent-builder__rhs';
+
+function computeDockPosition(anchorEl, { fullHeight = false } = {}) {
   const margin = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const asideEl = anchorEl?.closest ? anchorEl.closest('aside') : null;
+  const panelEl = anchorEl?.closest ? anchorEl.closest(PANEL_SELECTOR) : null;
   const anchorRect = anchorEl?.getBoundingClientRect ? anchorEl.getBoundingClientRect() : null;
 
-  if (asideEl) {
-    const asideRect = asideEl.getBoundingClientRect();
-    const availableWidth = Math.max(320, asideRect.left - DRAWER_GAP - margin);
+  if (panelEl) {
+    const panelRect = panelEl.getBoundingClientRect();
+    const availableWidth = Math.max(320, panelRect.left - DRAWER_GAP - margin);
     const width = Math.min(POPOVER_WIDTH, availableWidth);
-    const left = Math.max(margin, asideRect.left - DRAWER_GAP - width);
-    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, asideRect.height - margin * 2);
-    // Open level with the triggering icon (parallel to the Steps field) instead
-    // of always snapping to the top of the drawer.
-    const idealTop = anchorRect ? anchorRect.top : asideRect.top;
-    const top = Math.min(Math.max(margin, idealTop), vh - maxHeight - margin);
+    const left = Math.max(margin, panelRect.left - DRAWER_GAP - width);
+    if (fullHeight) {
+      // Match the anchor panel's own top/height exactly — same surface, not just "tall".
+      return { top: panelRect.top, left, width, maxHeight: panelRect.height };
+    }
+    // Match the spacious 5-step Fields card — do not shrink to the RHS panel height.
+    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
+    const idealTop = panelRect.top;
+    const top = Math.min(Math.max(margin, idealTop), Math.max(margin, vh - maxHeight - margin));
     return { top, left, width, maxHeight };
   }
 
   const width = Math.min(POPOVER_WIDTH, vw - margin * 2);
+
+  if (fullHeight) {
+    let left = anchorRect?.left ?? margin;
+    left = Math.min(left, vw - width - margin);
+    left = Math.max(margin, left);
+    return { top: margin, left, width, maxHeight: vh - margin * 2 };
+  }
+
   const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
 
-  // Prefer opening above the Fields icon so it stays inside the drawer column
   let top = (anchorRect?.top ?? vh / 2) - maxHeight - margin;
   let left = anchorRect?.left ?? margin;
 
   if (top < margin) {
-    // Not enough room above — open just below the icon instead
     top = (anchorRect?.bottom ?? margin) + margin;
   }
   if (top + maxHeight > vh - margin) {
@@ -169,157 +319,444 @@ function computePosition(anchorEl) {
   return { top, left, width, maxHeight };
 }
 
+function computeDropdownPosition(anchorEl) {
+  const margin = 8;
+  const gap = 4;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const anchorRect = anchorEl?.getBoundingClientRect?.() ?? null;
+  const anchorWidth = anchorRect?.width ?? 0;
+  // Full-width field triggers (e.g. Add input field → Field value): match width
+  // so the picker reads as a dropdown under the control. Icon-only triggers keep
+  // the wider default popover.
+  const width = anchorWidth >= 280
+    ? Math.min(Math.max(anchorWidth, 280), vw - margin * 2)
+    : Math.min(POPOVER_WIDTH, vw - margin * 2);
+  const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
+
+  let left = anchorRect?.left ?? margin;
+  // Prefer left-align with the field; if it overflows the viewport, shift left.
+  if (left + width > vw - margin) {
+    left = Math.max(margin, vw - width - margin);
+  }
+  left = Math.max(margin, left);
+
+  const spaceBelow = vh - (anchorRect?.bottom ?? 0) - margin;
+  const spaceAbove = (anchorRect?.top ?? 0) - margin;
+  const openBelow = spaceBelow >= Math.min(maxHeight, 280) || spaceBelow >= spaceAbove;
+
+  let top;
+  let height = maxHeight;
+  if (openBelow) {
+    top = (anchorRect?.bottom ?? margin) + gap;
+    height = Math.min(maxHeight, Math.max(240, spaceBelow - gap));
+  } else {
+    height = Math.min(maxHeight, Math.max(240, spaceAbove - gap));
+    top = Math.max(margin, (anchorRect?.top ?? height) - height - gap);
+  }
+
+  return { top, left, width, maxHeight: height };
+}
+
+/** `dock` placements are always full height; `dropdown` stays a small contextual popover. */
+function computePosition(anchorEl, placement = 'dock') {
+  return placement === 'dropdown'
+    ? computeDropdownPosition(anchorEl)
+    : computeDockPosition(anchorEl, { fullHeight: true });
+}
+
+/** Plain global class so panel-internal CSS (outside this module) can react to flush-dock. */
+const FLUSH_DOCK_GLOBAL_CLASS = 'ab-flush-dock';
+
+/** The panel (if any) this picker is currently docked flush against. */
+function getDockedPanelEl(anchorEl, placement) {
+  if (placement === 'dropdown') return null;
+  return anchorEl?.closest ? anchorEl.closest(PANEL_SELECTOR) : null;
+}
+
 /**
- * Contextual Fields picker — docks to the left of the nearest drawer (or near
- * the triggering icon when there's no drawer), never overlapping it, with no
- * dimmed overlay.
+ * Contextual Fields picker — docks to the left of the nearest drawer, or opens as a
+ * dropdown under the trigger. Nested trees match workflow task/tool output shapes.
+ * `dock` placements always run full height and flush against that panel (same top/height,
+ * no shadow at the seam, squared touching corners) — there's no compact variant anymore.
  */
 export default function FieldPickerModal({
   onClose,
   onSelectField,
   anchorEl = null,
   overlayZIndex = 120,
-  /** Workflow canvas only — procedures omit trigger/output fields. */
+  /** Workflow canvas / tool drawers — include trigger + task output trees. */
   showTriggerFields = false,
+  /** `dock` = left of enclosing panel, full height; `dropdown` = small popover under the trigger. */
+  placement = 'dock',
+  /** Current prompt text — a field's + shows as a check for as long as its token is in here. */
+  insertedText = '',
+  /**
+   * Optional full category list override (e.g. Update-state Add field). When set,
+   * BASE/WORKFLOW catalogs are ignored and only these categories appear.
+   */
+  categories: categoriesProp = null,
 }) {
   const [search, setSearch] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('business');
-  const [pos, setPos] = useState(() => computePosition(anchorEl));
-  const rootRef = useRef(null);
-
-  const categories = useMemo(
-    () => (showTriggerFields ? [...BASE_CATEGORIES, TRIGGER_CATEGORY] : BASE_CATEGORIES),
-    [showTriggerFields],
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    () => (Array.isArray(categoriesProp) && categoriesProp[0]?.id) || 'business',
   );
+  const [searchSelectedId, setSearchSelectedId] = useState(null);
+  const [pos, setPos] = useState(() => computePosition(anchorEl, placement));
+  const [userMoved, setUserMoved] = useState(false);
+  /** Full = every category/field is shown. Partial = a sparse preview — just Business
+   *  fields and the trigger step, each trimmed to one field. */
+  const [completeness, setCompleteness] = useState('full');
+  const rootRef = useRef(null);
+  const dragRef = useRef(null);
+
+  const hasCustomCategories = Array.isArray(categoriesProp) && categoriesProp.length > 0;
+
+  const categories = useMemo(() => {
+    if (hasCustomCategories) {
+      return categoriesProp.map(normalizeCategory);
+    }
+    const base = BASE_CATEGORIES.map(normalizeCategory);
+    const all = showTriggerFields ? [...base, ...WORKFLOW_CATEGORIES.map(normalizeCategory)] : base;
+    if (!showTriggerFields || completeness !== 'partial') return all;
+    // Partial preview — only two categories exist at all this early in the run, each
+    // down to a single field, so the picker reads as genuinely sparse.
+    return PARTIAL_CATEGORY_IDS
+      .map((id) => all.find((cat) => cat.id === id))
+      .filter(Boolean)
+      .map(firstFieldOnlyCategory);
+  }, [showTriggerFields, completeness, hasCustomCategories, categoriesProp]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
+  const query = search.trim();
+  const isSearching = query.length > 0;
 
-  const filteredFields = useMemo(() => {
-    if (!selectedCategory) return [];
-    const q = search.toLowerCase();
-    return selectedCategory.fields.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q)
-        || f.value.toLowerCase().includes(q)
-        || f.sample.toLowerCase().includes(q.replace(/"/g, '')),
+  const matchingCategories = useMemo(() => {
+    if (!isSearching) return [];
+    return categories
+      .map((cat) => {
+        const trees = filterTrees(cat.trees, query);
+        return {
+          ...cat,
+          trees,
+          count: countLeaves(trees),
+        };
+      })
+      .filter((cat) => cat.count > 0);
+  }, [categories, isSearching, query]);
+
+  const activeContentCategory = useMemo(() => {
+    if (isSearching) {
+      if (!searchSelectedId) return null;
+      return matchingCategories.find((c) => c.id === searchSelectedId) ?? null;
+    }
+    return selectedCategory;
+  }, [isSearching, searchSelectedId, matchingCategories, selectedCategory]);
+
+  const contentHeading = (
+    activeContentCategory
+    && BASE_CATEGORY_IDS.has(activeContentCategory.id)
+    && activeContentCategory.contentHeading
+  ) || null;
+
+  const visibleTrees = useMemo(() => {
+    if (!isSearching) return selectedCategory?.trees ?? [];
+    if (searchSelectedId) {
+      return matchingCategories.find((c) => c.id === searchSelectedId)?.trees ?? [];
+    }
+    // Stack every matching category's trees while searching.
+    return matchingCategories.flatMap((cat) => cat.trees);
+  }, [isSearching, selectedCategory, matchingCategories, searchSelectedId]);
+
+  const sidebarCategories = useMemo(
+    () => (isSearching ? matchingCategories : categories),
+    [categories, matchingCategories, isSearching],
+  );
+
+  const baseSidebarCategories = useMemo(
+    () => sidebarCategories.filter((cat) => BASE_CATEGORY_IDS.has(cat.id)),
+    [sidebarCategories],
+  );
+
+  const workflowSidebarCategories = useMemo(
+    () => sidebarCategories.filter((cat) => !BASE_CATEGORY_IDS.has(cat.id)),
+    [sidebarCategories],
+  );
+
+  const sidebarNeedsScrollbar =
+    showTriggerFields
+    && !isSearching
+    && workflowSidebarCategories.length > SIDEBAR_VISIBLE_WORKFLOW_COUNT;
+  // `dock` placements are always full height, so the body has room to grow and scroll
+  // internally — only the compact `dropdown` placement still needs the fixed-height clip.
+  const clipSidebarToFiveSteps = sidebarNeedsScrollbar && placement === 'dropdown';
+
+  const renderCategoryButton = (cat) => {
+    const isSelected = isSearching
+      ? cat.id === searchSelectedId
+      : cat.id === selectedCategoryId;
+    return (
+      <button
+        key={cat.id}
+        type="button"
+        className={`${styles.catBtn}${isSelected ? ` ${styles.catBtnSelected}` : ''}`}
+        onClick={() => {
+          if (isSearching) setSearchSelectedId((prev) => (prev === cat.id ? null : cat.id));
+          else setSelectedCategoryId(cat.id);
+        }}
+      >
+        <CatLabel text={cat.label} />
+        <span className={styles.catMeta}>
+          <span className={styles.catCount}>{cat.count}</span>
+          <span
+            className="material-symbols-outlined"
+            style={{ fontSize: 16, color: '#8f8f8f', fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+          >
+            chevron_right
+          </span>
+        </span>
+      </button>
     );
-  }, [selectedCategory, search]);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    setSearchSelectedId(null);
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+    setSearchSelectedId(null);
+  };
+
+  const handleSelect = (value, name, field) => {
+    onSelectField?.(value, name, field);
+  };
 
   useEffect(() => {
-    if (!showTriggerFields && selectedCategoryId === 'trigger') {
-      setSelectedCategoryId('business');
+    if (categories.length && !categories.some((c) => c.id === selectedCategoryId)) {
+      setSelectedCategoryId(categories[0].id);
     }
-  }, [showTriggerFields, selectedCategoryId]);
+  }, [categories, selectedCategoryId]);
 
   useLayoutEffect(() => {
-    setPos(computePosition(anchorEl));
-  }, [anchorEl]);
+    if (userMoved) return;
+    setPos(computePosition(anchorEl, placement));
+  }, [anchorEl, placement, userMoved]);
 
+  // Persist until the close button or the Fields toolbar icon toggles it —
+  // no Escape / outside-click dismiss.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    const onDown = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) onClose();
+    const reposition = () => {
+      if (userMoved) {
+        setPos((prev) => {
+          const next = computePosition(anchorEl, placement);
+          const margin = 12;
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const width = next.width;
+          const maxHeight = next.maxHeight;
+          const top = Math.min(Math.max(margin, prev.top), Math.max(margin, vh - maxHeight - margin));
+          const left = Math.min(Math.max(margin, prev.left), Math.max(margin, vw - width - margin));
+          return { top, left, width, maxHeight };
+        });
+        return;
+      }
+      setPos(computePosition(anchorEl, placement));
     };
-    const reposition = () => setPos(computePosition(anchorEl));
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('mousedown', onDown);
     window.addEventListener('resize', reposition);
-    // Capture phase so scrolling any nested container (e.g. the drawer's own
-    // scrollable body) is caught too, not just window-level scrolling.
     document.addEventListener('scroll', reposition, true);
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousedown', onDown);
       window.removeEventListener('resize', reposition);
       document.removeEventListener('scroll', reposition, true);
     };
-  }, [onClose, anchorEl]);
+  }, [anchorEl, placement, userMoved]);
+
+  // Flush-dock: whatever panel we're actually docked against gets its near corners
+  // squared off too, so the seam between it and this popover reads as one straight
+  // line rather than a rounded notch. Self-contained — no caller needs to opt in.
+  // `FLUSH_DOCK_GLOBAL_CLASS` (plain, unscoped) is what actually reaches the visible
+  // rounded card — the docked element itself (`.agent-builder__rhs`) is just an
+  // unstyled positioning wrapper; its rounded white surface is a separate CSS-module
+  // child (`RHS.module.css`'s `.rhs-panel`) that can't see `styles.flushDockPanel`.
+  const dockedPanelEl = getDockedPanelEl(anchorEl, placement);
+  useEffect(() => {
+    if (!dockedPanelEl) return undefined;
+    dockedPanelEl.classList.add(styles.flushDockPanel, FLUSH_DOCK_GLOBAL_CLASS);
+    return () => dockedPanelEl.classList.remove(styles.flushDockPanel, FLUSH_DOCK_GLOBAL_CLASS);
+  }, [dockedPanelEl]);
+
+  const clampPos = (top, left, width, maxHeight) => {
+    const margin = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return {
+      top: Math.min(Math.max(margin, top), Math.max(margin, vh - maxHeight - margin)),
+      left: Math.min(Math.max(margin, left), Math.max(margin, vw - width - margin)),
+      width,
+      maxHeight,
+    };
+  };
+
+  const handleDragPointerDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('a, button, input, textarea, select, [role="button"]')) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTop = pos.top;
+    const startLeft = pos.left;
+    dragRef.current = { startX, startY, startTop, startLeft };
+    setUserMoved(true);
+
+    const onMove = (ev) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const nextTop = drag.startTop + (ev.clientY - drag.startY);
+      const nextLeft = drag.startLeft + (ev.clientX - drag.startX);
+      setPos((prev) => clampPos(nextTop, nextLeft, prev.width, prev.maxHeight));
+    };
+
+    const onUp = () => {
+      dragRef.current = null;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.removeProperty('user-select');
+      document.body.style.removeProperty('cursor');
+    };
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
 
   return createPortal(
     <div
       ref={rootRef}
-      className={styles.popover}
+      className={`${styles.popover}${placement === 'dropdown' ? ` ${styles.popoverDropdown}` : ''}${dockedPanelEl ? ` ${styles.popoverFlushDock}` : ''}`}
       style={{
         top: pos.top,
         left: pos.left,
         width: pos.width,
-        maxHeight: pos.maxHeight,
+        // Spacious 5-step card: don't let the dock/RHS maxHeight crop the list.
+        maxHeight: clipSidebarToFiveSteps ? undefined : pos.maxHeight,
+        // Match the anchor panel's own height exactly, not just "tall".
+        height: dockedPanelEl ? pos.maxHeight : undefined,
         zIndex: overlayZIndex,
       }}
       role="dialog"
       aria-label="Fields"
     >
-      <div className={styles.header}>
-        <span className={styles.title}>Fields</span>
-        <div className={styles.headerRight}>
-          <div className={styles.search}>
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 18, color: '#8f8f8f', flexShrink: 0, fontVariationSettings: "'FILL' 0, 'wght' 300" }}
-            >
-              search
-            </span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
-              className={styles.searchInput}
-              aria-label="Search fields"
-            />
+      <div
+        className={styles.header}
+        onPointerDown={handleDragPointerDown}
+        role="presentation"
+      >
+        <div className={styles.titleBlock}>
+          <div className={styles.titleRow}>
+            <span className={styles.title}>Fields</span>
           </div>
-          <button type="button" onClick={onClose} className={styles.closeBtn} aria-label="Close">
-            <img src={CloseIcon} alt="" width={24} height={24} />
-          </button>
+          <span className={styles.subtitle}>
+            Select a field to add it to your prompt. It&apos;s replaced with the
+            actual value when the agent runs.{' '}
+            <a
+              href={FIELDS_LEARN_MORE_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.learnMore}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Learn more
+            </a>
+          </span>
+        </div>
+        <button type="button" onClick={onClose} className={styles.closeBtn} aria-label="Close">
+          <img src={CloseIcon} alt="" width={24} height={24} />
+        </button>
+      </div>
+
+      <div className={styles.searchRow}>
+        <div className={styles.search}>
+          <span
+            className="material-symbols-outlined"
+            style={{ fontSize: 18, color: '#8f8f8f', flexShrink: 0, fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+          >
+            search
+          </span>
+          <input
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search"
+            className={styles.searchInput}
+            aria-label="Search fields"
+          />
+          {isSearching && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className={styles.searchClear}
+              aria-label="Clear search"
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 18, fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+              >
+                close
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={styles.body}>
-        <div className={styles.sidebar}>
-          {categories.map((cat) => {
-            const isSelected = cat.id === selectedCategoryId;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                className={`${styles.catBtn} ${isSelected ? styles.catBtnSelected : ''}`}
-                onClick={() => setSelectedCategoryId(cat.id)}
-                title={cat.label}
-              >
-                <span className={styles.catLabel}>{cat.label}</span>
-                <span className={styles.catMeta}>
-                  <span className={styles.catCount}>{cat.fields.length}</span>
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: 16, color: '#8f8f8f', fontVariationSettings: "'FILL' 0, 'wght' 300" }}
-                  >
-                    chevron_right
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+      <div
+        className={`${styles.body}${clipSidebarToFiveSteps ? ` ${styles.bodySpacious}` : ''}`}
+        style={clipSidebarToFiveSteps ? { height: SPACIOUS_BODY_HEIGHT_PX } : undefined}
+      >
+        <div
+          className={`${styles.sidebar}${sidebarNeedsScrollbar ? ` ${styles.sidebarScrollable}` : ''}`}
+        >
+          {baseSidebarCategories.map(renderCategoryButton)}
+          {workflowSidebarCategories.length > 0 && (
+            <>
+              {!hasCustomCategories && (
+                <div className={styles.sidebarSectionHeading}>
+                  {WORKFLOW_SECTION_HEADING}
+                </div>
+              )}
+              {workflowSidebarCategories.map(renderCategoryButton)}
+            </>
+          )}
         </div>
-
-        <div className={styles.divider} />
 
         <div className={styles.content}>
           <div className={styles.card}>
-            <div className={styles.section}>
-              <div className={styles.sectionBody}>
-                <div className={styles.sectionLabel}>
-                  {selectedCategory?.sectionLabel ?? 'Trigger output'}
+            {visibleTrees.length === 0 ? (
+              <span className={styles.empty}>{`No fields match "${query}"`}</span>
+            ) : (
+              <>
+                {contentHeading && (
+                  <h3 className={styles.contentHeading}>{contentHeading}</h3>
+                )}
+                <div className={styles.treeList}>
+                  {visibleTrees.map((node) => {
+                    const kids = node.children || [];
+                    const isSingleLevel = kids.length > 0 && kids.every((child) => child.type === 'field');
+                    // Accordion only when more than one root section exists (or the node nests further).
+                    const allowCollapse = visibleTrees.length > 1 || !isSingleLevel;
+                    return (
+                      <TreeBranch
+                        key={node.id || node.value || node.name || node.label}
+                        node={node}
+                        onSelect={handleSelect}
+                        allowCollapse={allowCollapse}
+                        insertedText={insertedText}
+                      />
+                    );
+                  })}
                 </div>
-                <div className={styles.fieldList}>
-                  {filteredFields.length === 0 ? (
-                    <span className={styles.empty}>No fields match your search.</span>
-                  ) : (
-                    filteredFields.map((field) => (
-                      <FieldRow key={field.value} field={field} onClick={onSelectField} />
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

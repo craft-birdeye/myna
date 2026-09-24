@@ -19,6 +19,8 @@ export interface DefaultVoiceDrawerProps {
   speed: number
   onClose: () => void
   onSave: (next: { voice: string; speed: number }) => void
+  /** Defaults to voice wording; use `'persona'` for the TTS failover path. */
+  terminology?: 'voice' | 'persona'
 }
 
 export interface AdditionalVoiceDrawerProps {
@@ -29,4 +31,6 @@ export interface AdditionalVoiceDrawerProps {
   defaultVoice: string
   onClose: () => void
   onSave: (config: AdditionalVoiceConfig) => void
+  /** Defaults to voice wording; use `'persona'` for the TTS failover path. */
+  terminology?: 'voice' | 'persona'
 }

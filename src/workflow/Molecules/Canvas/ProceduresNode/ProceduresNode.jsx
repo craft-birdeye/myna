@@ -7,6 +7,7 @@ const ProcedureBookIcon = ({ disabled = false }) => (
 );
 
 import CanvasNodeHeader from '../CanvasNodeHeader/CanvasNodeHeader';
+import CanvasNodeBadge from '../CanvasNodeBadge/CanvasNodeBadge';
 import styles from './ProceduresNode.module.css';
 import '../CanvasNodeBody/CanvasNodeBody.css';
 import '../CanvasNode/CanvasNode.css';
@@ -34,6 +35,7 @@ export default function ProceduresNode({
   onRemoveProcedure,
   onSelectProcedure,
   selectedProcedureId = null,
+  runStatus,
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [on, setOn] = useState(toggleEnabled);
@@ -88,9 +90,11 @@ export default function ProceduresNode({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      <CanvasNodeBadge nodeType="procedures" label="Procedures" runStatus={runStatus} />
       <CanvasNodeHeader
         nodeType="procedures"
         label="Procedures"
+        runStatus={runStatus}
         hasToggle={hasToggle}
         toggleEnabled={on}
         toggleDisabled={toggleDisabled}

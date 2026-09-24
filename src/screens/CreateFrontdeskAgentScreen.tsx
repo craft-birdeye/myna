@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { Icon, InfoCard, Link, TopNav } from '../components'
+import { ChevronDown, Plus, Sparkles } from 'lucide-react'
+import { InfoCard, Link, TopNav, type LibraryCardGlyph, type LibraryCardTone } from '../components'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 
 interface CreateFrontdeskAgentScreenProps {
@@ -8,26 +9,39 @@ interface CreateFrontdeskAgentScreenProps {
   onUseTemplate?: (templateTitle: string) => void
 }
 
-const TEMPLATES = [
+const TEMPLATES: {
+  title: string
+  description: string
+  glyph: LibraryCardGlyph
+  tone: LibraryCardTone
+}[] = [
   {
-    title: 'Routing and triage',
+    title: 'SMS and Webchat',
     description:
-      'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat',
+    tone: 'info',
   },
   {
     title: 'New patient intake',
     description:
       'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake',
+    tone: 'success',
   },
   {
     title: 'Established patient scheduling',
     description:
       'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
+    glyph: 'scheduling',
+    tone: 'ai',
   },
   {
     title: 'Urgent escalations',
     description:
       'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
+    glyph: 'routing',
+    tone: 'danger',
   },
 ]
 
@@ -46,7 +60,7 @@ function AgentSetupIllustration() {
                 <path d="M18 0 L18 12 M18 12 L6 24 M18 12 L30 24" stroke="#afbcdf" strokeWidth="1" />
               </svg>
               <div className="relative z-[1] flex size-5 items-center justify-center rounded-full bg-surface-l2">
-                <Icon name="add" size={12} className="text-text-icon" />
+                <Plus className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               </div>
             </div>
           ))}
@@ -54,7 +68,7 @@ function AgentSetupIllustration() {
 
         <div className="mt-xs flex w-full gap-xs">
           <div className="flex h-[23px] w-[72px] shrink-0 items-center justify-center rounded-sm border border-dashed border-text-icon bg-surface-l2">
-            <Icon name="add" size={16} className="text-text-icon" />
+            <Plus className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           </div>
           <div className="flex h-[23px] flex-1 items-center rounded-sm bg-surface-l2 pl-sm">
             <div className="h-1 w-[80%] rounded-full bg-border-strong" />
@@ -63,7 +77,7 @@ function AgentSetupIllustration() {
       </div>
 
       <div className="absolute -right-[62px] -top-[23px] flex w-[116px] items-end gap-xs rounded-sm border border-[#6834b7] bg-[#ecf5fd] px-sm py-md">
-        <Icon name="auto_awesome" size={20} className="text-[#6834b7]" />
+        <Sparkles className="size-5 text-[#6834b7]" strokeWidth={1.6} absoluteStrokeWidth />
         <div className="flex flex-1 flex-col gap-xs">
           <div className="h-1 w-full rounded-full bg-primary" />
           <div className="h-1 w-[60%] rounded-full bg-[#9aceff]" />
@@ -98,12 +112,12 @@ export function CreateFrontdeskAgentScreen({
     <div className="flex h-full flex-col">
       <TopNav initials="S" />
 
-      <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center gap-sm bg-surface px-2xl py-xl">
         <button
           type="button"
           aria-label="Back"
           onClick={onBack}
-          className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
         >
           <BackArrowIcon />
         </button>
@@ -132,7 +146,7 @@ export function CreateFrontdeskAgentScreen({
               className="flex items-center gap-xs text-body text-text-primary"
             >
               Select from <span className="text-text-action">library</span>
-              <Icon name="expand_more" size={16} className="text-text-action" />
+              <ChevronDown className="size-4 text-text-action" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>
@@ -143,6 +157,8 @@ export function CreateFrontdeskAgentScreen({
               key={template.title}
               title={template.title}
               description={template.description}
+              glyph={template.glyph}
+              tone={template.tone}
               onAction={() => onUseTemplate?.(template.title)}
             />
           ))}

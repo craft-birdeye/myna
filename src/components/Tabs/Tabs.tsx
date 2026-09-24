@@ -1,28 +1,38 @@
 import { TabCountPill } from './TabCountPill'
 import { TabsProps } from './Tabs.types'
 
-export function Tabs({ tabs, activeTab, onChange }: TabsProps) {
+/**
+ * Aero underline text tabs: full-width `border-b` baseline; each tab uses a 2px bottom
+ * border (primary or transparent) with `-mb-px` so the active indicator stacks on the baseline.
+ */
+export function Tabs({ tabs, activeTab, onChange, showBaseline = true, disabledIds = [] }: TabsProps) {
   return (
-    <div className="flex items-end gap-xs">
+    <div
+      role="tablist"
+      className={`flex flex-wrap items-end gap-x-sm gap-y-sm${showBaseline ? ' border-b border-border' : ''}`}
+    >
       {tabs.map((tab) => {
         const active = tab.id === activeTab
+        const disabled = disabledIds.includes(tab.id)
         return (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={active}
+            disabled={disabled}
             onClick={() => onChange(tab.id)}
-            className="flex flex-col items-stretch"
+            className={`inline-flex -mb-px items-center gap-xs border-b-2 px-sm pb-sm pt-xs text-body transition-colors ${
+              disabled
+                ? 'cursor-not-allowed border-transparent text-text-tertiary'
+                : active
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:border-border hover:text-text-primary'
+            }`}
           >
-            <span
-              className={`flex h-9 items-center gap-xs rounded-sm px-sm text-body transition-colors ${
-                active ? 'text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-              {tab.count !== undefined && <TabCountPill count={tab.count} />}
-            </span>
-            <span className={`h-[2px] w-full ${active ? 'bg-primary' : 'bg-transparent'}`} />
+            {tab.icon}
+            {tab.label}
+            {tab.count !== undefined && <TabCountPill count={tab.count} />}
           </button>
         )
       })}

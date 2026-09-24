@@ -11,4 +11,8 @@ export interface TabsProps {
   tabs: Tab[]
   activeTab: string
   onChange: (tabId: string) => void
+  /** Full-width grey baseline under the tab row — off for agent instance header tabs. */
+  showBaseline?: boolean
+  /** Tab ids that can't be selected yet — dimmed and non-interactive. */
+  disabledIds?: string[]
 }

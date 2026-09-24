@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { DataTable, HeaderSearchField, Icon, Link, TopNav } from '../components'
+import { ChevronRight } from 'lucide-react'
+import { DataTable, HeaderSearchField, Link, TopNav } from '../components'
 
 interface WebWidgetRow {
   name: string
@@ -72,11 +73,11 @@ export function WebWidgetsScreen({ onBack }: WebWidgetsScreenProps) {
         <Link as="button" onClick={onBack} className="text-body">
           Settings
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-tertiary" />
+        <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
         <Link as="button" onClick={onBack} className="text-body">
           Widgets
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-tertiary" />
+        <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
         <span className="text-body text-text-primary">Web widgets</span>
       </div>
 
@@ -88,7 +89,7 @@ export function WebWidgetsScreen({ onBack }: WebWidgetsScreenProps) {
           <HeaderSearchField open={searchOpen} value={search} onOpenChange={setSearchOpen} onChange={setSearch} placeholder="Search widgets…" />
           <button
             type="button"
-            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
           >
             Create widget
           </button>

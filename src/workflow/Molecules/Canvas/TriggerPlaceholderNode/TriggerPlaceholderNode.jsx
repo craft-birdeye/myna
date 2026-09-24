@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import AddStepButton from '../../../FlowCanvas/AddStepButton';
 import { getFlowDragPayload, isDraggingFlowKind } from '../../../flowDragData';
 import './TriggerPlaceholderNode.css';
@@ -15,6 +15,10 @@ export default function TriggerPlaceholderNode({
   agentName = '',
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
+
+  useEffect(() => {
+    if (!isDraggingTrigger) setIsDragOver(false);
+  }, [isDraggingTrigger]);
 
   const handleDragOver = useCallback((e) => {
     if (!isDraggingFlowKind(e.dataTransfer, 'trigger')) return;

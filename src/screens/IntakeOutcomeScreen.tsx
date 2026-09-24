@@ -1,7 +1,7 @@
+import { ArrowDown, ArrowUp, Calendar, ChevronDown } from 'lucide-react'
 import {
   ChartCard,
   DonutChart,
-  Icon,
   SankeyChart,
   StackedBarChart,
   SummaryStats,
@@ -133,7 +133,7 @@ const LOCATION_COLUMNS: Column<LocationRow>[] = [
             row.rateDelta >= 0 ? 'text-chip-success-text' : 'text-chip-danger-text'
           }`}
         >
-          <Icon name={row.rateDelta >= 0 ? 'arrow_upward' : 'arrow_downward'} size={11} />
+          {row.rateDelta >= 0 ? <ArrowUp className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <ArrowDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
           {Math.abs(row.rateDelta)}%
         </span>
       </span>
@@ -162,7 +162,7 @@ function MiniKpis({ items }: { items: MiniKpi[] }) {
                   k.trend === 'down' ? 'text-chip-danger-text' : 'text-chip-success-text'
                 }`}
               >
-                <Icon name={k.trend === 'down' ? 'arrow_downward' : 'arrow_upward'} size={12} />
+                {k.trend === 'down' ? <ArrowDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <ArrowUp className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
                 {k.delta}
               </span>
             )}
@@ -192,7 +192,7 @@ export function IntakeOutcomeScreen() {
       <TopNav initials="S" />
 
       {/* page header */}
-      <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-surface px-2xl py-xl">
         <div>
           <h1 className="text-h3 text-text-primary">Intakes completed</h1>
           <p className="text-small text-text-secondary">
@@ -201,11 +201,11 @@ export function IntakeOutcomeScreen() {
         </div>
         <button
           type="button"
-          className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+          className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
         >
-          <Icon name="calendar_today" size={18} className="text-text-icon" />
+          <Calendar className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           Last 3 months
-          <Icon name="expand_more" size={20} className="text-text-icon" />
+          <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
 

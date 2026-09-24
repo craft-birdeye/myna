@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
-import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { SendIcon } from '../assets/SendIcon'
 import {
   AttachMenuPopover,
@@ -2239,29 +2237,22 @@ export function RecommendationDetailScreen({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header — flush-centered 720px column, matching the create-agent chat header. */}
-      <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
-        <div className="flex w-full max-w-[720px] items-center gap-sm">
+      {/* Header — full-bleed, left-aligned like CreateAiGhostwriterShellHeader. */}
+      <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+        <div className="flex min-w-0 w-full items-center gap-xs">
           <button
             type="button"
             aria-label="Back to recommendations"
             onClick={onBack}
             className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
           >
-            <BackArrowIcon />
+            <Icon name="arrow_back" size={20} />
           </button>
-          {rec.source === 'feedback' ? (
-            <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
-          ) : (
-            <AiAgentIcon size={16} className="shrink-0" />
-          )}
-          <div className="flex min-w-0 flex-1 items-center gap-sm">
-            <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
-            <Chip
-              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
-            />
-          </div>
+          <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
+          <Chip
+            label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
+          />
         </div>
       </div>
 

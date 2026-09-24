@@ -45,9 +45,9 @@ export const ReviewTasks = {
           'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
       },
       {
-        label: 'Review details extraction',
+        label: 'Extract review details',
         description:
-          'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+          'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
       },
       {
         label: 'Review responder',
@@ -55,9 +55,9 @@ export const ReviewTasks = {
         description: 'Reply to the review using the generated response',
       },
       {
-        label: 'Response generation',
+        label: 'Generate response',
         description:
-          'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+          'Assembles the response using the drafted strategy, extracted details, and brand voice',
       },
       {
         label: 'Message assembly',

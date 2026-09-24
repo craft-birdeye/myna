@@ -6,7 +6,6 @@ import {
   DateRangeSelector,
   DonutChart,
   FilterPanel,
-  Icon,
   ReportHeader,
   SankeyChart,
   StackedBarChart,
@@ -17,6 +16,7 @@ import {
   type SankeyLink,
   type SankeyNode,
 } from '../components'
+import { ListFilter } from 'lucide-react'
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l.toLowerCase().replace(/\s+/g, '-'), label: l }))
 
@@ -183,9 +183,9 @@ export function HCWaitlistFilledScreen({ isDental = false }: { isDental?: boolea
                 type="button"
                 aria-label="Filters"
                 onClick={() => setFilterOpen((o) => !o)}
-                className={`flex size-9 items-center justify-center rounded-sm text-text-icon ${filterOpen ? 'bg-surface-selected' : 'border border-border-selected bg-surface hover:bg-surface-l2'}`}
+                className={`flex size-[34px] items-center justify-center rounded-md text-text-icon ${filterOpen ? 'bg-surface-selected' : 'border border-border-selected bg-surface hover:bg-surface-l2'}`}
               >
-                <Icon name="filter_list" size={20} />
+                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           }

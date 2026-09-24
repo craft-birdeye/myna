@@ -2,7 +2,16 @@ export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
 export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
-export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export { AiBuilderPanel } from './AiBuilderPanel/AiBuilderPanel'
+export type { AiBuilderPanelProps } from './AiBuilderPanel/AiBuilderPanel.types'
+export {
+  CallTranscriptSection,
+  getUserRatingForLogStatus,
+  RunConversationThread,
+  RunDetailsPanel,
+} from './RunDetailsPanel/RunDetailsPanel'
+export { TestRunPanel } from './TestRunPanel/TestRunPanel'
+export type { TestRunPanelProps, TestRunStepStatus } from './TestRunPanel/TestRunPanel.types'
 export type {
   RunConversationEntry,
   RunDetailsPanelProps,
@@ -13,6 +22,8 @@ export type {
 export { Chip } from './Chip/Chip'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
+export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'
+export type { ReviewCardBodyProps, ReviewCardData, ReviewCardReply, StarRatingProps } from './ReviewCard/ReviewCard.types'
 export { ProcedureSidePanel } from './ProcedureSidePanel/ProcedureSidePanel'
 export type { ProcedureSidePanelProps, ProcedureSidePanelStep } from './ProcedureSidePanel/ProcedureSidePanel.types'
 export { TranscriptSidePanel } from './TranscriptSidePanel/TranscriptSidePanel'
@@ -27,7 +38,7 @@ export { EmptyState } from './EmptyState/EmptyState'
 export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
-export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
+export type { TooltipProps, TooltipVariant, TooltipSide } from './Tooltip/Tooltip.types'
 export {
   VoiceCallEngineSettings,
   TtsModelSettings,
@@ -46,6 +57,7 @@ export {
   AGENT_VOICE_OPTIONS,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
 } from './VoiceSettingsDrawers/VoiceSettingsDrawers'
 export type {
   AdditionalVoiceConfig,
@@ -58,15 +70,18 @@ export type {
   BookTestAppointmentModalProps,
   BookTestAppointmentValues,
 } from './BookTestAppointmentModal/BookTestAppointmentModal.types'
+export { AeroFormModal } from './AeroFormModal/AeroFormModal'
 export { ContextModal } from './ContextModal/ContextModal'
 export { CustomizeColumnsDrawer } from './CustomizeColumnsDrawer/CustomizeColumnsDrawer'
 export { EmptyHintField } from './EmptyHintField/EmptyHintField'
 export { DateChange } from './DateChange/DateChange'
+export { DateRangePickerPanel, DATE_RANGE_PRESETS } from './DateRangePickerPanel/DateRangePickerPanel'
 export { DateRangeSelector } from './DateRangeSelector/DateRangeSelector'
 export { ReportHeader } from './ReportHeader/ReportHeader'
 export { FilterPanel } from './FilterPanel/FilterPanel'
 export { HeaderSearchField } from './HeaderSearchField/HeaderSearchField'
 export { FormDrawer } from './FormDrawer/FormDrawer'
+export { ScheduleDemoPanel } from './ScheduleDemoPanel/ScheduleDemoPanel'
 export { ProceduresPickerDrawer } from './ProceduresPickerDrawer/ProceduresPickerDrawer'
 export { IntegrationsPickerDrawer } from './IntegrationsPickerDrawer/IntegrationsPickerDrawer'
 export { ProcedureListCard } from './ProcedureListCard/ProcedureListCard'
@@ -79,6 +94,8 @@ export type { IntegrationSelectCardProps } from './IntegrationSelectCard/Integra
 export { IntakeFormPreviewDrawer } from './IntakeFormPreviewDrawer/IntakeFormPreviewDrawer'
 export { InfoCard } from './InfoCard/InfoCard'
 export { InfoCardListItem } from './InfoCard/InfoCardListItem'
+export { LibraryCardIcon } from './LibraryCardIcon/LibraryCardIcon'
+export type { LibraryCardGlyph, LibraryCardTone } from './LibraryCardIcon/LibraryCardIcon'
 export { Link } from './Link/Link'
 export { LogDetailsPanel } from './LogDetailsPanel/LogDetailsPanel'
 export type {
@@ -98,6 +115,8 @@ export { AttachMenuPopover } from './AttachMenuPopover/AttachMenuPopover'
 export { PromptComposer } from './PromptComposer/PromptComposer'
 export { MediaLibraryModal } from './MediaLibraryModal/MediaLibraryModal'
 export { FilesModal } from './FilesModal/FilesModal'
+export { MessageTemplateModal } from './MessageTemplateModal/MessageTemplateModal'
+export { ChecklistDropdownPanel } from './ChecklistDropdown/ChecklistDropdownPanel'
 export { SelectMenu } from './SelectMenu/SelectMenu'
 export { BookingTemplateSelectField } from './BookingTemplateSelectField/BookingTemplateSelectField'
 export { BaseFieldsEditor, AddFieldForm, FieldTypeIcon, fieldTypeLabel, SimpleSelect } from './BaseFieldsEditor/BaseFieldsEditor'
@@ -112,8 +131,35 @@ export { QuickSendModal } from './QuickSendModal/QuickSendModal'
 export { Toast } from './Toast/Toast'
 export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
-export { EstimateSavingsModal } from './EstimateSavingsModal/EstimateSavingsModal'
-export type { EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { EstimateSavingsModal, REVIEW_RESPONSE_SAVINGS_COPY, parseTimeSavedHours } from './EstimateSavingsModal/EstimateSavingsModal'
+export type { EstimateSavingsCopy, EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { AgentsIntroVideoModal } from './AgentsIntroVideoModal/AgentsIntroVideoModal'
+export type { AgentsIntroVideoModalProps } from './AgentsIntroVideoModal/AgentsIntroVideoModal.types'
+export { WorkflowCoachTour } from './WorkflowCoachTour/WorkflowCoachTour'
+export { WORKFLOW_COACH_STEPS } from './WorkflowCoachTour/WorkflowCoachTour.types'
+export type {
+  WorkflowCoachTourProps,
+  WorkflowCoachStep,
+  WorkflowCoachPlacement,
+} from './WorkflowCoachTour/WorkflowCoachTour.types'
+export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export { GlossaryModal } from './HelpCenterPanel/GlossaryModal'
+export type { GlossaryModalProps } from './HelpCenterPanel/GlossaryModal'
+export type {
+  HelpCenterPanelProps,
+  HelpCenterView,
+  HelpVideoItem,
+  HelpArticleItem,
+  HelpGlossaryItem,
+  HelpDictionaryItem,
+} from './HelpCenterPanel/HelpCenterPanel.types'
+export { HELP_GLOSSARY, HELP_DICTIONARY } from './HelpCenterPanel/HelpCenterPanel.types'
+export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
+export type {
+  AgentLibraryPreviewData,
+  AgentLibraryPreviewModalProps,
+  AgentLibraryPreviewStep,
+} from './AgentLibraryPreviewModal/AgentLibraryPreviewModal.types'
 export { ViewActivityDrawer } from './ViewActivityDrawer/ViewActivityDrawer'
 export { WeekCalendar } from './WeekCalendar/WeekCalendar'
 export { DayCalendar } from './DayCalendar/DayCalendar'
@@ -143,9 +189,12 @@ export { SummaryStats } from './charts/SummaryStats'
 export { StackedBarChart } from './charts/StackedBarChart'
 export { DonutChart } from './charts/DonutChart'
 export { SankeyChart } from './charts/SankeyChart'
+export { SessionsFunnelSankey } from './charts/SessionsFunnelSankey'
+export { WorkingHoursBreakdownChart } from './charts/WorkingHoursBreakdownChart'
 export { Heatmap } from './charts/Heatmap'
 export { ChartTooltip } from './charts/ChartTooltip'
 export { chartColors } from './charts/chartColors'
+export { ReviewResponseOutcomesCharts } from './charts/ReviewResponseOutcomesCharts'
 export type { ChartCardProps } from './charts/ChartCard'
 export type { HBarItem, HBarListProps } from './charts/HBarList'
 export type { RatingBar, RatingBarChartProps } from './charts/RatingBarChart'
@@ -153,10 +202,12 @@ export type { TrendPoint, TrendLineChartProps } from './charts/TrendLineChart'
 export type { ChartStat, ChartStatRowProps } from './charts/ChartStatRow'
 export type { SummaryStat, SummaryStatsProps } from './charts/SummaryStats'
 export { CallRecordingPlayer } from './CallRecordingPlayer/CallRecordingPlayer'
+export type { CallRecordingPlayerProps, CallRecordingPlayerHandle } from './CallRecordingPlayer/CallRecordingPlayer.types'
+export { CallAiSummary, DEFAULT_CALL_AI_SUMMARY } from './CallAiSummary/CallAiSummary'
+export type { CallAiSummaryProps } from './CallAiSummary/CallAiSummary.types'
 export { FallbackMessageField } from './FallbackMessageField/FallbackMessageField'
 export type { FallbackMessageFieldProps } from './FallbackMessageField/FallbackMessageField.types'
 export { AudioPreviewPlayer } from './AudioPreviewPlayer/AudioPreviewPlayer'
-export type { CallRecordingPlayerProps } from './CallRecordingPlayer/CallRecordingPlayer.types'
 export { VoicemailMessage } from './VoicemailMessage/VoicemailMessage'
 export type { VoicemailMessageProps } from './VoicemailMessage/VoicemailMessage.types'
 export { VoiceChatDrawer } from './VoiceChatDrawer/VoiceChatDrawer'
@@ -164,11 +215,14 @@ export type { VoiceChatDrawerProps, VoiceChatMessage } from './VoiceChatDrawer/V
 export type { BarSeries, StackedBarChartProps } from './charts/StackedBarChart'
 export type { DonutDatum, DonutChartProps } from './charts/DonutChart'
 export type { SankeyNode, SankeyLink, SankeyChartProps } from './charts/SankeyChart'
+export type { SessionsFunnelSankeyProps } from './charts/SessionsFunnelSankey'
+export type { WorkingHoursBreakdownChartProps, WorkingHoursBreakdownRow } from './charts/WorkingHoursBreakdownChart'
 export type { HeatmapProps } from './charts/Heatmap'
 export type { ChartTooltipItem, ChartTooltipProps } from './charts/ChartTooltip'
 
 export type { LinkProps } from './Link/Link.types'
 export type { ChipProps, ChipVariant } from './Chip/Chip.types'
+export type { AeroFormModalProps } from './AeroFormModal/AeroFormModal.types'
 export type { ContextModalProps, ContextModalResult } from './ContextModal/ContextModal.types'
 export type {
   CustomizeColumnsDrawerProps,
@@ -192,6 +246,7 @@ export type { AttachMenuOption, AttachMenuPopoverProps } from './AttachMenuPopov
 export type { PromptComposerAttachment, PromptComposerProps } from './PromptComposer/PromptComposer.types'
 export type { MediaLibraryFile, MediaLibraryFolder, MediaLibraryModalProps } from './MediaLibraryModal/MediaLibraryModal.types'
 export type { FilesModalFile, FilesModalFileType, FilesModalProps } from './FilesModal/FilesModal.types'
+export type { MessageTemplateModalProps } from './MessageTemplateModal/MessageTemplateModal.types'
 export type { SelectMenuProps, SelectOption } from './SelectMenu/SelectMenu.types'
 export type { BookingTemplateSelectFieldProps, BookingTemplateSelectOption } from './BookingTemplateSelectField/BookingTemplateSelectField.types'
 export type { BaseFieldsEditorProps, BaseFieldsValue } from './BaseFieldsEditor/BaseFieldsEditor.types'

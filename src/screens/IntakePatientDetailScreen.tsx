@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Icon } from '../components/Icon/Icon'
-import { Tabs } from '../components'
+import { ChevronDown, MoreVertical, Search, Send } from 'lucide-react'
+import { Icon, Tabs } from '../components'
 import { PatientDetail } from '../components/QuickViewDrawer/QuickViewDrawer.types'
 import {
   AccordionSection,
@@ -87,20 +87,20 @@ export function IntakePatientDetailScreen({
               </div>
               <span className="mt-sm text-h3 text-text-primary">{patient.patient}</span>
               <div className="mt-sm flex items-center gap-xs">
-                <button type="button" className="flex size-8 items-center justify-center rounded-sm border border-border hover:bg-surface-hover" style={{ color: '#303030' }}>
-                  <Icon name="send" size={18} />
+                <button type="button" className="flex size-8 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2" style={{ color: '#303030' }}>
+                  <Send className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
-                <button type="button" className="flex size-8 items-center justify-center rounded-sm border border-border hover:bg-surface-hover">
+                <button type="button" className="flex size-8 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                   <img src={iconInbox} alt="SMS" className="size-[18px]" style={{ filter: 'brightness(0) invert(18.8%)' }} />
                 </button>
-                <button type="button" className="flex size-8 items-center justify-center rounded-sm border border-border hover:bg-surface-hover">
+                <button type="button" className="flex size-8 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                   <img src={iconMail} alt="Email" className="size-[18px]" style={{ filter: 'brightness(0) invert(18.8%)' }} />
                 </button>
-                <button type="button" className="flex size-8 items-center justify-center rounded-sm border border-border hover:bg-surface-hover">
+                <button type="button" className="flex size-8 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                   <img src={iconWhatsapp} alt="WhatsApp" className="size-4" style={{ filter: 'brightness(0) invert(18.8%)' }} />
                 </button>
-                <button type="button" className="flex size-8 items-center justify-center rounded-sm border border-border hover:bg-surface-hover" style={{ color: '#303030' }}>
-                  <Icon name="more_vert" size={18} />
+                <button type="button" className="flex size-8 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2" style={{ color: '#303030' }}>
+                  <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
             </div>
@@ -135,7 +135,7 @@ export function IntakePatientDetailScreen({
             </div>
             <button
               type="button"
-              className="flex h-8 shrink-0 items-center rounded-sm bg-[#6834B7] px-md text-body text-white hover:bg-[#5a2c9e]"
+              className="flex h-8 shrink-0 items-center rounded-md bg-[#6834B7] px-md text-body text-white hover:bg-[#5a2c9e]"
             >
               Generate summary
             </button>
@@ -174,7 +174,7 @@ export function IntakePatientDetailScreen({
           {/* Search + filters */}
           <div className="mx-lg mt-lg flex items-center gap-sm">
             <div className="flex flex-1 items-center gap-xs rounded-sm border border-border px-md py-[7px]">
-              <Icon name="search" size={16} className="shrink-0 text-text-icon" />
+              <Search className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               <input
                 type="text"
                 placeholder="Search"
@@ -195,17 +195,17 @@ export function IntakePatientDetailScreen({
             </div>
             <button
               type="button"
-              className="flex h-9 items-center gap-xs rounded-sm border border-border px-md text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-[34px] items-center gap-xs rounded-md border border-border px-md text-body text-text-primary hover:bg-surface-l2"
             >
               All time
-              <Icon name="expand_more" size={16} className="text-text-icon" />
+              <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <button
               type="button"
-              className="flex h-9 items-center gap-xs rounded-sm border border-border px-md text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-[34px] items-center gap-xs rounded-md border border-border px-md text-body text-text-primary hover:bg-surface-l2"
             >
               All entities
-              <Icon name="expand_more" size={16} className="text-text-icon" />
+              <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
 

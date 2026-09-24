@@ -1,0 +1,38 @@
+.addDescriptionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  align-self: flex-start;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #1976d2;
+  white-space: nowrap;
+}
+
+.addDescriptionBtn :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #1976d2;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.addDescriptionBtn:hover {
+  color: #1565c0;
+}
+
+.addDescriptionBtn:hover :global(.material-symbols-outlined) {
+  color: #1565c0;
+}
+
+.descriptionField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

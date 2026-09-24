@@ -3,6 +3,7 @@ import { Chip } from '../Chip/Chip'
 import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import { MessageDrawerProps } from './MessageDrawer.types'
+import { ArrowLeft, CheckCircle2, ChevronDown, DollarSign, MoreHorizontal, MoreVertical, Paperclip, RotateCcw, Rows3, Smile, Sparkles } from 'lucide-react'
 
 interface Message {
   id: string
@@ -58,30 +59,30 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialCh
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 z-[100] bg-black/20 transition-opacity duration-300 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        className={`fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={onClose}
       />
 
       {/* Drawer */}
       <div
-        className={`fixed right-0 top-0 z-[101] flex h-full w-[650px] flex-col bg-surface shadow-modal transition-transform duration-300 ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-2 top-2 z-[101] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-300 ${open ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-lg py-md">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={20} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">{patient}</span>
             <Chip label={status} variant={status === 'Unconfirmed' ? 'warning' : status === 'Cancelled' ? 'danger' : status === 'No-show' ? 'danger' : 'success'} />
           </div>
           <div className="flex items-center gap-sm">
-            <button type="button" className="flex h-8 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm text-body text-text-primary hover:bg-surface-hover">
+            <button type="button" className="flex h-8 items-center gap-xs rounded-md border border-border-selected bg-surface px-sm text-body text-text-primary hover:bg-surface-hover">
               Unassigned
-              <Icon name="expand_more" size={16} className="text-text-icon" />
+              <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
-            <button type="button" className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="more_vert" size={20} />
+            <button type="button" className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>
@@ -112,7 +113,7 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialCh
           <div className="flex flex-col items-end">
             <div className="w-full max-w-[420px] rounded-lg border border-border bg-[#fdf8ee] p-md">
               <div className="mb-sm flex items-center gap-xs">
-                <Icon name="check_circle" size={16} className="text-success" />
+                <CheckCircle2 className="size-4 text-success" strokeWidth={1.6} absoluteStrokeWidth />
                 <span className="text-body text-text-primary">Appointment booked</span>
               </div>
               <div className="mb-sm border-t border-border" />
@@ -135,12 +136,12 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialCh
               </div>
               <div className="flex items-center gap-md">
                 <Link as="button" className="flex items-center gap-xs text-small">
-                  <Icon name="autorenew" size={14} />
+                  <RotateCcw className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   Reschedule
                 </Link>
                 <Link as="button" className="text-small">Send reminder</Link>
                 <button type="button" className="text-text-icon">
-                  <Icon name="more_horiz" size={16} />
+                  <MoreHorizontal className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
             </div>
@@ -197,11 +198,11 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialCh
             {/* Toolbar + Send */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-sm text-text-icon">
-                <button type="button" className="hover:text-text-primary"><Icon name="table_rows" size={20} /></button>
-                <button type="button" className="hover:text-text-primary"><Icon name="attach_money" size={20} /></button>
-                <button type="button" className="hover:text-text-primary"><Icon name="attach_file" size={20} /></button>
-                <button type="button" className="hover:text-text-primary"><Icon name="sentiment_satisfied" size={20} /></button>
-                <button type="button" className="hover:text-text-primary"><Icon name="auto_awesome" size={20} /></button>
+                <button type="button" className="hover:text-text-primary"><Rows3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                <button type="button" className="hover:text-text-primary"><DollarSign className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                <button type="button" className="hover:text-text-primary"><Paperclip className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                <button type="button" className="hover:text-text-primary"><Smile className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                <button type="button" className="hover:text-text-primary"><Sparkles className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
               </div>
               <div className="flex items-center">
                 <button
@@ -214,7 +215,7 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialCh
                   type="button"
                   className="flex h-9 items-center justify-center rounded-r-sm border-l border-white/30 bg-primary px-sm text-white hover:bg-primary-hover"
                 >
-                  <Icon name="expand_more" size={16} />
+                  <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
             </div>

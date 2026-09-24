@@ -122,3 +122,10 @@ export const REMINDER_CONVERSATION_EVENTS: ReminderConversationEntry[] = [
     tts: '700ms',
   },
 ]
+
+/** Multi-channel summary for Reminder agent logs — email, SMS, and voice legs combined. */
+export const REMINDER_CONVERSATION_AI_SUMMARY = [
+  'Sarah Lauren booked a routine checkup by email and received an automated appointment reminder.',
+  'She confirmed her attendance via email before the agent followed up with a voice call.',
+  'Across email and voice, the agent reconfirmed the Jun 14 visit and answered insurance questions.',
+]

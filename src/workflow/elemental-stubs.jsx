@@ -8,10 +8,28 @@
  *
  * Styled to look clean but deliberately lightweight: no external deps.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { buildFixedMenuStyle, MENU_Z_INDEX } from './menuPlacement';
 import './Molecules/Conditions/Conditions.css';
 
 const font = '"Roboto", arial, sans-serif';
+
+/* ─── Color tokens (mirrors @birdeye/elemental/core/sass/js/colors.js) ──── */
+export const gray900 = '#212121';
+export const gray90 = '#8f8f8f';
+export const gray2000 = '#d6d6d6';
+export const red100 = '#de1b0c';
+export const white = '#ffffff';
+export const blue20 = '#e8f1fc';
+export const blue50 = '#d1e5f9';
+export const blue100 = '#1a73e8';
+export const green20 = '#f1faf0';
+export const green50 = '#c8e6c9';
+export const green300 = '#377e2c';
+export const gray30 = '#f5f5f5';
+export const gray60 = '#e0e0e0';
+export const gray300 = '#757575';
 
 /* ─── FormInput ─────────────────────────────────────────────────────────── */
 export function FormInput({
@@ -29,6 +47,8 @@ export function FormInput({
   checked,
   labelInside,
   styleConfig,
+  error,
+  errorMessage = 'This field is required',
 }) {
   /* Radio button layout */
   if (type === 'radio') {
@@ -71,7 +91,7 @@ export function FormInput({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#212121',
+            color: error ? '#de1b0c' : '#717182',
             fontFamily: font,
           }}
         >
@@ -93,20 +113,27 @@ export function FormInput({
         style={{
           height: 36,
           padding: '0 12px',
-          border: noBorder ? 'none' : '1px solid #c5cad3',
+          border: noBorder ? 'none' : `1px solid ${error ? '#de1b0c' : '#e5e9f0'}`,
           borderRadius: noBorder ? 0 : 4,
           fontSize: 14,
+          lineHeight: '20px',
+          letterSpacing: '-0.28px',
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
           boxSizing: 'border-box',
           width: '100%',
-          cursor: readOnly ? 'default' : undefined,
+          cursor: disabled ? 'not-allowed' : readOnly ? 'default' : undefined,
         }}
-        onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
+        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}
       />
+      {error && errorMessage && (
+        <span style={{ fontSize: 12, lineHeight: '16px', color: '#de1b0c', fontFamily: font }}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }
@@ -123,10 +150,14 @@ export function TextArea({
   rows = 3,
   disabled,
   readOnly,
+  error,
+  errorMessage = 'This field is required',
+  resize,
 }) {
+  const resizeValue = resize ?? (readOnly ? 'none' : 'vertical');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {label && !noFloatingLabel && (
+      {label && (
         <label
           htmlFor={name}
           style={{
@@ -134,23 +165,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#212121',
-            fontFamily: font,
-          }}
-        >
-          {label}
-          {required && <span style={{ color: '#de1b0c', marginLeft: 2 }}>*</span>}
-        </label>
-      )}
-      {label && noFloatingLabel && (
-        <label
-          htmlFor={name}
-          style={{
-            fontSize: 12,
-            fontWeight: 400,
-            lineHeight: '18px',
-            letterSpacing: '-0.24px',
-            color: '#212121',
+            color: error ? '#de1b0c' : '#717182',
             fontFamily: font,
           }}
         >
@@ -169,22 +184,28 @@ export function TextArea({
         readOnly={readOnly}
         style={{
           padding: '8px 12px',
-          border: '1px solid #c5cad3',
+          border: `1px solid ${error ? '#de1b0c' : '#e5e9f0'}`,
           borderRadius: 4,
           fontSize: 14,
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
-          resize: readOnly ? 'none' : 'vertical',
+          resize: resizeValue,
           boxSizing: 'border-box',
           width: '100%',
           lineHeight: '20px',
-          cursor: readOnly ? 'default' : undefined,
+          letterSpacing: '-0.28px',
+          cursor: disabled ? 'not-allowed' : readOnly ? 'default' : undefined,
         }}
-        onFocus={(e) => { if (!readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onFocus={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
+        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}
       />
+      {error && errorMessage && (
+        <span style={{ fontSize: 12, lineHeight: '16px', color: '#de1b0c', fontFamily: font }}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }
@@ -197,20 +218,109 @@ export function SingleSelect({
   onChange,
   placeholder = 'Select',
   disabled,
+  /** Portal the menu to <body> so it isn't clipped by a scrolling panel (and doesn't
+   *  vanish behind the panel footer's Save CTA). Opt-in — callers inside a modal that
+   *  stacks above `MENU_Z_INDEX` should keep the default in-flow menu. */
+  portalMenu = false,
+  /** Adds a pinned search box to the menu — for long option lists (e.g. Delay's events). */
+  searchable = false,
+  /** Grey caption above the search box, e.g. "Select events". */
+  menuHeader,
+  searchPlaceholder = 'Search',
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const [query, setQuery] = useState('');
   const ref = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!open || disabled) return undefined;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      // A portaled menu lives outside the trigger wrapper — check it too, or clicking an
+      // option would close the menu before its own onClick ran.
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open, disabled]);
 
+  // Anchor the portaled menu to the trigger; the host panel scrolls, so re-measure.
+  useLayoutEffect(() => {
+    if (!portalMenu || !open || disabled || !ref.current) return undefined;
+    const updatePlacement = () => setMenuStyle(
+      // The header + search box need room the option count alone doesn't account for.
+      buildFixedMenuStyle(ref.current, options.length, MENU_Z_INDEX, searchable ? { maxHeight: 360 } : {}),
+    );
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [portalMenu, open, disabled, options.length, searchable]);
+
+  // Every open starts from an unfiltered list.
+  useEffect(() => {
+    if (!open) setQuery('');
+  }, [open]);
+
   const selectedLabel = options.find((o) => o.value === selected)?.label;
+
+  const q = query.trim().toLowerCase();
+  const visibleOptions = searchable && q
+    ? options.filter((o) => String(o.label).toLowerCase().includes(q))
+    : options;
+
+  const optionItems = visibleOptions.map((opt) => (
+    <li
+      key={opt.value}
+      role="option"
+      aria-selected={opt.value === selected}
+      className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
+      onClick={() => { onChange?.(opt); setOpen(false); }}
+    >
+      {opt.label}
+      {opt.value === selected && (
+        <span className="material-symbols-outlined tc-dropdown__check">check</span>
+      )}
+    </li>
+  ));
+
+  const menuClassName = `tc-dropdown__menu${searchable ? ' tc-dropdown__menu--searchable' : ''}${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`;
+
+  const menuList = searchable ? (
+    <div ref={menuRef} className={menuClassName} style={portalMenu ? menuStyle : undefined}>
+      {menuHeader && <div className="tc-dropdown__menu-header">{menuHeader}</div>}
+      <div className="tc-dropdown__search">
+        <span className="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+          autoFocus
+        />
+      </div>
+      {optionItems.length > 0 ? (
+        <ul className="tc-dropdown__menu-list" role="listbox">{optionItems}</ul>
+      ) : (
+        <div className="tc-dropdown__empty">No results</div>
+      )}
+    </div>
+  ) : (
+    <ul
+      ref={menuRef}
+      className={menuClassName}
+      style={portalMenu ? menuStyle : undefined}
+      role="listbox"
+    >
+      {optionItems}
+    </ul>
+  );
 
   return (
     <div className="tc-dropdown" ref={ref}>
@@ -230,22 +340,241 @@ export function SingleSelect({
         <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
       </button>
       {open && !disabled && (
-        <ul className="tc-dropdown__menu" role="listbox">
-          {options.map((opt) => (
-            <li
-              key={opt.value}
-              role="option"
-              aria-selected={opt.value === selected}
-              className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
-              onClick={() => { onChange?.(opt); setOpen(false); }}
-            >
-              {opt.label}
-              {opt.value === selected && (
-                <span className="material-symbols-outlined tc-dropdown__check">check</span>
-              )}
-            </li>
-          ))}
-        </ul>
+        portalMenu
+          ? (menuStyle ? createPortal(menuList, document.body) : null)
+          : menuList
+      )}
+    </div>
+  );
+}
+
+/** Checkbox multi-select using the same tc-dropdown chrome as SingleSelect. */
+export function MultiSelect({
+  name,
+  selected = [],
+  options = [],
+  onChange,
+  placeholder = 'Select',
+  disabled,
+  /** Optional override for the closed-trigger text, e.g. "2 roles". */
+  formatLabel,
+  /** When set and something is selected, the chevron becomes a clear (✕). */
+  onClear,
+  /** See SingleSelect — portal the menu so a scrolling panel can't clip it. */
+  portalMenu = false,
+  /** When set, prepends a row that checks/clears every option, e.g. "Select all". */
+  selectAllLabel,
+  /** Pinned search box over the option list. */
+  searchable = false,
+  searchPlaceholder = 'Search',
+  /** `(ids) => string` caption above the search box; falls back to `placeholder`. */
+  menuHeaderLabel,
+  /** When set, picks are staged and only committed (onChange) when this footer button is
+   *  pressed — the menu owns the draft while it's open. */
+  applyLabel,
+}) {
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState(selected);
+  const ref = useRef(null);
+  const menuRef = useRef(null);
+
+  // With an Apply footer the menu edits a draft; without one it edits `selected` directly.
+  const staged = Boolean(applyLabel);
+  const current = staged && open ? draft : selected;
+  const selectedSet = new Set(current);
+
+  useEffect(() => {
+    if (!open || disabled) return undefined;
+    const handler = (e) => {
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, disabled]);
+
+  useEffect(() => {
+    if (!open) return;
+    setQuery('');
+    setDraft(selected);
+    // `selected` intentionally read only at open time — a staged menu owns its draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!portalMenu || !open || disabled || !ref.current) return undefined;
+    const updatePlacement = () => setMenuStyle(
+      buildFixedMenuStyle(ref.current, options.length + (selectAllLabel ? 1 : 0), MENU_Z_INDEX, {
+        maxHeight: searchable || applyLabel ? 420 : undefined,
+      }),
+    );
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [portalMenu, open, disabled, options.length, selectAllLabel, searchable, applyLabel]);
+
+  const displayLabel = selected.length === 0
+    ? placeholder
+    : formatLabel
+      ? formatLabel(selected)
+      : selected.length === 1
+        ? (options.find((o) => o.value === selected[0])?.label || '1 selected')
+        : `${selected.length} selected`;
+
+  const commit = (next) => {
+    if (staged) setDraft(next);
+    else onChange?.(next);
+  };
+
+  const toggle = (value) => commit(
+    selectedSet.has(value) ? current.filter((v) => v !== value) : [...current, value],
+  );
+
+  const allSelected = options.length > 0 && current.length >= options.length;
+  const toggleAll = () => commit(allSelected ? [] : options.map((o) => o.value));
+
+  const checkbox = (checked) => (
+    <span className={`tc-dropdown__checkbox${checked ? ' tc-dropdown__checkbox--checked' : ''}`}>
+      {checked && <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>}
+    </span>
+  );
+
+  const q = query.trim().toLowerCase();
+  const visibleOptions = searchable && q
+    ? options.filter((o) => String(o.label).toLowerCase().includes(q)
+      || String(o.description ?? '').toLowerCase().includes(q))
+    : options;
+
+  const optionRows = (
+    <>
+      {selectAllLabel && !q && (
+        <li
+          role="option"
+          aria-selected={allSelected}
+          className={`tc-dropdown__option tc-dropdown__option--multi${allSelected ? ' tc-dropdown__option--selected' : ''}`}
+          onClick={toggleAll}
+        >
+          {checkbox(allSelected)}
+          {selectAllLabel}
+        </li>
+      )}
+      {visibleOptions.map((opt) => {
+        const isSelected = selectedSet.has(opt.value);
+        return (
+          <li
+            key={opt.value}
+            role="option"
+            aria-selected={isSelected}
+            className={`tc-dropdown__option tc-dropdown__option--multi${isSelected ? ' tc-dropdown__option--selected' : ''}`}
+            onClick={() => toggle(opt.value)}
+          >
+            {checkbox(isSelected)}
+            {opt.description ? (
+              <span className="tc-dropdown__option-body">
+                <span className="tc-dropdown__option-title">{opt.label}</span>
+                <span className="tc-dropdown__option-desc">{opt.description}</span>
+              </span>
+            ) : opt.label}
+          </li>
+        );
+      })}
+      {visibleOptions.length === 0 && <li className="tc-dropdown__empty">No results</li>}
+    </>
+  );
+
+  const menuClassName = `tc-dropdown__menu${searchable || applyLabel ? ' tc-dropdown__menu--searchable' : ''}${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`;
+
+  const menuList = searchable || applyLabel ? (
+    <div ref={menuRef} className={menuClassName} style={portalMenu ? menuStyle : undefined}>
+      {menuHeaderLabel && (
+        <div className={`tc-dropdown__menu-header${current.length ? ' tc-dropdown__menu-header--filled' : ''}`}>
+          {menuHeaderLabel(current) || placeholder}
+        </div>
+      )}
+      {searchable && (
+        <div className="tc-dropdown__search">
+          <span className="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            autoFocus
+          />
+        </div>
+      )}
+      <ul className="tc-dropdown__menu-list" role="listbox" aria-multiselectable="true">
+        {optionRows}
+      </ul>
+      {applyLabel && (
+        <div className="tc-dropdown__menu-footer">
+          <button
+            type="button"
+            className="tc-dropdown__apply"
+            onClick={() => { onChange?.(draft); setOpen(false); }}
+          >
+            {applyLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <ul
+      ref={menuRef}
+      className={menuClassName}
+      style={portalMenu ? menuStyle : undefined}
+      role="listbox"
+      aria-multiselectable="true"
+    >
+      {optionRows}
+    </ul>
+  );
+
+  return (
+    <div className="tc-dropdown" ref={ref}>
+      <button
+        type="button"
+        id={name}
+        name={name}
+        className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''}${disabled ? ' tc-dropdown__trigger--readonly' : ''}`}
+        onClick={() => { if (!disabled) setOpen((v) => !v); }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+      >
+        <span className={`tc-dropdown__value${selected.length === 0 ? ' tc-dropdown__value--placeholder' : ''}`}>
+          {displayLabel}
+        </span>
+        {onClear && selected.length > 0 && !disabled ? (
+          // A span with role=button, not a <button> — the trigger is already a
+          // button and nesting one inside trips React's DOM-nesting warning.
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Clear selection"
+            className="material-symbols-outlined tc-dropdown__chevron"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClear(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClear(); }
+            }}
+          >
+            close
+          </span>
+        ) : (
+          <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+        )}
+      </button>
+      {open && !disabled && (
+        portalMenu
+          ? (menuStyle ? createPortal(menuList, document.body) : null)
+          : menuList
       )}
     </div>
   );
@@ -591,5 +920,53 @@ export function DrawerHeader({ title = '', onBack, actions = [] }) {
   );
 }
 
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+export function Modal({ dialogOptions = {}, children }) {
+  const {
+    isOpen = true,
+    onCloseModal,
+    shouldCloseOnOverlayClick = true,
+    shouldCloseOnEsc = true,
+    dialogStyles = {},
+  } = dialogOptions;
+
+  useEffect(() => {
+    if (!isOpen || !shouldCloseOnEsc) return;
+    function handleKey(e) {
+      if (e.key === 'Escape') onCloseModal?.();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isOpen, shouldCloseOnEsc, onCloseModal]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(33, 33, 33, 0.5)',
+        zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      onClick={(e) => {
+        if (shouldCloseOnOverlayClick && e.target === e.currentTarget) onCloseModal?.();
+      }}
+    >
+      <div
+        style={{
+          background: white,
+          borderRadius: 4,
+          boxShadow: '0px 4px 8px 0px rgba(33, 33, 33, 0.18)',
+          maxHeight: 'calc(100vh - 60px)',
+          overflow: 'auto',
+          ...dialogStyles.content,
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /* ─── Default export for convenience ────────────────────────────────────── */
-export default { FormInput, TextArea, SingleSelect, Chip, Toggle, Button, TabHeader, Tooltip, DrawerHeader };
+export default { FormInput, TextArea, SingleSelect, MultiSelect, Chip, Toggle, Button, TabHeader, Tooltip, DrawerHeader, Modal };

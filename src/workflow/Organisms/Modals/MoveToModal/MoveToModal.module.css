@@ -44,7 +44,7 @@
   color: #555;
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: 8px;
   line-height: 1;
 }
 
@@ -133,7 +133,7 @@
   color: #555;
   letter-spacing: -0.26px;
   text-align: left;
-  border-radius: 4px;
+  border-radius: 8px;
   transition: background 0.12s, color 0.12s;
 }
 
@@ -180,7 +180,7 @@
   background: #ffffff;
   color: #212121;
   border: 1px solid #ccd5e4;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   font-family: "Roboto", arial, sans-serif;
@@ -198,7 +198,7 @@
   background: #1976d2;
   color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   font-family: "Roboto", arial, sans-serif;

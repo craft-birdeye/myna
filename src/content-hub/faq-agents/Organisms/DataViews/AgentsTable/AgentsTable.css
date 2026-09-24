@@ -1,0 +1,17 @@
+.agents-table tbody td,
+.agents-table thead th {
+  text-align: left !important;
+}
+
+.agents-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.agents-table tbody tr:hover {
+  background-color: var(--muted) !important;
+}
+
+.agents-table tbody tr:hover td:first-child {
+  color: var(--primary) !important;
+}

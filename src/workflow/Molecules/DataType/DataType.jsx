@@ -3,7 +3,7 @@ import {
   blue20, blue50, blue100,
   green20, green50, green300,
   gray30, gray60, gray300,
-} from '@birdeye/elemental/core/sass/colors.js';
+} from '../../elemental-stubs';
 import './DataType.css';
 
 const VARIANT_CONFIG = {

@@ -1,6 +1,6 @@
 // src/components/ViewActivityDrawer/activityUtils.tsx
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
+import { Calendar, Check, Mail, Bell, Circle, ChevronUp, ChevronDown } from 'lucide-react'
 import { Link } from '../Link/Link'
 import { Activity, ActivityType, ViewActivityDrawerProps } from './ViewActivityDrawer.types'
 
@@ -111,17 +111,17 @@ export function buildActivities(props: ViewActivityDrawerProps): Activity[] {
 }
 
 export function ActivityIcon({ type }: { type: ActivityType }) {
-  const iconMap: Partial<Record<ActivityType, string>> = {
-    booked:      'calendar_today',
-    check:       'check',
-    'form-sent': 'mail',
-    reminder:    'notifications',
-    completed:   'check',
+  const iconNode: Partial<Record<ActivityType, React.ReactNode>> = {
+    booked:      <Calendar className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />,
+    check:       <Check className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />,
+    'form-sent': <Mail className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />,
+    reminder:    <Bell className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />,
+    completed:   <Check className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />,
   }
 
   return (
     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface">
-      <Icon name={iconMap[type] ?? 'circle'} size={18} className="text-text-primary" />
+      {iconNode[type] ?? <Circle className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />}
     </div>
   )
 }
@@ -148,7 +148,9 @@ export function ActivityRow({ activity, isLast }: { activity: Activity; isLast: 
               className="flex w-fit items-center gap-xs text-small"
             >
               {expanded ? 'Hide details' : activity.actionLabel}
-              <Icon name={expanded ? 'expand_less' : 'expand_more'} size={14} />
+              {expanded
+                ? <ChevronUp className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+                : <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
             </Link>
           )}
         </div>

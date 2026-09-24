@@ -33,7 +33,7 @@
   letter-spacing: -0.28px;
   color: #212121;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   outline: none;
   /* Arrow Elemental read-only / disabled fill (L2 BG) */
   background: #fafafa;
@@ -57,8 +57,10 @@
 .readOnlySteps {
   height: auto;
   min-height: 120px;
+  max-height: 500px;
   padding: 16px;
   pointer-events: auto;
+  overflow-y: auto;
 }
 
 .readOnlySteps .stepsList {
@@ -81,7 +83,7 @@
 
 .libraryContextBox {
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   box-sizing: border-box;
   width: 100%;
@@ -129,6 +131,52 @@
   left: 12px;
   right: auto;
   z-index: 50;
+}
+
+.includeSystemPromptRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 18px;
+}
+
+.includeSystemPromptToggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 16px;
+  border-radius: 9999px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: #e0e0e0;
+  transition: background-color 120ms ease;
+}
+
+.includeSystemPromptToggleOn {
+  background: #1976d2;
+}
+
+.includeSystemPromptToggleDisabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.includeSystemPromptThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  transition: left 120ms ease;
+}
+
+.includeSystemPromptToggleOn .includeSystemPromptThumb {
+  left: 18px;
 }
 
 .libraryCheckbox {
@@ -286,16 +334,17 @@
 }
 
 /* ── Steps editor shell (edit mode + toolbar) ──
- * No max-height/internal scroll — the box has a min-height and grows with
- * content, same as the create-mode variant below. */
+ * Default: fixed height + internal scroll. Expand overlay removes the cap. */
 .stepsEditorShell {
   display: flex;
   flex-direction: column;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   box-sizing: border-box;
   min-height: 160px;
+  max-height: 500px;
+  overflow: hidden;
 }
 
 .stepsEditorShellFocused {
@@ -305,18 +354,21 @@
 .stepsEditorShellCreate {
   /* Matches STEPS_FIELD_MIN_HEIGHT in ProcedureDetailScreen.tsx. */
   min-height: 250px;
+  max-height: 500px;
 }
 
 .stepsEditorBody {
   flex: 1;
-  overflow: visible;
-  min-height: 100px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .stepsEditorBodyCreate {
   flex: 1 1 auto;
-  overflow: visible;
-  min-height: calc(250px - 36px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .stepsEditorBodyCreate .stepsListNestedEmpty {
@@ -373,7 +425,7 @@
   padding: 24px;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   box-sizing: border-box;
 }
 
@@ -478,7 +530,7 @@
   color: #9e9e9e;
   padding: 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   margin: 0;
 }
 
@@ -491,7 +543,7 @@
   height: 28px;
   flex-shrink: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: transparent;
   color: #8f8f8f;
   cursor: pointer;
@@ -510,7 +562,7 @@
   min-height: 40px;
   padding: 8px 12px;
   border: 1px dashed #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fafafa;
   color: #6b7280;
   font-size: 14px;
@@ -579,6 +631,13 @@
 .stepsOverlayBody .stepsEditorShell,
 .stepsOverlayBody .stepsEditorShellCreate {
   min-height: 100%;
+  max-height: none;
+  overflow: hidden;
+}
+
+.stepsOverlayBody .stepsEditorBody,
+.stepsOverlayBody .stepsEditorBodyCreate {
+  overflow-y: auto;
 }
 
 .stepsOverlayBody .readOnlySteps {

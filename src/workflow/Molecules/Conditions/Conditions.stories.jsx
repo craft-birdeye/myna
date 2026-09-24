@@ -54,6 +54,7 @@ export const Default = {
         conditions={conditions}
         onConditionChange={handleChange}
         onAddCondition={() => setConditions((prev) => [...prev, makeCondition(prev.length + 1)])}
+        onRemoveCondition={(id) => setConditions((prev) => (prev.length > 1 ? prev.filter((c) => c.id !== id) : prev))}
         onAdvancedFilters={() => {}}
       />
     );
@@ -75,6 +76,7 @@ export const MultipleConditions = {
         onConditionChange={handleChange}
         onLogicChange={setLogic}
         onAddCondition={() => setConditions((prev) => [...prev, makeCondition(prev.length + 1)])}
+        onRemoveCondition={(id) => setConditions((prev) => (prev.length > 1 ? prev.filter((c) => c.id !== id) : prev))}
         onEditLogic={() => {}}
         onAdvancedFilters={() => {}}
       />
@@ -97,6 +99,7 @@ export const AndOrSelector = {
         onConditionChange={handleChange}
         onLogicChange={setLogic}
         onAddCondition={() => setConditions((prev) => [...prev, makeCondition(prev.length + 1)])}
+        onRemoveCondition={(id) => setConditions((prev) => (prev.length > 1 ? prev.filter((c) => c.id !== id) : prev))}
         onEditLogic={() => {}}
         onAdvancedFilters={() => {}}
       />

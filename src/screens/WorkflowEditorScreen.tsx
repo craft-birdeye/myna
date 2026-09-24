@@ -3,16 +3,25 @@ import {
   AUTOMOTIVE_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
   DENTAL_AGENT_WORKFLOWS,
+  REVIEW_RESPONSE_WORKFLOW,
 } from '../data/agentWorkflows'
+import CardBadgeContext from '../workflow/Molecules/Canvas/CardBadgeContext'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
-import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
+import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
+import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
+import { instanceHasUnpublishedDraft } from '../data/agentUnpublishedDrafts'
+import {
+  applyReviewResponseCopy,
+  RR_COPY_REV,
+} from '../data/reviewResponseCopy'
+import { applyFrontDeskCopy, FD_COPY_REV, FD_GOALS } from '../data/frontDeskCopy'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
+import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
 
 // Cast to accept any props so TypeScript doesn't complain about JSX prop types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,7 +35,7 @@ const EMPTY_WORKFLOW = {
 /** Goals / outcomes for Reviews AI create-from-scratch (empty canvas). Locations stay empty. */
 const REVIEW_RESPONSE_SCRATCH_START = {
   goals:
-    'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+    'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
   outcomes:
     'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
   locations: [] as string[],
@@ -40,11 +49,16 @@ const REVIEW_GENERATION_SCRATCH_START = {
   locations: [] as string[],
 }
 
+/** Create-from-scratch titles — empty canvas, not the seeded review workflow template. */
+function isReviewsScratchCreateName(name: string) {
+  return /^review (response|generation) agent 1$/i.test(name.trim())
+}
+
 // Healthcare / Dental Frontdesk start-node details — defined inline to avoid
 // any module-cache staleness from agentWorkflows.ts.
 const HC_FRONTDESK_START = {
   agentName: 'Front desk agent',
-  goals: 'Serves as the first point of contact for inbound calls, texts, and chats, resolving patient inquiries, managing appointments, verifying insurance, and escalating complex cases when needed',
+  goals: FD_GOALS,
   outcomes:
     "1. Patient's query is resolved or routed without human intervention\n" +
     '2. Appointment is confirmed, modified, or cancelled and reflected in the system\n' +
@@ -72,6 +86,13 @@ interface WorkflowEditorScreenProps {
   /** Shown in the builder header and start node; workflow lookup still uses `agentName`. */
   displayName?: string
   onClose: () => void
+  /**
+   * Agent was deleted from the editor. Distinct from `onClose` because the deleted agent's
+   * instance screen must not be restored — the caller should land on the agent list.
+   */
+  onDeleted?: () => void
+  /** Called after Activate / Save as draft — `published` is true when status becomes Active. */
+  onSaveAgent?: (published: boolean, payload?: Record<string, unknown>) => void
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
@@ -84,20 +105,59 @@ interface WorkflowEditorScreenProps {
   onPreviewProcedureIdChange?: (id: string | null) => void
   /** Opens the full-page Create with AI experience. */
   onOpenAiFullscreen?: () => void
+  /** Docked "AI Builder" side panel (review-response chrome). */
+  aiBuilderPanelOpen?: boolean
+  onAiBuilderPanelOpenChange?: (open: boolean) => void
   /** Initial LHS tab when the editor mounts. */
   lhsDefaultTab?: 'Create with AI' | 'Create manually'
   /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
   /** When true, Create with AI uses help-oriented copy for an already-built agent. */
   existingAgent?: boolean
+  /** Hides the in-canvas title/status row (identity rendered in the header back cluster). */
+  hideTopIdentity?: boolean
+  /** Hide the canvas's own back/identity cluster (shell renders its own header). */
+  hideCanvasBackCluster?: boolean
+  /** Hide the canvas's Run test / Activate / kebab cluster. */
+  hideHeaderActions?: boolean
+  /** Ghostwriter canvas geometry — RHS-style docked LHS panels, controls bottom-right. */
+  ghostwriterChrome?: boolean
+  /** Fire a canvas header action from a shell that owns the visible CTAs. */
+  externalHeaderAction?: { type: string; nonce: number } | null
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. Sep 1 keeps the card. */
+  hideCanvasStartNode?: boolean
+  /** Exploration editor UX (help RHS, version history, chip collapse, etc.). Sep 1 keeps the canvas agent-details card. */
+  explorationChrome?: boolean
+  /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
+  sep1Chrome?: boolean
+  /** Full canvas design sandbox: floating type badge above each card, no inline icon/label. */
+  cardBadgeChrome?: boolean
+  /**
+   * Action RHS Option 1/2 + R1–R4 layout picker (Response / Front desk exploration only —
+   * not Sep 1). Independent of sep1Chrome, which is true for all exploration-family navs.
+   */
+  llmTaskExplorationLayout?: boolean
+  /**
+   * Location-aware identity header — Add location CTA until locations exist, 38-char
+   * name truncation, name + location hover card (Response agents exploration only).
+   */
+  identityLocationChrome?: boolean
+  /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
+  inlineRhsFooter?: boolean
+  /** Opens Settings > Account > Product research (Help center "Learn more"). */
+  onOpenProductResearchSettings?: () => void
+  /** Opens the Agent builder basics coach tour on mount (Response agents coach cue nav). */
+  autoOpenCoachTour?: boolean
 }
 
 export function WorkflowEditorScreen({
   agentName,
   displayName,
   onClose,
+  onDeleted,
+  onSaveAgent,
   product = 'automotive',
-  agentStatus = 'Running',
+  agentStatus = 'Active',
   wizardDraft = null,
   aiAssistOpen,
   onAiAssistOpenChange,
@@ -107,30 +167,47 @@ export function WorkflowEditorScreen({
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
   onOpenAiFullscreen,
+  aiBuilderPanelOpen = false,
+  onAiBuilderPanelOpenChange,
   lhsDefaultTab = 'Create manually',
   aiTranscript = null,
   existingAgent,
+  hideTopIdentity = false,
+  hideCanvasBackCluster = false,
+  hideHeaderActions = false,
+  ghostwriterChrome = false,
+  externalHeaderAction = null,
+  hideCanvasStartNode = hideTopIdentity,
+  explorationChrome = hideTopIdentity,
+  sep1Chrome = false,
+  cardBadgeChrome = false,
+  llmTaskExplorationLayout = false,
+  identityLocationChrome = false,
+  inlineRhsFooter = false,
+  onOpenProductResearchSettings,
+  autoOpenCoachTour = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
   const shownName = displayName ?? agentName
   const createChatVariant =
     createChatVariantForAgent(shownName) ?? createChatVariantForAgent(agentName)
-  const resolvedAiTranscript = aiTranscript ?? getLastSavedCreateChat(createChatVariant)
+  const resolvedAiTranscript =
+    aiTranscript ??
+    getRetainedCreateAiChat(shownName) ??
+    getRetainedCreateAiChat(agentName) ??
+    getLastSavedCreateChat(createChatVariant)
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
-  const HC_FRONTDESK_SIDEBAR_NAMES = new Set([
-    'General inquiry',
-    'Talk to human',
-    'Book, cancel, reschedule appointment',
-    'Reschedule appointment',
-  ])
+  // Any Front desk canvas (base agent, regional instance, create-flow title, or library template).
+  const isFrontDeskAgent = isFrontDeskCanvasAgent(agentBaseName, agentName, shownName)
   const filteredProcedures = procedures.filter((p) => {
     if (!isHCProduct) return p.category !== 'Healthcare Frontdesk' && p.category !== 'Healthcare Pre-visit'
     if (isPreVisit) return p.category === 'Healthcare Pre-visit'
     if (isWaitlist) return p.category === 'Healthcare Waitlist'
-    return p.category === 'Healthcare Frontdesk' && HC_FRONTDESK_SIDEBAR_NAMES.has(p.name)
+    // Front desk (+ other HC agents using this canvas): full Healthcare Frontdesk library.
+    return p.category === 'Healthcare Frontdesk'
   })
 
   // For healthcare / dental, patch the __start__ node details directly here
@@ -140,8 +217,12 @@ export function WorkflowEditorScreen({
     product === 'healthcare' ? HEALTHCARE_AGENT_WORKFLOWS :
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
-  const baseWorkflow = workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
-  const isEmptyScratch = !wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0
+  const baseWorkflow = /review response/i.test(agentBaseName)
+    ? REVIEW_RESPONSE_WORKFLOW
+    : workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
+  const isReviewScratchCreate = !wizardDraft && isReviewsScratchCreateName(shownName)
+  const isEmptyScratch =
+    isReviewScratchCreate || (!wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0)
   const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
   const reviewScratchStart = /review response/i.test(shownName)
     ? REVIEW_RESPONSE_SCRATCH_START
@@ -195,7 +276,7 @@ export function WorkflowEditorScreen({
     })
   }
 
-  const workflow = wizardDraft
+  const rawWorkflow = wizardDraft
     ? buildWizardAgentWorkflow(wizardDraft)
     : isEmptyScratch && reviewScratchStart
       ? {
@@ -209,7 +290,7 @@ export function WorkflowEditorScreen({
             },
           },
         }
-    : isHC && agentBaseName === 'Front desk agent'
+    : isHC && (agentBaseName === 'Front desk agent' || agentBaseName === 'Front desk agent (exploration)')
       ? {
           nodes: baseWorkflow.nodes,
           nodeDetails: {
@@ -221,56 +302,101 @@ export function WorkflowEditorScreen({
           nodes: patchNodes(baseWorkflow.nodes as unknown[]) as typeof baseWorkflow.nodes,
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
+  const workflow = applyFrontDeskCopy(
+    applyReviewResponseCopy(rawWorkflow, agentBaseName, shownName, agentName),
+    agentBaseName,
+    shownName,
+    agentName,
+  )
 
-  // Create-from-scratch opens an empty canvas — never show "Running".
+  // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
+  const hasUnpublishedDraft =
+    resolvedStatus === 'Active' && instanceHasUnpublishedDraft(agentName)
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
-  const publishDisabled = issueCount > 0
 
   const AGENT_NAV_MAP: Record<string, string> = {
     'Front desk agent': 'frontdesk',
+    'Front desk agent (exploration)': 'frontdesk',
     'Reminder agent': 'inbox',
     'Outreach agent': 'marketing',
     'Pre-visit agent': 'frontdesk',
     'Waitlist agent': 'frontdesk',
+    'Review response agent': 'reviews',
+    'Review generation agent': 'reviews',
   }
-  const activeNavId = AGENT_NAV_MAP[agentName] ?? 'frontdesk'
+  const activeNavId = AGENT_NAV_MAP[agentBaseName] ?? 'frontdesk'
+  const copyFingerprint = Object.entries(workflow.nodeDetails ?? {})
+    .map(([id, d]) => {
+      const n = d as Record<string, unknown> | undefined
+      return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.triggerName ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
+    })
+    .join('|')
+  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${FD_COPY_REV}::${copyFingerprint}`
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
-        <AgentBuilder
-          key={`${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
-          pageTitle={shownName}
-          appTitle={shownName}
-          onClose={onClose}
-          product={product}
-          activeNavId={activeNavId}
-          moduleSlug="myna"
-          moduleContext="myna"
-          sectionContext="workflow"
-          navItems={[]}
-          initialNodes={workflow.nodes}
-          initialNodeDetails={workflow.nodeDetails}
-          procedures={filteredProcedures}
-          onAddProcedure={addProcedure}
-          initialStatus={resolvedStatus}
-          publishDisabled={publishDisabled}
-          issueCount={issueCount}
-          defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
-          aiAssistOpen={aiAssistOpen}
-          onAiAssistOpenChange={onAiAssistOpenChange}
-          hideLhs={hideLhs}
-          createAiPanelOpen={createAiPanelOpen}
-          previewProcedureId={previewProcedureId}
-          previewProcedureDetail={previewProcedureDetail}
-          onPreviewProcedureIdChange={onPreviewProcedureIdChange}
-          onOpenAiFullscreen={onOpenAiFullscreen}
-          lhsDefaultTab={lhsDefaultTab}
-          aiTranscript={resolvedAiTranscript}
-          existingAgent={resolvedExistingAgent}
-        />
-      </Suspense>
+    /* Provided here rather than inside AgentBuilder/FlowCanvas so it reaches both the canvas
+       cards and the RHS panels (siblings in AgentBuilder's tree) without threading a prop
+       through every node wrapper and every <RHS> call site. */
+    <CardBadgeContext.Provider value={cardBadgeChrome}>
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
+          <AgentBuilder
+            key={editorSeedKey}
+            pageTitle={shownName}
+            appTitle={shownName}
+            onClose={onClose}
+            hideCanvasBackCluster={hideCanvasBackCluster}
+            hideHeaderActions={hideHeaderActions}
+            ghostwriterChrome={ghostwriterChrome}
+            externalHeaderAction={externalHeaderAction}
+            onDeleted={onDeleted}
+            onSaveAgent={onSaveAgent}
+            product={product}
+            activeNavId={activeNavId}
+            moduleSlug="myna"
+            moduleContext="myna"
+            sectionContext="workflow"
+            navItems={[]}
+            initialNodes={workflow.nodes}
+            initialNodeDetails={workflow.nodeDetails}
+            procedures={filteredProcedures}
+            showProceduresPalette={isFrontDeskAgent}
+            onAddProcedure={addProcedure}
+            initialStatus={resolvedStatus}
+            hasUnpublishedDraft={hasUnpublishedDraft}
+            publishDisabled={false}
+            issueCount={issueCount}
+            issues={getAgentIssues(agentName)}
+            defaultOpenSection={isEmptyScratch && !autoOpenCoachTour ? 'Trigger' : 'Tasks'}
+            aiAssistOpen={aiAssistOpen}
+            onAiAssistOpenChange={onAiAssistOpenChange}
+            hideLhs={hideLhs}
+            createAiPanelOpen={createAiPanelOpen}
+            previewProcedureId={previewProcedureId}
+            previewProcedureDetail={previewProcedureDetail}
+            onPreviewProcedureIdChange={onPreviewProcedureIdChange}
+            onOpenAiFullscreen={onOpenAiFullscreen}
+            aiBuilderPanelOpen={aiBuilderPanelOpen}
+            onAiBuilderPanelOpenChange={onAiBuilderPanelOpenChange}
+            lhsDefaultTab={lhsDefaultTab}
+            aiTranscript={resolvedAiTranscript}
+            existingAgent={resolvedExistingAgent}
+            hideTopIdentity={hideTopIdentity}
+            hideCanvasStartNode={hideCanvasStartNode}
+            explorationChrome={explorationChrome}
+            inlineRhsFooter={inlineRhsFooter}
+            sep1Chrome={sep1Chrome}
+            cardBadgeChrome={cardBadgeChrome}
+            llmTaskExplorationLayout={llmTaskExplorationLayout}
+            identityLocationChrome={identityLocationChrome}
+            onOpenProductResearchSettings={onOpenProductResearchSettings}
+            autoOpenCoachTour={autoOpenCoachTour}
+          />
+        </Suspense>
+      </div>
     </div>
+    </CardBadgeContext.Provider>
   )
 }

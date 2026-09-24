@@ -15,6 +15,9 @@ export interface UserPromptInputProps {
   showProcedureButton?: boolean
   enableToolSlash?: boolean
   showTriggerFields?: boolean
+  fieldsOnly?: boolean
+  fieldPickerPlacement?: 'dock' | 'dropdown'
+  fieldPickerZIndex?: number
 }
 
 declare const UserPromptInput: FC<UserPromptInputProps>

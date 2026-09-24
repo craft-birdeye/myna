@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon, DataTable, HeaderSearchField, SelectMenu, TopNav, type Column } from '../components'
+import { DataTable, HeaderSearchField, SelectMenu, TopNav, type Column } from '../components'
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, Download, Search, X } from 'lucide-react'
 import emptyPhoneNumberUrl from '../assets/empty-phone-number.svg'
 
 // --- Phone number 1 data & helpers (Abhishek's version — do not delete) ---
@@ -57,7 +58,7 @@ import emptyPhoneNumberUrl from '../assets/empty-phone-number.svg'
 //       <button
 //         type="button"
 //         onClick={() => setOpen((o) => !o)}
-//         className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+//         className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
 //       >
 //         Import number
 //       </button>
@@ -235,7 +236,7 @@ function PrefixDropdownInput({
 
   return (
     <div ref={ref} className="relative">
-      <div className={`flex h-9 items-center rounded-sm border transition-colors focus-within:border-primary ${open ? 'border-primary' : 'border-border'}`}>
+      <div className={`flex h-[34px] items-center rounded-md border transition-colors focus-within:border-primary ${open ? 'border-primary' : 'border-border'}`}>
         {/* Prefix dropdown trigger */}
         <button
           type="button"
@@ -243,7 +244,7 @@ function PrefixDropdownInput({
           className="flex shrink-0 items-center gap-xs px-md text-body text-text-primary hover:bg-surface-hover rounded-l-sm h-full"
         >
           {displayLabel}
-          <Icon name={open ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
+          {open ? <ChevronUp className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
         </button>
         {/* Divider */}
         <span className="h-5 w-px shrink-0 bg-border" />
@@ -300,7 +301,7 @@ function DropdownField({ label, options, value, multi = false, placeholder = 'Se
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setOpen(o => !o)}
-          className={`flex h-9 w-full items-center justify-between rounded-sm border px-md text-body transition-colors ${
+          className={`flex h-[34px] w-full items-center justify-between rounded-md border px-md text-body transition-colors ${
             disabled
               ? 'cursor-not-allowed border-border bg-surface-subtle text-text-tertiary'
               : open
@@ -309,7 +310,7 @@ function DropdownField({ label, options, value, multi = false, placeholder = 'Se
           }`}
         >
           <span className={value.length === 0 ? 'text-text-tertiary' : ''}>{displayLabel}</span>
-          <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="shrink-0 text-text-icon" />
+          {open ? <ChevronUp className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
         </button>
         {open && (
           <div className="absolute left-0 top-[calc(100%+4px)] z-[60] w-full">
@@ -367,14 +368,14 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-[80] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
 
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-lg">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={18} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">{isEdit ? 'Edit number' : 'Integrate using SIP trunking'}</span>
           </div>
@@ -399,7 +400,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               })
               onClose()
             }}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               !canSave ? 'cursor-not-allowed bg-surface-selected text-text-tertiary' : 'bg-primary text-white hover:bg-primary-hover'
             }`}
           >
@@ -420,7 +421,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               placeholder="e.g. Main reception"
               value={form.name}
               onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setVerified(false) }}
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -476,7 +477,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               placeholder="Enter username"
               value={form.sipUsername}
               onChange={(e) => setForm((f) => ({ ...f, sipUsername: e.target.value }))}
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -488,7 +489,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               placeholder="Enter password"
               value={form.sipPassword}
               onChange={(e) => setForm((f) => ({ ...f, sipPassword: e.target.value }))}
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -498,7 +499,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               type="button"
               disabled={!canVerify || verifying || verified}
               onClick={handleVerify}
-              className={`flex h-9 items-center gap-sm rounded-sm border px-lg text-body transition-colors ${
+              className={`flex h-[34px] items-center gap-sm rounded-md border px-lg text-body transition-colors ${
                 verified
                   ? 'cursor-default border-border bg-surface text-text-primary'
                   : !canVerify || verifying
@@ -509,7 +510,7 @@ function ImportDrawer({ open, initialRow, onClose, onSave }: { open: boolean; in
               {verifying ? (
                 <><span className="size-4 animate-spin rounded-full border-2 border-border border-t-primary" />Verifying…</>
               ) : verified ? (
-                <><Icon name="check_circle" size={16} fill className="text-chip-success-text" />Verified</>
+                <><CheckCircle2 className="size-4 text-chip-success-text" strokeWidth={1.6} absoluteStrokeWidth />Verified</>
               ) : 'Verify'}
             </button>
             {!verified && !verifying && (
@@ -589,19 +590,19 @@ function CallForwardingDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-[80] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
 
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-lg">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={18} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">Call forwarding</span>
           </div>
-          <button type="button" title="Download list (XLS)" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-            <Icon name="download" size={20} />
+          <button type="button" title="Download list (XLS)" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+            <Download className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
 
@@ -611,8 +612,8 @@ function CallForwardingDrawer({ open, onClose }: { open: boolean; onClose: () =>
             For instructions on how to forward unanswered calls from your landline number to the receptionist number, consult your phone system setup or{' '}
             <a href="#" className="text-text-action">learn more</a>
           </p>
-          <div className="flex h-9 items-center gap-sm rounded-sm border border-border px-md focus-within:border-primary">
-            <Icon name="search" size={16} className="shrink-0 text-text-icon" />
+          <div className="flex h-[34px] items-center gap-sm rounded-md border border-border px-md focus-within:border-primary">
+            <Search className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             <input
               type="text"
               placeholder="Search by location or number"
@@ -622,7 +623,7 @@ function CallForwardingDrawer({ open, onClose }: { open: boolean; onClose: () =>
             />
             {search && (
               <button type="button" onClick={() => setSearch('')} className="text-text-icon hover:text-text-primary">
-                <Icon name="close" size={16} />
+                <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             )}
           </div>
@@ -676,7 +677,7 @@ function AddPhoneNumberButton({ onSelect }: { onSelect: (mode: 'sip' | 'forwardi
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
       >
         Add number
       </button>
@@ -732,14 +733,14 @@ function SetupCallForwardingDrawer({ open, initialRow, onClose, onSave }: { open
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-[80] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
 
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-lg">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={18} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">{isEdit ? 'Edit number' : 'Setup call forwarding'}</span>
           </div>
@@ -764,7 +765,7 @@ function SetupCallForwardingDrawer({ open, initialRow, onClose, onSave }: { open
               })
               onClose()
             }}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               !canSave ? 'cursor-not-allowed bg-surface-selected text-text-tertiary' : 'bg-primary text-white hover:bg-primary-hover'
             }`}
           >
@@ -783,7 +784,7 @@ function SetupCallForwardingDrawer({ open, initialRow, onClose, onSave }: { open
               placeholder="e.g. Main reception"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -795,7 +796,7 @@ function SetupCallForwardingDrawer({ open, initialRow, onClose, onSave }: { open
               placeholder="(415) 555-2671"
               value={form.phoneNumber}
               onChange={(e) => setForm((f) => ({ ...f, phoneNumber: applyPhoneFormat(e.target.value, 'National') }))}
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
             />
           </div>
 
@@ -845,7 +846,7 @@ export function PhoneNumber2Screen() {
               <button
                 type="button"
                 onClick={() => setCallForwardingOpen(true)}
-                className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                className="flex h-[34px] items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
               >
                 Call forwarding
               </button>
@@ -942,14 +943,14 @@ export function PhoneNumber2Screen() {
 //           <div className="flex items-center justify-between px-2xl py-xl">
 //             <h1 className="text-h3 text-text-primary">Phone number</h1>
 //             <div className="flex items-center gap-sm">
-//               <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-//                 <Icon name="search" size={20} />
+//               <button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+//                 <Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
 //               </button>
 //               <ImportNumberButton onSelect={setImportSource} />
-//               <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+//               <button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
 //                 <Icon name="view_column" size={20} />
 //               </button>
-//               <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+//               <button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
 //                 <Icon name="filter_list" size={20} />
 //               </button>
 //             </div>

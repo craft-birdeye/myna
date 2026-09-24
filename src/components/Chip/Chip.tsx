@@ -9,11 +9,14 @@ const VARIANTS: Record<NonNullable<ChipProps['variant']>, string> = {
   purple: 'bg-chip-purple-bg text-chip-purple-text',
 }
 
-export function Chip({ label, variant = 'warning' }: ChipProps) {
+export function Chip({ label, variant = 'warning', showDot = false, className = '' }: ChipProps) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-small text-center ${VARIANTS[variant]}`}
+      className={`inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-small text-center ${VARIANTS[variant]} ${className}`}
     >
+      {showDot ? (
+        <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+      ) : null}
       {label}
     </span>
   )

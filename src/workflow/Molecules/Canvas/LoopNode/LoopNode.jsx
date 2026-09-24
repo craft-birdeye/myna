@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import CanvasNode from '../CanvasNode/CanvasNode';
 import CanvasNodeHeader from '../CanvasNodeHeader/CanvasNodeHeader';
+import CanvasNodeBadge from '../CanvasNodeBadge/CanvasNodeBadge';
 import CanvasNodeBody from '../CanvasNodeBody/CanvasNodeBody';
 import { useFlowDndState } from '../../../FlowCanvas/FlowDndContext';
 import '../CanvasNode/CanvasNode.css';
@@ -159,7 +160,7 @@ function computeArmWidth(nodes, nodeDetails) {
 }
 
 function nodeTypeLabel(flowType) {
-  return { task: 'Task', delay: 'Delay', voiceCall: 'Voice call', branch: 'Branch' }[flowType] || 'Task';
+  return { task: 'Action', delay: 'Delay', voiceCall: 'Voice call', branch: 'Branch' }[flowType] || 'Action';
 }
 
 function InlineConnLine({ height = INLINE_CONN_H }) {
@@ -376,6 +377,7 @@ export default function LoopNode({
   return (
     <div className={styles.root} style={{ width: containerW }}>
       <div className={`canvas-node${stateClass} ${styles.card}`} style={{ marginLeft: cardMarginLeft }}>
+        <CanvasNodeBadge nodeType="loop" label="Loop" runStatus={runStatus} />
         <CanvasNodeHeader
           nodeType="loop"
           label="Loop"
@@ -453,7 +455,7 @@ export default function LoopNode({
                   >
                     <CanvasNode
                       nodeType="task"
-                      label="Task"
+                      label="Action"
                       stepNumber={child.stepNumber}
                       title={child.title}
                       description={child.subtitle}

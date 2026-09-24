@@ -1,3 +1,5 @@
+import { CONDITION_OPERATORS } from '../workflow/constants/conditionOperators'
+
 export interface AgentWorkflow {
   nodes: any[]
   nodeDetails: Record<string, any>
@@ -170,7 +172,7 @@ const OUTREACH_NODE_DETAILS: Record<string, any> = {
 const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
   '__start__': {
     agentName: 'Front desk agent - North region',
-    goals: 'Serves as the first point of contact for inbound calls, texts, and chats — routing customer inquiries, scheduling service and sales appointments, answering vehicle and inventory questions, and escalating complex cases to the right department.',
+    goals: 'Answer all inbound calls, texts, and chats. Handle general questions, book, cancel, and reschedule appointments, verify insurance, and bring in a human when something is too complex to handle.',
     outcomes: [
       '1. Customer inquiry is resolved or routed without human intervention',
       '2. Service or sales appointment is confirmed, modified, or cancelled and reflected in the DMS',
@@ -198,7 +200,7 @@ const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
     procedureIds: [
       'General inquiry',
       'Talk to human',
-      'Book, cancel, reschedule appointment',
+      'Book, cancel, or reschedule appointment',
       'Verify insurance',
     ],
   },
@@ -246,12 +248,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'insurance_verified', label: 'Insurance verified' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'booked',    label: 'Booked' },
         { value: 'confirmed', label: 'Confirmed' },
@@ -319,12 +316,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'reminder_channel',    label: 'Reminder channel' },
         { value: 'response_time',       label: 'Response time' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'confirmed',    label: 'Confirmed' },
         { value: 'cancelled',    label: 'Cancelled' },
@@ -351,12 +343,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'reminder_channel',    label: 'Reminder channel' },
         { value: 'response_time',       label: 'Response time' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'confirmed',    label: 'Confirmed' },
         { value: 'cancelled',    label: 'Cancelled' },
@@ -402,11 +389,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -434,11 +417,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -467,11 +446,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -500,11 +475,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -577,6 +548,7 @@ const HEALTHCARE_REMINDER_DEFAULT_WORKFLOW: AgentWorkflow = {
 
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
+  'Front desk agent (exploration)': { nodes: FRONTDESK_NODES, nodeDetails: FRONTDESK_NODE_DETAILS },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
 }
@@ -622,10 +594,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'location',           label: 'Location' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'cancelled',  label: 'Cancelled' },
         { value: 'updated',    label: 'Updated' },
@@ -653,7 +622,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     basedOn: 'conditions',
     branches: [
       { id: 'wl-5-path-1', name: 'Slot open' },
-      { id: 'wl-5-path-2', name: 'No conditions met', isFallback: true },
+      { id: 'wl-5-path-2', name: 'Fallback', isFallback: true },
     ],
   },
   'wl-5-path-1': {
@@ -664,7 +633,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'slot', label: 'Slot' }],
-      operator: [{ value: 'is', label: 'Is' }, { value: 'is_not', label: 'Is not' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'available', label: 'Available' }, { value: 'unavailable', label: 'Unavailable' }],
     },
     parentId: 'wl-5',
@@ -677,7 +646,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'wl-5-path-2': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback',
     description: 'No slot available — end loop iteration.',
     conditions: [],
     parentId: 'wl-5',
@@ -700,7 +669,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     basedOn: 'conditions',
     branches: [
       { id: 'wl-9-path-1', name: 'Slot open' },
-      { id: 'wl-9-path-2', name: 'No conditions met', isFallback: true },
+      { id: 'wl-9-path-2', name: 'Fallback', isFallback: true },
     ],
   },
   'wl-9-path-1': {
@@ -711,7 +680,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'slot', label: 'Slot' }],
-      operator: [{ value: 'is', label: 'Is' }, { value: 'is_not', label: 'Is not' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'open', label: 'Open' }, { value: 'filled', label: 'Filled' }],
     },
     parentId: 'wl-9',
@@ -721,7 +690,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'wl-9-path-2': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback',
     description: 'Slot no longer available — end loop iteration.',
     conditions: [],
     parentId: 'wl-9',
@@ -789,12 +758,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'insurance_verified', label: 'Insurance verified' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'booked',      label: 'Booked' },
         { value: 'confirmed',   label: 'Confirmed' },
@@ -829,10 +793,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'appointment_status', label: 'Appointment status' },
         { value: 'patient_response',   label: 'Patient response' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Is' },
-        { value: 'not_equals', label: 'Is not' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'not_filled', label: 'Not filled' },
         { value: 'filled',     label: 'Filled' },
@@ -878,10 +839,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'form_status',  label: 'Form status' },
         { value: 'intake_form',  label: 'Intake form' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Is' },
-        { value: 'not_equals', label: 'Is not' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'not_filled', label: 'Not filled' },
         { value: 'filled',     label: 'Filled' },
@@ -961,11 +919,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
         { value: 'channel',               label: 'Channel' },
         { value: 'conversation_assigned', label: 'Conversation assigned to' },
       ],
-      operator: [
-        { value: 'since',       label: 'since' },
-        { value: 'is',          label: 'is' },
-        { value: 'assigned_to', label: 'assigned to' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: '15_mins',   label: '15mins' },
         { value: 'web',       label: 'Web' },
@@ -999,7 +953,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1017,7 +971,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1035,7 +989,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1076,7 +1030,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'message_received', label: 'Message received' }],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tr-10',
@@ -1100,7 +1054,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
 // ─── Review response agent ───────────────────────────────────────────────────
 // Workflow: new/updated review → triage → branch
 //   → "Respond": extract details → generate response → post reply
-//   → "No conditions met" (spam): send email alert
+//   → "Fallback" (spam): send email alert
 
 const REVIEW_RESPONSE_NODES = [
   {
@@ -1128,20 +1082,20 @@ const REVIEW_RESPONSE_NODES = [
       hasAiIcon: false,
       titlePlaceholder: 'Enter task name',
       descriptionPlaceholder:
-        'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+        'Checks whether the review is genuine or spam',
     },
   },
   {
     id: 'rr-3',
     flowType: 'branch' as const,
     data: {
-      title: 'Based on conditions',
+      title: 'Evaluate conditions',
       subtype: 'Branch',
       hasToggle: true,
       toggleEnabled: true,
       hasAiIcon: false,
       titlePlaceholder: 'Enter branch name',
-      descriptionPlaceholder: 'Build condition-specific flows',
+      descriptionPlaceholder: 'Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.',
     },
   },
 ]
@@ -1176,27 +1130,22 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   '__start__': {
     agentName: 'Review response agent replying autonomously',
     goals:
-      'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+      'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
     outcomes:
       'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
     locations: REVIEW_RESPONSE_LOCATIONS,
   },
   'rr-1': {
     triggerName: 'When a new review is received or updated',
-    description: 'Agent triggers on new or updated reviews across all sources and locations.',
-    conditions: [
-      { id: 1, fieldValue: 'review_event', operatorValue: 'equals', valueValue: 'created_or_updated' },
-    ],
+    description: 'Starts when a new review is received or an existing review is updated across all sources and locations',
+    conditions: [],
     conditionOptions: {
       field: [
         { value: 'review_event',  label: 'Review event' },
         { value: 'review_source', label: 'Review source' },
         { value: 'location',      label: 'Location' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'created_or_updated', label: 'Created or updated' },
         { value: 'created',            label: 'Created' },
@@ -1207,7 +1156,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-2': {
     taskName: 'Triage review',
     description:
-      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+      'Checks whether the review is genuine or spam',
     llmModel: 'Fast',
     contextFields: [
       { value: 'Review.comment', type: 'variable' },
@@ -1228,11 +1177,11 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
       { value: 'Review.rating', type: 'variable' },
     ],
     systemPrompt:
-      'You are the First-Line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
+      'You are the first-line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
     userPrompt:
-      'If the review content violates any content terms of {{Review.source}} treat it as spam.\n' +
+      'If the review content violates any content terms of {{Review.source}}, treat it as spam.\n' +
       'If the review contains business-unrelated self-promotion or distracts from the business profile, treat it as spam.\n' +
-      'Otherwise mark it as a genuine customer review.\n' +
+      'Otherwise, mark it as a genuine customer review.\n\n' +
       'Set Review.isSpam and Review.spamReason accordingly.',
     outputFields: [
       { value: 'Review.isSpam', type: 'variable' },
@@ -1241,9 +1190,11 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   },
   'rr-3': {
     basedOn: 'conditions',
+    branchNodeTitle: 'Evaluate conditions',
+    description: 'Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.',
     branches: [
       { id: 'rr-3-path-respond', name: 'Respond' },
-      { id: 'rr-3-path-fallback', name: 'No conditions met', isFallback: true },
+      { id: 'rr-3-path-fallback', name: 'Fallback branch', isFallback: true },
     ],
   },
   'rr-3-path-respond': {
@@ -1257,10 +1208,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         { value: 'Review.isSpam', label: 'Review.isSpam' },
         { value: 'triage_result', label: 'Triage result' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'true',  label: 'True' },
         { value: 'false', label: 'False' },
@@ -1275,49 +1223,50 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-4',
         flowType: 'task' as const,
         data: {
-          title: 'Review details extraction',
+          title: 'Extract review details',
           subtype: 'Custom',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+            'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
         },
       },
       {
         id: 'rr-5',
         flowType: 'task' as const,
         data: {
-          title: 'Response generation',
+          title: 'Generate response',
           subtype: 'Custom',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+            'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
         },
       },
       {
         id: 'rr-6',
         flowType: 'task' as const,
         data: {
-          title: 'Send a review response',
-          subtype: 'Custom',
+          title: 'Publish response',
+          subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
-          descriptionPlaceholder: 'Reply to the review using the generated response',
+          descriptionPlaceholder:
+            'Sends the response automatically or holds it for approval',
         },
       },
     ],
   },
   'rr-4': {
-    taskName: 'Review details extraction',
+    taskName: 'Extract review details',
     description:
-      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
     llmModel: 'Thinking',
     contextFields: [
       { value: 'Location.name', type: 'variable' },
@@ -1336,14 +1285,14 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     systemPrompt:
       'You are a Review Intelligence Extractor. Your job is to analyze a customer review and extract details. Be precise. Do not hallucinate. If something is not mentioned or cannot be confidently determined, leave the field empty.',
     userPrompt:
-      'Analyze the following review:\n' +
+      'Analyze the following review:\n\n' +
       'Review Text: {{Review.text}}\n' +
-      'Star Rating: {{Review.rating}}\n' +
+      'Star Rating: {{Review.rating}}\n\n' +
       'Perform all of the following:\n' +
       '1. Detect the review language\n' +
       '2. Score sentiment and severity, and explain the severity reason\n' +
       '3. Decide whether to escalate (legal threats, safety, CRITICAL)\n' +
-      '4. Extract topics, staff mentions, and competitor mentions\n' +
+      '4. Extract topics, staff mentions, and competitor mentions\n\n' +
       'Never invent staff or competitor names that are not in the review.',
     outputFields: [
       { value: 'Review.language', type: 'variable' },
@@ -1357,9 +1306,9 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'rr-5': {
-    taskName: 'Response generation',
+    taskName: 'Generate response',
     description:
-      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+      'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
     llmModel: 'Balanced',
     contextFields: [
       { value: 'Location.brand', type: 'variable' },
@@ -1392,32 +1341,25 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     systemPrompt:
       'You are a marketing manager specialised in writing responses to customer reviews',
     userPrompt:
-      'Write a response to {{Review.text}} with Star rating: {{Review.rating}}\n' +
-      'Apply all relevant rules below (cumulative, not exclusive).\n' +
-      'Rule 0 — LANGUAGE: reply in the same language as the review ({{4.review.language}}).\n' +
-      'Rule 1 — LENGTH: keep the reply under 60 words.\n' +
-      'Rule 2 — POSITIVE: for positive sentiment, thank them and add one SEO keyword.\n' +
-      'Rule 3 — NEGATIVE: never name staff; acknowledge and invite them to call or email the business.\n' +
-      'Rule 4 — ESCALATE: if {{4.review.escalate}} is true, keep the reply short and recommend an immediate call.',
+      'Write a response to {{Review.text}} with star rating: {{Review.rating}}\n\n' +
+      'Apply all relevant rules below (cumulative, not exclusive).\n\n' +
+      'Rule 0 — Language: reply in the same language as the review ({{4.review.language}}).\n\n' +
+      'Rule 1 — Length: keep the reply under 60 words.\n\n' +
+      'Rule 2 — Positive: for positive sentiment, thank them and add one SEO keyword.\n\n' +
+      'Rule 3 — Negative: never name staff; acknowledge and invite them to call or email the business.\n\n' +
+      'Rule 4 — Escalate: if {{4.review.escalate}} is true, keep the reply short and recommend an immediate call.',
     outputFields: [
       { value: 'Review.response', type: 'variable' },
     ],
   },
   'rr-6': {
-    taskName: 'Send a review response',
-    description: 'Reply to the review using the generated response',
-    llmModel: 'Fast',
-    contextFields: [],
-    inputFields: [],
-    systemPrompt:
-      'You are a marketing manager specialised in responding to reviews. Given the generated response, post it to the review.',
-    userPrompt:
-      'Use response from {{5.review.response}} and respond using {{Review responder}}',
-    outputFields: [],
-    selectedTools: ['review-responder'],
+    taskName: 'Publish response',
+    description:
+      'Sends the response automatically or holds it for approval',
+    selectedTools: ['publish-response'],
   },
   'rr-3-path-fallback': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback branch',
     description: 'Review was marked as spam — alert the team instead of posting a reply.',
     conditions: [],
     parentId: 'rr-3',
@@ -1428,22 +1370,22 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-7',
         flowType: 'task' as const,
         data: {
-          title: 'Send an email alert',
+          title: 'Send email alert',
           subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+            'Notifies your team when a review is marked as spam and needs manual action on the review site',
         },
       },
     ],
   },
   'rr-7': {
-    taskName: 'Send an email alert',
+    taskName: 'Send email alert',
     description:
-      'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+      'Notifies your team when a review is marked as spam and needs manual action on the review site',
     selectedTools: ['send-email'],
   },
 }
@@ -1519,10 +1461,7 @@ const REVIEW_GENERATION_NODE_DETAILS: Record<string, any> = {
         { value: 'transaction_status', label: 'Transaction status' },
         { value: 'location', label: 'Location' },
       ],
-      operator: [
-        { value: 'equals', label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'completed', label: 'Completed' },
       ],
@@ -1547,6 +1486,7 @@ export const REVIEW_GENERATION_WORKFLOW: AgentWorkflow = {
 
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
+  'Front desk agent (exploration)': { nodes: FRONTDESK_NODES, nodeDetails: FRONTDESK_HC_NODE_DETAILS },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },
   'Pre-visit agent':  { nodes: PREVISIT_NODES,             nodeDetails: PREVISIT_NODE_DETAILS              },
@@ -1559,6 +1499,7 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Review response agent replying after human approval': REVIEW_RESPONSE_WORKFLOW,
   'Review response agent suggesting replies in dashboard': REVIEW_RESPONSE_WORKFLOW,
   'Review response agents': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agents (exploration)': REVIEW_RESPONSE_WORKFLOW,
   'Review generation agent': REVIEW_GENERATION_WORKFLOW,
   'Review generation agent with A/B testing': REVIEW_GENERATION_WORKFLOW,
   'Review generation agents': REVIEW_GENERATION_WORKFLOW,
@@ -1573,11 +1514,7 @@ const VC_CONDITION_OPTIONS = {
     { value: 'patient_response', label: 'Patient response' },
     { value: 'call_attempt',     label: 'Call attempt' },
   ],
-  operator: [
-    { value: 'equals',       label: 'Equals' },
-    { value: 'not_equals',   label: 'Does not equal' },
-    { value: 'greater_than', label: 'Greater than' },
-  ],
+  operator: [...CONDITION_OPERATORS],
   value: [
     { value: 'answered',  label: 'Answered' },
     { value: 'rejected',  label: 'Rejected' },
@@ -1647,11 +1584,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'recall_due_date', label: 'Recall due date' },
         { value: 'patient_status',  label: 'Patient status' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'hygiene_recall', label: 'Hygiene recall' },
         { value: 'active',         label: 'Active' },
@@ -1689,10 +1622,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'appointment_status', label: 'Appointment status' },
         { value: 'booking_response',   label: 'Booking response' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'true',  label: 'True' },
         { value: 'false', label: 'False' },
@@ -1719,7 +1649,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'future_appointment', label: 'Future appointment' },
         { value: 'appointment_status', label: 'Appointment status' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rcl-5',
@@ -1886,11 +1816,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
         { value: 'balance_amount',  label: 'Balance amount' },
         { value: 'payment_status',  label: 'Payment status' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'overdue_30_days', label: 'Overdue 30 days' },
         { value: '30_days',         label: '30 days' },
@@ -1930,7 +1856,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
         { value: 'payment_status', label: 'Payment status' },
         { value: 'balance_amount', label: 'Balance amount' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rev-5',
@@ -1951,7 +1877,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field: [{ value: 'payment_done', label: 'Payment done' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rev-5',
@@ -2115,11 +2041,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
         { value: 'days_since_presented', label: 'Days since presented' },
         { value: 'tp_value',             label: 'Treatment plan value' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'treatment_plan_due',  label: 'Treatment plan due' },
         { value: 'presented',           label: 'Presented' },
@@ -2158,7 +2080,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
         { value: 'treatment_plan_status',    label: 'Treatment plan status' },
         { value: 'future_appointment',       label: 'Future appointment' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tpa-5',
@@ -2179,7 +2101,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field: [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tpa-5',
@@ -2341,7 +2263,7 @@ const TPS_NODE_DETAILS: Record<string, unknown> = {
     conditions: [{ id: 1, fieldValue: 'treatment_plan_scheduled', operatorValue: 'equals', valueValue: 'false' }],
     conditionOptions: {
       field:    [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tps-6',
@@ -2356,7 +2278,7 @@ const TPS_NODE_DETAILS: Record<string, unknown> = {
     conditions: [{ id: 1, fieldValue: 'treatment_plan_scheduled', operatorValue: 'equals', valueValue: 'true' }],
     conditionOptions: {
       field:    [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }],
     },
     parentId: 'tps-6',
@@ -2479,11 +2401,7 @@ const TPE_NODE_DETAILS: Record<string, unknown> = {
         { value: 'treatment_plan_status', label: 'Plan status'     },
         { value: 'plan_value',            label: 'Plan value'      },
       ],
-      operator: [
-        { value: 'equals',     label: 'equals'     },
-        { value: 'not_equals', label: 'not equals' },
-        { value: 'contains',   label: 'contains'   },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'ABC', label: 'ABC' },
         { value: '124', label: '124' },

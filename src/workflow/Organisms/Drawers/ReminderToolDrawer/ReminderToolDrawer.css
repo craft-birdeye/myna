@@ -30,7 +30,7 @@
   border: none;
   cursor: pointer;
   color: #555;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 0;
   flex-shrink: 0;
 }
@@ -52,7 +52,7 @@
   background: #1976d2;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   line-height: 20px;
@@ -136,7 +136,7 @@
   justify-content: space-between;
   gap: 12px;
   border: 1px solid #e5e8ef;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 10px 14px;
   background: #fff;
 }
@@ -156,7 +156,7 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #757575;
   padding: 0;
@@ -175,7 +175,7 @@
 .rtd__reminder-edit {
   background: #f5f7fa;
   border: 1px solid #e0e4ec;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 16px;
 }
 
@@ -199,7 +199,7 @@
   background: #fff;
   color: #1976d2;
   border: 1px solid #1976d2;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   font-family: inherit;
@@ -277,7 +277,7 @@
   width: 100%;
   min-height: 84px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
   line-height: 20px;

@@ -25,7 +25,7 @@ function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) 
   const pct = Math.round(percent * 100)
   if (pct < 5) return null
   return (
-    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontFamily="Roboto">
+    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontFamily="Inter, sans-serif">
       {pct}%
     </text>
   )
@@ -70,8 +70,8 @@ export function DonutChart({ data, centerValue, centerLabel, height = 260, showL
             align="left"
             iconType="circle"
             iconSize={8}
-            formatter={(value) => <span style={{ color: '#555555' }}>{value}</span>}
-            wrapperStyle={{ fontSize: 12, fontFamily: 'Roboto', paddingTop: 8 }}
+            formatter={(value) => <span style={{ color: '#717182' }}>{value}</span>}
+            wrapperStyle={{ fontSize: 12, fontFamily: 'Inter, sans-serif', paddingTop: 8 }}
           />
         </PieChart>
       </ResponsiveContainer>

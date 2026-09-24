@@ -8,7 +8,7 @@
   padding: 1px 4px 1px 0;
   background: #fff;
   border: 1px solid #d1e5f9;
-  border-radius: 4px;
+  border-radius: 8px;
   vertical-align: middle;
   margin: 0 2px;
   cursor: default;
@@ -83,7 +83,7 @@
 .prompt-chip--link       { border-color: #f48fb1; }
 .prompt-chip--address    { border-color: #9fa8da; }
 .prompt-chip--product    { border-color: #c8e6c9; }
-.prompt-chip--tool       { border-color: #cccccc; background: #fafafa; }
+.prompt-chip--tool       { border-color: #cccccc; background: #fafafa; cursor: pointer; }
 
 .prompt-chip-swatch--attachment { background: #e8f5e9; border-right-color: #c8e6c9; }
 .prompt-chip-swatch--link       { background: #fce4ec; border-right-color: #f48fb1; }
@@ -106,3 +106,13 @@
 .prompt-chip-swatch--address    .prompt-chip-mat-icon { color: #3949ab; }
 .prompt-chip-swatch--product    .prompt-chip-mat-icon { color: #37a248; }
 .prompt-chip-swatch--tool       .prompt-chip-mat-icon { color: #555555; }
+
+.prompt-rich-link {
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.prompt-rich-link:hover {
+  color: #1565c0;
+}

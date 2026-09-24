@@ -15,7 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  gap: 12px; /* spacing/md */
+  padding: 24px 24px 16px; /* Aero drawer header */
   flex-shrink: 0;
   background: #fff;
   position: sticky;
@@ -26,27 +27,27 @@
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
   min-width: 0;
 }
 
 .backBtn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 4px; /* Corner Radius/sm */
   cursor: pointer;
-  color: #555;
+  color: #303030; /* text/icon */
   padding: 0;
   flex-shrink: 0;
 }
 
 .backBtn:hover {
-  background: #f5f5f5;
+  background: #f2f4f7; /* surface/hover */
 }
 
 .backBtn .material-symbols-outlined {
@@ -54,10 +55,10 @@
 }
 
 .headerTitle {
-  font-size: 18px;
+  font-size: 18px; /* Heading 3 */
   font-weight: 400;
-  color: #212121;
-  line-height: 24px;
+  color: #0d0d12; /* text/primary */
+  line-height: 26px;
   letter-spacing: -0.36px;
   white-space: nowrap;
   overflow: hidden;
@@ -67,12 +68,14 @@
 
 .saveBtn {
   height: 36px;
-  padding: 0 20px;
-  background: #1976d2;
+  padding: 0 16px; /* spacing/lg */
+  background: #1976d2; /* primary */
   color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 4px; /* Corner Radius/sm */
+  font-size: 14px; /* Body 2 */
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-weight: 400;
   font-family: 'Roboto', sans-serif;
   cursor: pointer;
@@ -81,7 +84,7 @@
 }
 
 .saveBtn:hover {
-  background: #1565c0;
+  background: #1565c0; /* primary/hover */
 }
 
 .headerRight {
@@ -99,7 +102,7 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #555;
   padding: 0;
@@ -119,7 +122,7 @@
   right: 0;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   min-width: 148px;
   z-index: 200;
@@ -151,13 +154,70 @@
   color: #666;
 }
 
-/* ─── Body: free-flowing fields, 20px between each ─── */
+/* ─── Body: free-flowing fields, Aero 24px stack ─── */
 
 .body {
-  padding: 24px;
+  padding: 0 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px; /* spacing/2xl */
+}
+
+/* Inline embed inside Action RHS (Option 2 Tool details) */
+.embeddedOuter {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto', sans-serif;
+  min-width: 0;
+}
+
+.embeddedBody {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* spacing/2xl */
+}
+
+/* Compact 12px fields when embedded in Action RHS Tool details */
+.embeddedBody :global(input[type='text']),
+.embeddedBody :global(input:not([type])) {
+  font-size: 12px !important;
+  line-height: 18px !important;
+  letter-spacing: -0.24px !important;
+}
+
+.embeddedBody .promptRichBody {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 10px 12px;
+  min-height: 132px;
+  letter-spacing: -0.24px;
+}
+
+.embeddedBody .promptRichText {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.embeddedBody .promptTextarea {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Match FormInput / Select tool labels inside the Action RHS embed. Field labels are the
+   headings of a tool's details, so they keep the primary text colour here too — the grey
+   belongs to the help line under them, not the label. */
+.embeddedBody .fieldLabel,
+.embeddedBody .fieldLabelRow .fieldLabel {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #0d0d12; /* text/primary */
+}
+
+.embeddedBody .fieldWrap {
+  gap: 4px;
 }
 
 /* ─── Interactive field wrappers ─── */
@@ -174,11 +234,15 @@
   gap: 4px;
 }
 
+/* Same heading type as the "Tool" label above the panel (EntityTaskBody's
+   .sectionLabelText) and ExternalToolDetails' field labels, so every heading in a tool's
+   details reads at one size. */
 .fieldLabel {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
-  color: #212121;
   line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #0d0d12;
   font-family: 'Roboto', sans-serif;
 }
 
@@ -242,11 +306,11 @@
 /* ─── Tags input ─── */
 
 .tagsInput {
-  min-height: 40px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
   background: #fff;
-  padding: 6px 10px;
+  padding: 4px 12px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -256,13 +320,17 @@
   box-sizing: border-box;
 }
 
+.tagsInput:focus-within {
+  border-color: #1976d2;
+}
+
 .tagChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   background: #f2f4f7;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 3px 8px;
   font-size: 13px;
   color: #212121;
@@ -270,6 +338,7 @@
   white-space: nowrap;
 }
 
+.tagChipEdit,
 .tagChipRemove {
   background: none;
   border: none;
@@ -278,6 +347,15 @@
   display: flex;
   align-items: center;
   line-height: 1;
+}
+
+.tagChipEdit :global(.material-symbols-outlined) {
+  font-size: 14px;
+  color: #888;
+}
+
+.tagChipEdit:hover :global(.material-symbols-outlined) {
+  color: #1976d2; /* text/action — signals it opens the editor */
 }
 
 .tagChipRemove :global(.material-symbols-outlined) {
@@ -301,6 +379,126 @@
   padding: 0;
 }
 
+/* ─── Tag select (searchable multi-select with inline + modal create) ─── */
+
+.tagSelectWrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Portaled to <body>; left/top/width come from the anchor measurement. */
+.tagDropdown {
+  position: fixed;
+  z-index: 10001;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.tagOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tagOption:hover {
+  background: #f2f4f7;
+}
+
+.tagOptionName {
+  font-size: 13px;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+  line-height: 18px;
+}
+
+.tagOptionDesc {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+  line-height: 16px;
+}
+
+.tagCreateOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border: none;
+  border-top: 1px solid #e5e9f0;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+}
+
+.tagCreateOption:hover {
+  background: #f2f4f7;
+}
+
+.tagCreateOption :global(.material-symbols-outlined) {
+  font-size: 16px;
+}
+
+/* Label + right-aligned add action, matching the "Input fields … ⊕ Add" row. */
+.tagLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.addTagBtn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2; /* text/action */
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.addTagBtn:hover {
+  color: #1565c0; /* primary/hover */
+}
+
+.addTagBtn :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.addTagBtnLabel {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
 .variableEmptyHint {
   font-size: 14px;
   color: #9e9e9e;
@@ -321,7 +519,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
@@ -347,7 +545,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   width: 100%;
   box-sizing: border-box;
@@ -397,9 +595,11 @@
 .selectInput {
   height: 36px;
   padding: 0 36px 0 12px;
-  border: 1px solid #c5cad3;
+  border: 1px solid #e5e9f0; /* match promptBox / FormInput */
   border-radius: 4px;
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
   background: #fff;
@@ -425,7 +625,7 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 20px !important;
-  color: #6b7280;
+  color: #303030;
   pointer-events: none;
   line-height: 1;
 }
@@ -482,12 +682,51 @@
 /* ─── Prompt textarea with variable toolbar ─── */
 
 .promptBox {
-  border: 1px solid #c5cad3;
+  border: 1px solid #e5e9f0;
   border-radius: 4px;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.promptBox:focus-within {
+  border-color: #1976d2;
+}
+
+/* Single-line text + {x} fields button (Freshdesk-style tool params) */
+.variableTextRow {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  gap: 0;
+}
+
+.variableTextInput {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  box-sizing: border-box;
+}
+
+.variableTextInput::placeholder {
+  color: #9e9e9e;
+}
+
+.variableTextToolbar {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+  flex-shrink: 0;
 }
 
 .promptTextarea {
@@ -505,6 +744,30 @@
   background: transparent;
 }
 
+.promptRichBody {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  color: #212121;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.promptRichText {
+  white-space: pre-wrap;
+  vertical-align: middle;
+}
+
+/* Keep variable chips aligned with surrounding body text */
+.promptRichBody :global([class*='chip']) {
+  vertical-align: middle;
+  margin: 2px 0;
+}
+
 .promptTextarea::placeholder {
   color: #9e9e9e;
 }
@@ -512,8 +775,12 @@
 .promptToolbar {
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: flex-start;
+  padding: 0 8px;
+  height: 36px;
+  gap: 4px;
   background: #fff;
+  flex-shrink: 0;
 }
 
 .variableBtn {
@@ -523,7 +790,7 @@
   padding: 2px 4px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #212121;
   font-family: 'Roboto', sans-serif;
@@ -544,6 +811,885 @@
 }
 
 /* ─── A/B section card ─── */
+
+/* ─── Create ticket in Birdeye (ticketBuilder) ─── */
+
+.ticketWrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sections are separated by rules rather than boxed, per the design. */
+/* Only the rule *between* the two sections is kept — see the first-child
+   override below, and no closing rule at the bottom. */
+.ticketSection {
+  border-top: 1px solid #eef0f4;
+  position: relative;
+}
+
+/* Sits right under the Tool row: no line. No extra padding either — the
+   embedded body's 20px field gap plus the header's own 12px already space it. */
+.ticketSection:first-child {
+  border-top: none;
+}
+
+.ticketSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #303030;
+}
+
+.ticketSectionHeader :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #303030;
+}
+
+.ticketSectionTitle {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.ticketSectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 16px;
+}
+
+/* "Assign ticket to  Users ▾" — label with an inline type switch. */
+.ticketInlineLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.ticketInlineSelect {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0 16px 0 4px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #1976d2;
+  cursor: pointer;
+  outline: none;
+}
+
+.ticketInlineChevron {
+  font-size: 18px !important;
+  color: #1976d2;
+  margin-left: -18px;
+  pointer-events: none;
+}
+
+/* Plain section header — no divider rule beneath it. */
+.ticketGroupLabelRow {
+  padding-bottom: 2px;
+  margin-top: 4px;
+}
+
+/* Sentence case, primary text — reads as a section header, not an eyebrow. */
+.ticketGroupLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #212121;
+}
+
+/* Box that holds inserted variable chips + free text + the {x} trigger. */
+.ticketVarBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: border-box;
+  padding: 4px 36px 4px 12px;
+  cursor: text;
+  transition: border-color 0.12s ease;
+}
+
+.ticketVarBox:hover {
+  border-color: #cccccc;
+}
+
+.ticketVarBox:focus-within {
+  border-color: #1976d2;
+}
+
+.ticketVarBoxMultiline {
+  min-height: 96px;
+  align-items: flex-start;
+  padding: 8px 12px 32px;
+}
+
+.ticketVarChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ticketVarInput {
+  flex: 1;
+  min-width: 60px;
+  height: 26px;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  background: transparent;
+}
+
+.ticketVarTextarea {
+  width: 100%;
+  min-height: 56px;
+  border: none;
+  outline: none;
+  padding: 0;
+  resize: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  background: transparent;
+}
+
+.ticketVarBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #303030;
+  border-radius: 4px;
+}
+
+.ticketVarBtn:hover {
+  background: #f4f6f7;
+}
+
+/* Multiline puts the trigger bottom-left, as in the design. */
+.ticketVarBtnBottom {
+  top: auto;
+  bottom: 6px;
+  left: 8px;
+  right: auto;
+  transform: none;
+}
+
+/* ── Escalation rules ── */
+
+.ticketRuleCard {
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  /* Same grey surface as a branch row (ControlBranchBody's .accordionItem), so the white
+     field boxes inside read as fields on a panel rather than boxes on a white card. */
+  background: #f8f9fb;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.ticketRuleCardTitle {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.ticketCondBlock,
+.ticketActionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Inline condition/action row: label, slot(s), then the remove button. */
+.ticketCondRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* IF / AND (or an action's name) with its delete on the right, above the stacked
+   field / operator / value boxes. */
+.ticketCondHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+/* The operator: a settled box with nothing to pick or clear. */
+.ticketCondStatic {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+/* Label and field on one line; the field takes the rest of the row so it still ends at the
+   same right edge as the stacked dropdowns above. */
+.ticketExcludeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ticketExcludeLabel {
+  flex-shrink: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+}
+
+/* IF / AND group label — uppercase and quiet, on its own row above the fields. */
+.ticketCondJoin {
+  text-transform: uppercase;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.26px;
+  color: #717182;
+  flex-shrink: 0;
+}
+
+/* Empty slot — the picker shares the row evenly with its sibling. */
+.ticketCondSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Exclude's picker starts where the field chip starts and runs the full row. */
+.ticketExcludeSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Second action row — full width, stacked under the value above it. */
+.ticketActionSub {
+  display: flex;
+}
+
+/* A settled value reads as a filled field box matching the pickers around it; the cross
+   clears the slot back to its picker. */
+.ticketChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  padding: 7px 12px;
+  box-sizing: border-box;
+}
+
+.ticketChipLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketChipClear {
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ticketChipClear :global(.material-symbols-outlined) {
+  font-size: 16px;
+  color: #303030;
+}
+
+.ticketActionLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  min-width: 76px;
+}
+
+.ticketRowDelete {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303030;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ticketRowDelete:hover {
+  background: #eef0f4;
+}
+
+.ticketRowDelete :global(.material-symbols-outlined) {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ticketAddWrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.ticketAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.ticketAddBtn:hover {
+  color: #1565c0;
+}
+
+.ticketAddBtnDisabled,
+.ticketAddBtnDisabled:hover {
+  color: #b0b5bd;
+  cursor: not-allowed;
+}
+
+.ticketAddBtn :global(.material-symbols-outlined) {
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ticketAddBtnLabel {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+/* Portaled to <body>; left/top come from the anchor measurement. */
+.ticketActionMenu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketActionMenuItem {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.ticketActionMenuItem:hover {
+  background: #f2f4f7;
+}
+
+/* ─── Competitor list (Track keywords from competitor domains) ─── */
+
+.compList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Sets the list apart from the "Add competitor" action below it. */
+  margin-bottom: 10px;
+}
+
+/* Negative side margin cancels the padding, so the avatar's left edge lines up
+   with the section label while the hover fill still extends past the content. */
+.compRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.compRow:hover {
+  background: #f8f9fb;
+}
+
+.compAvatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.compInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.compName {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.compUrl {
+  font-size: 12px;
+  line-height: 18px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Actions reveal on row hover (and on keyboard focus, so they stay reachable). */
+.compActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.compRow:hover .compActions,
+.compActions:focus-within {
+  opacity: 1;
+}
+
+.compActionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303030;
+  padding: 0;
+}
+
+.compActionBtn:hover {
+  background: #eef0f4;
+}
+
+.compActionBtn :global(.material-symbols-outlined) {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.compAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.compAddBtn:hover {
+  color: #1565c0;
+}
+
+.compAddBtnDisabled,
+.compAddBtnDisabled:hover {
+  color: #b0b5bd;
+  cursor: not-allowed;
+}
+
+.compAddBtn :global(.material-symbols-outlined) {
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.compAddBtnLabel {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+/* ─── Sentiment classifier list (Social sentiment classifier) ─── */
+
+.sentimentSectionTitle {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  font-family: 'Roboto', sans-serif;
+}
+
+.sentimentHeaderActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sentimentRestoreBtn,
+.sentimentAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.sentimentRestoreBtn:hover,
+.sentimentAddBtn:hover {
+  color: #1565c0;
+}
+
+.sentimentRestoreBtn:disabled {
+  cursor: not-allowed;
+  color: #b0b5bd;
+}
+
+.sentimentRestoreBtn :global(.material-symbols-outlined),
+.sentimentAddBtn :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.sentimentAddBtnLabel {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+.sentimentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sentimentRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 4px;
+  border-bottom: 1px solid #eef0f4;
+  box-sizing: border-box;
+}
+
+.sentimentRow:last-child {
+  border-bottom: none;
+}
+
+.sentimentRow:hover {
+  background: #f8f9fb;
+}
+
+.sentimentRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sentimentName {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Actions reveal on row hover (and on keyboard focus, so they stay reachable). */
+.sentimentRowActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sentimentRow:hover .sentimentRowActions,
+.sentimentRowActions:focus-within {
+  opacity: 1;
+}
+
+.sentimentActionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303030;
+  padding: 0;
+}
+
+.sentimentActionBtn:hover {
+  background: #eef0f4;
+}
+
+.sentimentActionBtn :global(.material-symbols-outlined) {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.sentimentDesc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* "No configuration" plain-text state — tools with zero fields to set up.
+   Just one helper line under the Tool row, no icon, no accent color, no card. */
+.noConfigPlainText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Inline add/edit form — bordered card, same surface as the tool card. */
+.compForm {
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.compFormTitle {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+}
+
+.compFormInput {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  padding: 0 12px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  transition: border-color 0.12s ease;
+}
+
+.compFormInput:hover {
+  border-color: #cccccc;
+}
+
+.compFormInput:focus {
+  border-color: #1976d2;
+}
+
+.compFormActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.compFormCancel {
+  background: none;
+  border: none;
+  padding: 0 8px;
+  height: 32px;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  border-radius: 4px;
+}
+
+.compFormCancel:hover {
+  background: #f4f6f7;
+}
+
+.compFormSubmit {
+  height: 32px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.compFormSubmit:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.compFormSubmit:disabled {
+  background: #eef0f4;
+  color: #b0b5bd;
+  cursor: not-allowed;
+}
+
+/* ─── Contact preference channel card (Email / Text) ─── */
+/* Mirrors the branch RHS accordion card (ControlBranchBody `.accordionItem`),
+   with the header at the same 36px as the Select tool card above it so all
+   three rectangles in the panel line up. */
+.prefCard {
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #f8f9fb;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.prefCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.prefCardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 12px 12px;
+}
 
 .abCard {
   background: transparent;
@@ -626,7 +1772,7 @@
   height: 36px;
   padding: 0 10px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
@@ -656,3 +1802,209 @@
   line-height: 20px;
   flex-shrink: 0;
 }
+
+/* ─── Localize media ─────────────────────────────────────────────────────────
+ * Preview image with a field slot in each corner; the centred button swaps the image.
+ */
+.localizeField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.localizeCanvas {
+  position: relative;
+  margin-top: 8px;
+  height: 200px;
+  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  background-color: #eef2f8;
+  background-size: cover;
+  background-position: center;
+  box-sizing: border-box;
+}
+
+.localizeCorner {
+  position: absolute;
+  display: flex;
+  max-width: calc(50% - 16px);
+}
+
+.localizeCorner--top-left { top: 10px; left: 10px; }
+.localizeCorner--top-right { top: 10px; right: 10px; justify-content: flex-end; }
+.localizeCorner--bottom-left { bottom: 10px; left: 10px; }
+.localizeCorner--bottom-right { bottom: 10px; right: 10px; justify-content: flex-end; }
+
+.localizeAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(33, 33, 33, 0.24);
+  cursor: pointer;
+  color: #212121;
+}
+
+.localizeAddBtn:hover {
+  background: #f2f4f7;
+}
+
+.localizeAddBtn :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+/* A stamped location detail, in place of that corner's +. The chip itself is `DataType`;
+   this only bounds it and keeps a long field name from spanning the whole image. */
+.localizeToken {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(33, 33, 33, 0.24);
+}
+
+.localizeToken :global(.data-type) {
+  max-width: 100%;
+  background: #ffffff;
+}
+
+.localizeToken :global(.data-type__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.localizeChangeWrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Absolutely positioned at left:50%, so shrink-to-fit caps the width at half the canvas
+     and the label wraps — keep it on one line and let it overhang the midpoint. */
+  white-space: nowrap;
+}
+
+.localizeChangeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 6px;
+  background: #3b76c9;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.localizeChangeBtn:hover {
+  background: #1565c0;
+}
+
+.localizeChangeBtn :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+.localizeSourceMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(33, 33, 33, 0.18);
+  z-index: 2;
+}
+
+.localizeSourceItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.localizeSourceItem:hover {
+  background: #f2f4f7;
+}
+
+.localizeSourceItem :global(.material-symbols-outlined) {
+  font-size: 18px;
+  color: #555555;
+}
+
+/* ─── Templates picker (Select template action) ─────────────────────────────
+ * The dropdown itself is the shared Aero `MultiSelect`; only the field wrapper is local.
+ */
+.tmsField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ─── Read-only source chips (Discover business keywords) ─── */
+.roChipsField,
+.countedField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roChipsBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #f5f5f5;
+  box-sizing: border-box;
+}
+
+/* ─── Counted textarea ─── */
+.countedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.countedCount {
+  flex-shrink: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #212121;
+}
+
+/* Taller than the single-row `tags` input, and chips stack from the top. */
+.keywordChipsBox {
+  min-height: 120px;
+  align-items: flex-start;
+  align-content: flex-start;
+  padding: 10px 12px;
+}
+

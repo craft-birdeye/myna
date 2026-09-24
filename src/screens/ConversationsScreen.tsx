@@ -2,7 +2,6 @@ import {
   ChartCard,
   DonutChart,
   Heatmap,
-  Icon,
   SankeyChart,
   StackedBarChart,
   SummaryStats,
@@ -11,6 +10,7 @@ import {
   type BarSeries,
   type SummaryStat,
 } from '../components'
+import { ArrowDown, ArrowUp, Calendar, ChevronDown } from 'lucide-react'
 
 const SUMMARY: SummaryStat[] = [
   { id: 'total', value: '7.9K', label: 'Total Conversations', delta: '8.4%', trend: 'up' },
@@ -133,7 +133,7 @@ function MiniKpis({ items }: { items: MiniKpi[] }) {
                   k.trend === 'down' ? 'text-chip-danger-text' : 'text-chip-success-text'
                 }`}
               >
-                <Icon name={k.trend === 'down' ? 'arrow_downward' : 'arrow_upward'} size={12} />
+                {k.trend === 'down' ? <ArrowDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <ArrowUp className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
                 {k.delta}
               </span>
             )}
@@ -151,15 +151,14 @@ export function ConversationsScreen() {
       <TopNav initials="S" />
 
       {/* page header */}
-      <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
-        <h1 className="text-h3 text-text-primary">Conversations</h1>
+      <div className="flex shrink-0 items-center justify-end bg-surface px-2xl py-xl">
         <button
           type="button"
-          className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+          className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
         >
-          <Icon name="calendar_today" size={18} className="text-text-icon" />
+          <Calendar className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           Mar 28, 2026 - Apr 24, 2026
-          <Icon name="expand_more" size={20} className="text-text-icon" />
+          <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
 

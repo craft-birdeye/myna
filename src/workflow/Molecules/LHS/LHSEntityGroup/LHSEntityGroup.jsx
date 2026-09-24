@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { setFlowDragData } from '../../../flowDragData';
+import { DraftBlockedGuard } from '../../../components/DraftBlockedTooltip';
 import iconAgentsPurple from '../../../../assets/icon-agents-purple.svg';
 import './LHSEntityGroup.css';
 
@@ -18,6 +19,11 @@ function getItemDescription(item) {
 function getItemHasAi(item) {
   if (typeof item === 'string') return false;
   return Boolean(item?.ai);
+}
+
+function getItemIcon(item) {
+  if (typeof item === 'string') return '';
+  return item?.icon || '';
 }
 
 function isTextTruncated(el) {
@@ -127,9 +133,18 @@ export default function LHSEntityGroup({
   readOnly = false,
   dragAlwaysVisible = false,
   disabledItems = null,
+  /** Renders as a plain inline block (no card shadow, bold titles, single-line desc)
+   *  for use directly under an expanded category row, instead of the floating
+   *  flyout's own boxed card look. */
+  inline = false,
+  /** When inline, still show the section title (e.g. "Reviews" / "Inbox"). */
+  showTitle = false,
+  draftBlocked = false,
+  onEditDraft,
 }) {
   const disabledSet = disabledItems instanceof Set ? disabledItems : new Set(disabledItems ?? []);
-  const canEdit = !viewOnly && !readOnly && !!onItemsChange;
+  const dragBlocked = draftBlocked && !viewOnly;
+  const canEdit = !viewOnly && !readOnly && !dragBlocked && !!onItemsChange;
   const [editingIdx, setEditingIdx] = useState(null);
   const [editDraft, setEditDraft] = useState('');
   const hasDescriptions = items.some((item) => Boolean(getItemDescription(item)));
@@ -143,6 +158,15 @@ export default function LHSEntityGroup({
       label: parentLabel,
       description: label,
     });
+
+    // Native drag ghost: label only (not description / drag handle).
+    const ghost = document.createElement('div');
+    ghost.className = 'lhs-entity-group__drag-ghost';
+    ghost.textContent = label;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 16, 16);
+    requestAnimationFrame(() => ghost.remove());
+
     onDragStartItem?.(item);
   };
 
@@ -170,23 +194,35 @@ export default function LHSEntityGroup({
   };
 
   return (
-    <div className={`lhs-entity-group${hasDescriptions ? ' lhs-entity-group--described' : ''}`}>
-      <p className="lhs-entity-group__title">{title}</p>
+    <div className={`lhs-entity-group${hasDescriptions ? ' lhs-entity-group--described' : ''}${inline ? ' lhs-entity-group--inline' : ''}`}>
+      {(!inline || showTitle) && title ? <p className="lhs-entity-group__title">{title}</p> : null}
 
       <div className="lhs-entity-group__items">
         {items.map((item, idx) => {
           const label = getItemLabel(item);
           const description = getItemDescription(item);
           const hasAi = getItemHasAi(item);
+          const icon = getItemIcon(item);
           const isDisabled = disabledSet.has(label) || disabledSet.has(item);
           return (
           <div
             key={`${label}-${idx}`}
             className={`lhs-entity-group__item${description ? ' lhs-entity-group__item--described' : ''}${editingIdx === idx ? ' lhs-entity-group__item--editing' : ''}${isDisabled ? ' lhs-entity-group__item--disabled' : ''}`}
-            draggable={!viewOnly && !isDisabled && (readOnly || editingIdx !== idx)}
-            onDragStart={(e) => !viewOnly && !isDisabled && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
+            draggable={!viewOnly && !isDisabled && !dragBlocked && (readOnly || editingIdx !== idx)}
+            onDragStart={(e) => !viewOnly && !isDisabled && !dragBlocked && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
             aria-disabled={isDisabled || undefined}
           >
+            {/* `Glyph` (a stroked SVG component) wins over the Material ligature, so a card
+                can carry either. Full canvas uses it for the Sub-agent bot icon. */}
+            {item?.Glyph ? (
+              <span className="lhs-entity-group__item-icon lhs-entity-group__item-icon--svg" aria-hidden>
+                <item.Glyph size={18} />
+              </span>
+            ) : icon ? (
+              <span className="material-symbols-outlined lhs-entity-group__item-icon" aria-hidden>
+                {icon}
+              </span>
+            ) : null}
             {editingIdx === idx ? (
               <input
                 className="lhs-entity-group__item-input"
@@ -234,13 +270,24 @@ export default function LHSEntityGroup({
                     <span className="material-symbols-outlined">edit</span>
                   </button>
                 ) : null}
-                <span
-                  className={`lhs-entity-group__item-drag material-symbols-outlined${
-                    dragAlwaysVisible || isDisabled ? ' lhs-entity-group__item-drag--visible' : ''
-                  }`}
-                >
-                  drag_indicator
-                </span>
+                {dragBlocked ? (
+                  <DraftBlockedGuard blocked onEditDraft={onEditDraft} inline className="lhs-entity-group__item-drag-wrap">
+                    <span
+                      className="lhs-entity-group__item-drag material-symbols-outlined lhs-entity-group__item-drag--visible lhs-entity-group__item-drag--draft-blocked"
+                      aria-hidden
+                    >
+                      drag_indicator
+                    </span>
+                  </DraftBlockedGuard>
+                ) : (
+                  <span
+                    className={`lhs-entity-group__item-drag material-symbols-outlined${
+                      dragAlwaysVisible || isDisabled ? ' lhs-entity-group__item-drag--visible' : ''
+                    }`}
+                  >
+                    drag_indicator
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@
  * WorkflowViewerTab
  * View-only workflow canvas on the Workflow tab of AgentInstanceScreen.
  * - No LHS drawer, no yellow banner, no editing
- * - Edit pencil lives inside the existing floating zoom toolbar (via onEdit prop)
+ * - Floating top chrome shows only Edit workflow (pencil, via onEdit) + Run test (play)
  * - Canvas has left/right padding and rounded corners
  */
 import React, { Suspense } from 'react'
@@ -11,11 +11,15 @@ import {
   DENTAL_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
   HEALTHCARE_REMINDER_NORTH_WORKFLOW,
+  REVIEW_RESPONSE_WORKFLOW,
 } from '../data/agentWorkflows'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
+import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
+import { applyReviewResponseCopy, RR_COPY_REV } from '../data/reviewResponseCopy'
+import { applyFrontDeskCopy, FD_COPY_REV } from '../data/frontDeskCopy'
 const AgentBuilder = AgentBuilderRaw as unknown as React.ComponentType<any>
 
 const EMPTY_WORKFLOW = {
@@ -46,37 +50,59 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
   const baseWorkflow =
-    product === 'healthcare' && instanceName === 'Reminder agent - North region'
-      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
-      : workflowMap[agentName] ?? EMPTY_WORKFLOW
+    /review response/i.test(agentName)
+      ? REVIEW_RESPONSE_WORKFLOW
+      : product === 'healthcare' && instanceName === 'Reminder agent - North region'
+        ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
+        : workflowMap[agentName] ?? EMPTY_WORKFLOW
 
   // Patch the start-node label so newly created drafts show their draft name on the canvas.
-  const workflow = {
-    nodes: baseWorkflow.nodes,
-    nodeDetails: {
-      ...baseWorkflow.nodeDetails,
-      '__start__': {
-        ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
-        agentName: shownName,
+  const workflow = applyFrontDeskCopy(
+    applyReviewResponseCopy(
+      {
+        nodes: baseWorkflow.nodes,
+        nodeDetails: {
+          ...baseWorkflow.nodeDetails,
+          '__start__': {
+            ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
+            agentName: shownName,
+          },
+        },
       },
-    },
-  }
+      agentName,
+      shownName,
+      instanceName,
+    ),
+    agentName,
+    shownName,
+    instanceName,
+  )
 
   return (
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>
       {/* Scoped CSS overrides */}
       <style>{`
-        .wf-viewer .agent-builder__lhs    { display: none !important; }
-        .wf-viewer .faq-ab-header         { display: none !important; }
-        .wf-viewer .ab-view-banner        { display: none !important; }
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
-        .wf-viewer .agent-builder-wrapper { background-color: #f8f9fb !important; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px) !important; background-size: 28px 28px !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
-        /* Viewer: canvas rounded, no extra containers — padding comes from wrapper margin */
+        /* Flat canvas — #F2F4F7 (no dot grid). Cover every layer that paints bg. */
+        .wf-viewer .faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+        .wf-viewer .agent-builder--rr-chrome,
+        .wf-viewer .agent-builder-wrapper,
+        .wf-viewer .agent-builder__canvas,
+        .wf-viewer .flow-canvas,
+        .wf-viewer .flow-canvas .react-flow,
+        .wf-viewer .flow-canvas .react-flow__renderer,
+        .wf-viewer .flow-canvas .react-flow__pane {
+          background-color: #f2f4f7 !important;
+          background-image: none !important;
+        }
+        .wf-viewer .agent-builder-wrapper { margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
-        .wf-viewer .flow-canvas__toolbar-anchor { top: 16px !important; }
-        /* Hide orientation toggle (↓ →) in view-only mode only */
+        .wf-viewer .flow-canvas__toolbar-anchor--rr-chrome { top: auto !important; bottom: 16px !important; left: 16px !important; right: 16px !important; }
         .wf-viewer .graph-controls__toggle { display: none !important; }
+        /* Node toggles are disabled here (state display, not a control) — don't invite clicks. */
+        .wf-viewer .cnh__toggle, .wf-viewer .cnh__toggle * { cursor: default !important; }
+        .wf-viewer .cnh__toggle { opacity: 0.75; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>
@@ -86,10 +112,18 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
           </div>
         }>
           <AgentBuilder
-            key={`${agentName}::${shownName}::${product ?? 'automotive'}`}
+            key={`${agentName}::${shownName}::${product ?? 'automotive'}::${RR_COPY_REV}::${FD_COPY_REV}::${
+              Object.entries(workflow.nodeDetails ?? {})
+                .map(([id, d]) => {
+                  const n = d as Record<string, unknown> | undefined
+                  return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
+                })
+                .join('|')
+            }`}
             pageTitle={shownName}
             appTitle={shownName}
             viewOnly={true}
+            viewChromeActions
             onEdit={onEdit}
             product={product ?? 'automotive'}
             moduleSlug="myna"
@@ -99,6 +133,7 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
             initialNodes={workflow.nodes}
             initialNodeDetails={workflow.nodeDetails}
             procedures={filteredProcedures}
+            showProceduresPalette={isFrontDeskCanvasAgent(agentName, shownName)}
             defaultOpenSection="Tasks"
           />
         </Suspense>

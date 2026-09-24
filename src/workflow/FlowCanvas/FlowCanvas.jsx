@@ -5,6 +5,7 @@ import {
   Handle,
   Position,
   BaseEdge,
+  EdgeLabelRenderer,
   getStraightPath,
   useReactFlow,
 } from '@xyflow/react';
@@ -19,8 +20,10 @@ import LoopNode, { computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/Lo
 import AddStepButton from './AddStepButton';
 import './FlowCanvas.css';
 import branchStyles from './BranchPath.module.css';
-import { FLOW_CONNECTOR_GAP } from '../flowLayoutConstants';
+import collapseStyles from './BranchCollapse.module.css';
+import { FLOW_CARD_WIDTH, FLOW_CONNECTOR_GAP, FLOW_STANDARD_NODE_HEIGHT, FLOW_TRIGGER_PLACEHOLDER_HEIGHT } from '../flowLayoutConstants';
 import { getDraggingFlowKind, getFlowDragPayload, isDraggingFlowKind } from '../flowDragData';
+import { Tooltip } from '../../components/Tooltip/Tooltip';
 
 /* ─── Custom Node Wrappers ─── */
 function StartNodeWrapper({ id, data }) {
@@ -79,6 +82,7 @@ function TriggerNodeWrapper({ id, data }) {
       <CanvasNode
         nodeType="trigger"
         label={data.headerLabel || (data.subtype === 'Schedule-based' ? 'Schedule-based trigger' : 'Trigger')}
+        runStatus={data.runStatus} hasError={data.hasError}
         stepNumber={data.stepNumber}
         title={data.title}
         description={data.subtitle}
@@ -88,6 +92,8 @@ function TriggerNodeWrapper({ id, data }) {
         toggleEnabled={data.toggleEnabled}
         toggleDisabled={data.viewOnly}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         state={isDropTarget ? 'drop-target' : (isSelected ? 'selected' : 'default')}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -109,7 +115,7 @@ function TaskNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Task" stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -120,7 +126,7 @@ function VoiceCallNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Task" stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -131,7 +137,7 @@ function BranchNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="branch" label="Branch" stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} hasAddButton onAddClick={data.onAddBranch} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="branch" label="Branch" runStatus={data.runStatus} hasError={data.hasError} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -145,6 +151,7 @@ function ControlNodeWrapper({ id, data, nodeType, label }) {
       <CanvasNode
         nodeType={nodeType}
         label={label}
+        runStatus={data.runStatus} hasError={data.hasError}
         stepNumber={data.stepNumber}
         title={data.title}
         description={data.subtitle}
@@ -152,7 +159,7 @@ function ControlNodeWrapper({ id, data, nodeType, label }) {
         descriptionPlaceholder={data.descriptionPlaceholder}
         hasToggle={data.hasToggle}
         toggleEnabled={data.toggleEnabled}
-        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly}
+        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft}
         state={isSelected ? 'selected' : 'default'}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -176,10 +183,11 @@ function ProceduresNodeWrapper({ id, data }) {
       <Handle type="target" position={Position.Top} />
       <ProceduresNode
         stepNumber={data.stepNumber}
+        runStatus={data.runStatus} hasError={data.hasError}
         procedureItems={data.procedureItems || []}
         hasToggle={data.hasToggle}
         toggleEnabled={data.toggleEnabled}
-        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly}
+        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft}
         state={isSelected ? 'selected' : 'default'}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -229,6 +237,8 @@ function LoopNodeWrapper({ id, data }) {
         toggleEnabled={data.toggleEnabled}
         toggleDisabled={data.viewOnly}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         loopChildren={loopChildren}
         loopFlow={loopFlow}
         loopNodeDetails={loopNodeDetails}
@@ -259,62 +269,165 @@ function SubAgentNodeWrapper(props) {
   return <ControlNodeWrapper {...props} nodeType="subagent" label="Sub-agent" />;
 }
 
-function BranchPathNodeWrapper({ id, data }) {
-  const isSelected = id === data.selectedNodeId;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+const BRANCH_CHIP_LABEL_MAX = 24;
+const FALLBACK_CHIP_LABEL = 'Fallback branch';
+const FALLBACK_CHIP_TOOLTIP =
+  'If none of the criteria are met, follow this branch.';
+const LEGACY_FALLBACK_CHIP_LABELS = new Set([
+  'No conditions met',
+  'None met',
+  'Fallback',
+  'Fallback branch',
+  'Fall back branch',
+]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
+function BranchPathNodeWrapper({ id, data }) {
+  const isSelected = id === data.selectedNodeId || id === data.focusBranchPathId;
+  const canDelete = !data.viewOnly && !data.isFallback && !data.isVoiceCallBranch && !!data.onDelete;
+  const rawLabel = String(data.label ?? '').trim();
+  const isFallbackChip = !!data.isFallback || LEGACY_FALLBACK_CHIP_LABELS.has(rawLabel);
+  const fullLabel = isFallbackChip ? FALLBACK_CHIP_LABEL : rawLabel;
+  const description = isFallbackChip ? '' : String(data.description || '').trim();
+  const isTruncated = fullLabel.length > BRANCH_CHIP_LABEL_MAX;
+  const displayLabel = isTruncated
+    ? `${fullLabel.slice(0, BRANCH_CHIP_LABEL_MAX)}…`
+    : fullLabel;
+  const collapsed = !!data.collapsed;
+  const hiddenCount = data.hiddenCount ?? 0;
 
   const chipClass = [
     branchStyles.chip,
-    data.isFallback ? branchStyles.chipFallback : '',
+    isFallbackChip ? branchStyles.chipFallback : '',
     isSelected ? branchStyles.chipSelected : '',
     data.isVoiceCallBranch ? branchStyles.chipNoPointer : '',
   ].filter(Boolean).join(' ');
 
+  const truncatedTooltip = isTruncated ? (
+    <span className={branchStyles.tooltipBody}>
+      <span className={branchStyles.tooltipTitle}>{fullLabel}</span>
+      {description ? (
+        <span className={branchStyles.tooltipDescription}>{description}</span>
+      ) : null}
+    </span>
+  ) : null;
+
+  const labelEl = <span className={branchStyles.chipLabel}>{displayLabel}</span>;
+
   return (
-    <div className={branchStyles.pathWrapper}>
-      <Handle type="target" position={Position.Top} />
-      <div className={chipClass}>
-        <span className={branchStyles.chipLabel}>{data.label}</span>
-        {!data.isFallback && !data.isVoiceCallBranch && (
-          <span className={`material-symbols-outlined ${branchStyles.chipIcon}`}>info</span>
-        )}
-        {!data.isVoiceCallBranch && (
-          <div className={branchStyles.chipMenuWrapper} ref={menuRef}>
-            <span
-              className={`material-symbols-outlined ${branchStyles.chipMenu}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!data.isFallback) setMenuOpen((m) => !m);
-              }}
-            >more_vert</span>
-            {menuOpen && !data.isFallback && (
-              <div className={branchStyles.chipDropdown}>
+    <div className="flow-canvas__node-center">
+      <div className={branchStyles.pathWrapper}>
+        <Handle type="target" position={Position.Top} />
+        <div className={branchStyles.chipRow}>
+          <div className={chipClass}>
+            {isFallbackChip ? (
+              <Tooltip content={FALLBACK_CHIP_TOOLTIP} variant="detail" side="top">
+                {labelEl}
+              </Tooltip>
+            ) : isTruncated ? (
+              <Tooltip content={truncatedTooltip} variant="detail" side="top">
+                {labelEl}
+              </Tooltip>
+            ) : description ? (
+              <Tooltip content={description} variant="detail" side="top">
+                {labelEl}
+              </Tooltip>
+            ) : (
+              labelEl
+            )}
+            {hiddenCount > 0 && (
+              <Tooltip content={collapsed ? 'Expand branch' : 'Collapse branch'} variant="brief" side="top">
                 <button
-                  className={branchStyles.chipDropdownItem}
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); data.onDelete?.(); }}
+                  className={`nodrag nopan ${branchStyles.chipCollapse}`}
+                  aria-label={collapsed ? 'Expand branch' : 'Collapse branch'}
+                  aria-expanded={!collapsed}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onToggleCollapse?.();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <span className="material-symbols-outlined">delete</span>
-                  Delete branch
+                  <span className="material-symbols-outlined" aria-hidden>
+                    {collapsed ? 'expand_more' : 'expand_less'}
+                  </span>
                 </button>
-              </div>
+              </Tooltip>
             )}
           </div>
+          {canDelete && (
+            <div className={`nodrag nopan ${branchStyles.hoverActions}`}>
+              <Tooltip content="Delete" variant="brief" side="right">
+                <button
+                  type="button"
+                  className={branchStyles.hoverDelete}
+                  aria-label="Delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onDelete?.();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <span className="material-symbols-outlined" aria-hidden>delete</span>
+                </button>
+              </Tooltip>
+            </div>
+          )}
+        </div>
+        {collapsed && hiddenCount > 0 && (
+          <p className={branchStyles.hiddenCount}>{hiddenCount} Tasks hidden</p>
         )}
+        <Handle type="source" position={Position.Bottom} style={collapsed ? { opacity: 0 } : undefined} />
       </div>
-      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+
+function BranchCollapseNodeWrapper({ data }) {
+  const collapsed = !!data.collapsed;
+  const branchCount = data.branchCount ?? 0;
+  const taskCount = data.taskCount ?? 0;
+  const label = `${branchCount} Branch • ${taskCount} Tasks hidden`;
+
+  return (
+    <div className="flow-canvas__node-center">
+      <div className={collapseStyles.wrap}>
+        <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+        {collapsed ? (
+          <Tooltip content="Expand branch" variant="brief" side="right">
+            <button
+              type="button"
+              className={`nodrag nopan ${collapseStyles.pill}`}
+              aria-label="Expand branch"
+              aria-expanded={false}
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onToggle?.();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <span className={collapseStyles.pillLabel}>{label}</span>
+              <span className="material-symbols-outlined" aria-hidden>expand_more</span>
+            </button>
+          </Tooltip>
+        ) : (
+          <Tooltip content="Collapse branch" variant="brief" side="right">
+            <button
+              type="button"
+              className={`nodrag nopan ${collapseStyles.circle}`}
+              aria-label="Collapse branch"
+              aria-expanded
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onToggle?.();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <span className="material-symbols-outlined" aria-hidden>expand_less</span>
+            </button>
+          </Tooltip>
+        )}
+        <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      </div>
     </div>
   );
 }
@@ -327,12 +440,16 @@ function EndNodeWrapper({ id, data }) {
       <EndNode
         selected={isSelected}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         isDraggingFromLHS={data.isDraggingFromLHS}
         onDropBeforeEnd={data.onDropBeforeEnd}
         onAddStep={data.onAddStepBeforeEnd}
         product={data.product}
         agentName={data.agentName}
         hideAdd={data.hideAdd}
+        hasClipboard={data.hasClipboard}
+        onPaste={data.onPasteBeforeEnd}
       />
     </div>
   );
@@ -355,13 +472,24 @@ function TriggerPlaceholderWrapper({ data }) {
 
 function BranchEndNodeWrapper() {
   return (
-    <div className="flow-canvas__branch-end-wrapper">
-      <Handle type="target" position={Position.Top} />
-      <div className="flow-canvas__branch-end">
-        End
+    <div className="flow-canvas__node-center">
+      <div className="flow-canvas__branch-end-wrapper">
+        <Handle type="target" position={Position.Top} />
+        <div className="flow-canvas__branch-end">
+          End
+        </div>
       </div>
     </div>
   );
+}
+
+/** Collapse tiny X drift so arm connectors stay truly vertical. */
+function snapVerticalPair(sourceX, targetX, tolerance = 2) {
+  if (Math.abs(targetX - sourceX) <= tolerance) {
+    const x = (sourceX + targetX) / 2;
+    return { sourceX: x, targetX: x };
+  }
+  return { sourceX, targetX };
 }
 
 /* ─── Custom Edge: main connector with + button ─── */
@@ -370,7 +498,17 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
   const isDraggingFromLHS = data?.isDraggingFromLHS && data?.draggingLhsKind !== 'trigger';
   const viewOnly = data?.viewOnly;
 
-  const [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  const snapped = snapVerticalPair(sourceX, targetX);
+  const [edgePath, labelX, labelY] = getStraightPath({
+    sourceX: snapped.sourceX,
+    sourceY,
+    targetX: snapped.targetX,
+    targetY,
+  });
+
+  useEffect(() => {
+    if (!isDraggingFromLHS) setIsDragOver(false);
+  }, [isDraggingFromLHS]);
 
   const handleDragOver = useCallback((e) => {
     if (isDraggingFlowKind(e.dataTransfer, 'trigger')) return;
@@ -380,7 +518,10 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
     setIsDragOver(true);
   }, []);
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback((e) => {
+    // Ignore child-to-child drag transitions within this connector wrapper.
+    const next = e.relatedTarget;
+    if (next && e.currentTarget.contains(next)) return;
     setIsDragOver(false);
   }, []);
 
@@ -400,51 +541,61 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
     data?.onDropOnEdge?.(type, label, description);
   }, [data]);
 
+  // Identity → first step: line only (no insert). End owns its own HTML connector.
+  // Every other spine gap gets the same line + add control as EndNode.
   const showAddButton = source !== '__start__' && target !== '__end__' && !data?.hideAddButton;
 
   const isEndEdge = target === '__end__';
+  // Draw the HTML spine connector for every non-end edge so gaps match EndNode
+  // even when the + is suppressed (start edge / after procedures / placeholder).
+  const showMidConnector = !isEndEdge && !viewOnly;
+
+  // Grow the connector's drop hit-area whenever a compatible drag is active OR
+  // this connector is currently hovered as a drop target. The latter avoids the
+  // "Drop here" label being clipped if drag metadata doesn't mark the drag as
+  // coming from the LHS.
+  const shouldExpandDropZone = showAddButton && (isDraggingFromLHS || isDragOver);
 
   return (
     <>
       {!isEndEdge && <BaseEdge id={id} path={edgePath} style={style} />}
-      {showAddButton && viewOnly && (
-        // View-only canvases keep the + as an inert visual marker (no menu, no drop).
-        <foreignObject width={56} height={56} x={labelX - 28} y={labelY - 28} className="flow-canvas__edge-fo">
-          <div className="flow-canvas__edge-add-wrapper">
-            <button
-              type="button"
-              className="flow-canvas__edge-add"
-              disabled
-              aria-hidden
-              tabIndex={-1}
-            >
-              <span className="material-symbols-outlined">add</span>
-            </button>
-          </div>
-        </foreignObject>
-      )}
-      {showAddButton && !viewOnly && (
-        <foreignObject width={56} height={56} x={labelX - 28} y={labelY - 28} className="flow-canvas__edge-fo">
+      {showMidConnector && (
+        // HTML overlay (not SVG foreignObject) so the connector sits above the
+        // node layer and matches EndNode — foreignObject was clipped / buried
+        // under cards so mid-flow connectors disappeared.
+        <EdgeLabelRenderer>
           <div
-            className="flow-canvas__edge-add-wrapper"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            className={`flow-canvas__edge-add-wrapper${shouldExpandDropZone ? ' flow-canvas__edge-add-wrapper--drop-expanded' : ''}${!showAddButton ? ' flow-canvas__edge-add-wrapper--line-only' : ''}`}
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: showAddButton ? 'all' : 'none',
+              zIndex: 1001,
+            }}
+            onDragOver={showAddButton ? handleDragOver : undefined}
+            onDragLeave={showAddButton ? handleDragLeave : undefined}
+            onDrop={showAddButton ? handleDrop : undefined}
           >
-            <AddStepButton
-              isDraggingFromLHS={isDraggingFromLHS}
-              isDragOver={isDragOver}
-              product={data?.product}
-              agentName={data?.agentName}
-              onSelect={handleSelect}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              showPasteOption={!!(data?.hasClipboard && data?.betweenCards)}
-              onPaste={data?.onPasteAtEdge}
-            />
+            <div className="flow-canvas__edge-connector-line" aria-hidden />
+            {showAddButton && (
+              <AddStepButton
+                isDraggingFromLHS={isDraggingFromLHS}
+                isDragOver={isDragOver}
+                product={data?.product}
+                agentName={data?.agentName}
+                onSelect={handleSelect}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                singleSearch={!!data?.singleAddStepSearch}
+                showPasteOption={!!data?.hasClipboard && !!data?.betweenCards}
+                onPaste={data?.onPasteAtEdge}
+                draftBlocked={!!data?.draftBlocked}
+                onEditDraft={data?.onEditDraft}
+              />
+            )}
           </div>
-        </foreignObject>
+        </EdgeLabelRenderer>
       )}
     </>
   );
@@ -452,9 +603,26 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
 
 /* ─── Custom Edge: branch fan ─── */
 function BranchFanEdge({ sourceX, sourceY, targetX, targetY }) {
-  const midY = sourceY + 30;
-  const d = `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+  // Orthogonal elbow only — never a diagonal. Snap tiny X drift first so the
+  // vertical legs stay plumb when source/target share an arm column.
+  const snapped = snapVerticalPair(sourceX, targetX);
+  const sx = snapped.sourceX;
+  const tx = snapped.targetX;
+  const gap = targetY - sourceY;
+  const midY = gap > 16 ? sourceY + Math.min(48, gap * 0.55) : sourceY + Math.max(gap / 2, 8);
+  const d = `M ${sx} ${sourceY} L ${sx} ${midY} L ${tx} ${midY} L ${tx} ${targetY}`;
   return <path d={d} className="flow-canvas__branch-fan" fill="none" />;
+}
+
+function StraightEdge({ id, sourceX, sourceY, targetX, targetY, style }) {
+  const snapped = snapVerticalPair(sourceX, targetX);
+  const [edgePath] = getStraightPath({
+    sourceX: snapped.sourceX,
+    sourceY,
+    targetX: snapped.targetX,
+    targetY,
+  });
+  return <BaseEdge id={id} path={edgePath} style={style ?? { stroke: '#ccd5e4', strokeWidth: 1 }} />;
 }
 
 /* ─── Stable maps ─── */
@@ -470,6 +638,7 @@ const NODE_TYPES = {
   subagent: SubAgentNodeWrapper,
   procedures: ProceduresNodeWrapper,
   branchPath: BranchPathNodeWrapper,
+  branchCollapse: BranchCollapseNodeWrapper,
   branchEnd: BranchEndNodeWrapper,
   triggerPlaceholder: TriggerPlaceholderWrapper,
   end: EndNodeWrapper,
@@ -478,6 +647,7 @@ const NODE_TYPES = {
 const EDGE_TYPES = {
   addButton: AddButtonEdge,
   branchFan: BranchFanEdge,
+  straight: StraightEdge,
 };
 
 /* ─── Main FlowCanvas ─── */
@@ -496,8 +666,11 @@ function FlowCanvasInner({
   onView,
   selectedNodeId,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   product = 'healthcare',
   agentName = '',
+  rrChrome = false,
   initialZoom = 1,
   runDisabled = false,
   hasClipboard = false,
@@ -506,6 +679,18 @@ function FlowCanvasInner({
   onRedo,
   canUndo = false,
   canRedo = false,
+  hideUndoRedo = false,
+  /** Add-step "+" menu uses one full-width search instead of one per pane (Sep 1 only). */
+  singleAddStepSearch = false,
+  /** When set, the Help center trigger renders as its own pill in the bottom editor row
+   * instead of the top-right floater (exploration only). */
+  onHelpToggle = null,
+  helpOpen = false,
+  /** Exploration-family canvases — groups zoom/undo-redo/help into three adjacent pills at
+   * bottom-left instead of spread across left/center/top-right. */
+  combineControlsLeft = false,
+  /** Node id to pan into view — used by the test run to follow the executing card. */
+  focusNodeId = null,
 }) {
   const { zoomTo, fitView, setCenter, setViewport, getViewport, getNodes } = useReactFlow();
   const [zoom, setZoom] = useState(Math.round(initialZoom * 100));
@@ -520,6 +705,19 @@ function FlowCanvasInner({
   const onPasteAtConnectorRef = useRef(onPasteAtConnector);
   useEffect(() => { onPasteAtConnectorRef.current = onPasteAtConnector; }, [onPasteAtConnector]);
 
+  // Pan the executing test-run node into view, keeping the user's current zoom.
+  useEffect(() => {
+    if (!focusNodeId) return;
+    const node = getNodes().find((n) => n.id === focusNodeId);
+    if (!node) return;
+    const w = node.measured?.width ?? node.width ?? 0;
+    const h = node.measured?.height ?? node.height ?? 0;
+    setCenter(node.position.x + w / 2, node.position.y + h / 2, {
+      zoom: getViewport().zoom,
+      duration: 700,
+    });
+  }, [focusNodeId, getNodes, setCenter, getViewport]);
+
   const endEdgeSourceId = useMemo(
     () => edges.find((e) => e.target === '__end__')?.source ?? null,
     [edges],
@@ -530,10 +728,25 @@ function FlowCanvasInner({
   const styledNodes = useMemo(
     () => nodes.map((n) => ({
       ...n,
+      // XYFlow keeps nodes `visibility:hidden` until both width and height are known
+      // (`nodeHasDimensions`). Without seeds, newly dropped cards never paint — and with
+      // the start node hidden on exploration scratch, the canvas looks empty.
+      initialWidth: n.initialWidth ?? n.width ?? (
+        n.type === 'branchCollapse' ? 40 : FLOW_CARD_WIDTH
+      ),
+      initialHeight: n.initialHeight ?? n.height ?? (
+        n.type === 'triggerPlaceholder' ? FLOW_TRIGGER_PLACEHOLDER_HEIGHT
+          : n.type === 'branchCollapse' ? 36
+            : n.type === 'branchPath' ? 40
+              : n.type === 'end' || n.type === 'branchEnd' ? 102
+                : FLOW_STANDARD_NODE_HEIGHT
+      ),
       data: {
         ...n.data,
         selectedNodeId,
         viewOnly,
+        draftBlocked,
+        onEditDraft,
         // The trigger placeholder pulses only for trigger drags; every other node (incl. the
         // End "+") pulses only for non-trigger step drags.
         isDraggingFromLHS: n.type === 'triggerPlaceholder'
@@ -587,33 +800,64 @@ function FlowCanvasInner({
                   afterNodeId: n.data?.afterNodeId ?? endEdgeSourceId,
                 });
               },
+              hasClipboard,
+              onPasteBeforeEnd: () => {
+                onPasteAtConnectorRef.current?.(n.data?.afterNodeId ?? endEdgeSourceId);
+              },
             }
           : {}),
         ...(n.id === '__end__' ? { hideAdd: !!n.data?.hideAddBeforeEnd } : {}),
       },
     })),
-    [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName]
+    [nodes, selectedNodeId, viewOnly, draftBlocked, onEditDraft, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
   );
 
-  // Pin start node 24px below the controls bar, horizontally centered, at the
-  // configured initial zoom (default 1).
+  // Pin the flow entry 24px below the controls bar, horizontally centered in the
+  // *visible* canvas (excluding absolute RHS / left palette overlays), at the
+  // configured initial zoom (default 1). Prefer the start card when present;
+  // otherwise the trigger placeholder / first trigger (exploration hides start).
   // Controls: top=8px + height≈52px → bottom≈60px → target top = 60+24 = 84px.
+  const getVisibleCenterX = useCallback((canvas) => {
+    const canvasRect = canvas.getBoundingClientRect();
+    const width = canvasRect.width;
+    const rhs = canvas.closest('.agent-builder')?.querySelector('.agent-builder__rhs');
+    const palette = canvas.closest('.agent-builder')?.querySelector(
+      '.rr-chrome-palette, .agent-builder__lhs-ai',
+    );
+    let leftClip = 0;
+    let rightClip = 0;
+    if (palette) {
+      const pr = palette.getBoundingClientRect();
+      leftClip = Math.max(0, Math.min(width, pr.right - canvasRect.left));
+    }
+    if (rhs) {
+      const rr = rhs.getBoundingClientRect();
+      rightClip = Math.max(0, Math.min(width, canvasRect.right - rr.left));
+    }
+    const visibleWidth = Math.max(120, width - leftClip - rightClip);
+    return leftClip + visibleWidth / 2;
+  }, []);
+
   const positionToStart = useCallback(() => {
-    const startNode = nodes.find(n => n.type === 'start');
+    const entryNode =
+      nodes.find((n) => n.type === 'start') ||
+      nodes.find((n) => n.type === 'triggerPlaceholder') ||
+      nodes.find((n) => n.type === 'trigger') ||
+      nodes[0];
     const canvas = canvasRef.current;
-    if (!startNode || !canvas) return;
-    const { width } = canvas.getBoundingClientRect();
+    if (!entryNode || !canvas) return;
     setViewport(
       {
-        x: width / 2 - startNode.position.x * initialZoom,
-        y: 84 - startNode.position.y * initialZoom,
+        x: getVisibleCenterX(canvas) - entryNode.position.x * initialZoom,
+        y: 84 - entryNode.position.y * initialZoom,
         zoom: initialZoom,
       },
       { duration: 0 },
     );
-  }, [nodes, setViewport, initialZoom]);
+  }, [nodes, setViewport, initialZoom, getVisibleCenterX]);
 
-  // Run once on initial load
+  // Run once on initial load. Do not re-pin when nodes are later added/removed
+  // (e.g. branch expand/collapse) — the viewport should stay where the user left it.
   useEffect(() => {
     if (initialPositioned.current || !nodes.length) return;
     const timer = setTimeout(() => {
@@ -623,50 +867,69 @@ function FlowCanvasInner({
     return () => clearTimeout(timer);
   }, [nodes.length, positionToStart]);
 
-  // Re-pin when nodes are added/removed
-  const prevNodeCountRef = useRef(nodes.length);
-  useEffect(() => {
-    if (!initialPositioned.current) return;
-    if (nodes.length !== prevNodeCountRef.current) {
-      prevNodeCountRef.current = nodes.length;
-      setTimeout(() => positionToStart(), 80);
-    }
-  }, [nodes.length, positionToStart]);
-
-  // Keep the flow horizontally centered whenever the canvas container resizes
-  // (LHS drawer collapse/expand, RHS panel open/close, window resize). CSS
-  // transitions the LHS width, so ResizeObserver fires continuously through
-  // the animation, keeping the canvas centered as the panel moves.
+  // Keep the flow horizontally centered in the visible area whenever the canvas
+  // container resizes (LHS drawer collapse/expand, RHS panel open/close, window
+  // resize). CSS transitions the LHS width, so ResizeObserver fires continuously
+  // through the animation, keeping the canvas centered as the panel moves.
+  // Also watch the agent-builder shell: the RHS is absolutely positioned so it
+  // does not change canvas width — MutationObserver catches overlay open/close.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const observer = new ResizeObserver(() => {
+    const shell = canvas.closest('.agent-builder');
+    const recenter = () => {
       if (!initialPositioned.current) return;
-      const { width } = canvas.getBoundingClientRect();
-      const { y, zoom: currentZoom } = getViewport();
-      setViewport({ x: width / 2, y, zoom: currentZoom }, { duration: 0 });
-    });
+      requestAnimationFrame(() => {
+        const { y, zoom: currentZoom } = getViewport();
+        setViewport({ x: getVisibleCenterX(canvas), y, zoom: currentZoom }, { duration: 0 });
+      });
+    };
+    const observer = new ResizeObserver(recenter);
     observer.observe(canvas);
-    return () => observer.disconnect();
-  }, [getViewport, setViewport]);
+    let mutationObserver;
+    if (shell) {
+      // RHS is a direct child of .agent-builder (absolute overlay). Watching only
+      // childList avoids re-centering on every keystroke inside the panel.
+      mutationObserver = new MutationObserver(recenter);
+      mutationObserver.observe(shell, { childList: true, subtree: false });
+    }
+    return () => {
+      observer.disconnect();
+      mutationObserver?.disconnect();
+    };
+  }, [getViewport, setViewport, getVisibleCenterX]);
 
-  // Detect LHS drag start/end (HTML5 drag API)
+  // Detect LHS drag start/end (HTML5 drag API).
+  // Do NOT clear on pointerup — it fires before `drop` and a re-render can
+  // unmount/move the drop target so the trigger never lands.
   useEffect(() => {
+    const clearDragging = () => {
+      // Defer so the target's own `drop` handler runs first.
+      requestAnimationFrame(() => {
+        setIsDraggingFromLHS(false);
+        setDraggingLhsKind(null);
+      });
+    };
     const onDragStart = (e) => {
       if (e.dataTransfer?.types?.includes('application/reactflow-type')) {
         setIsDraggingFromLHS(true);
         setDraggingLhsKind(getDraggingFlowKind(e.dataTransfer));
       }
     };
-    const onDragEnd = () => {
-      setIsDraggingFromLHS(false);
-      setDraggingLhsKind(null);
-    };
     document.addEventListener('dragstart', onDragStart);
-    document.addEventListener('dragend', onDragEnd);
+    document.addEventListener('dragend', clearDragging);
+    // Clear on `drop` too (capture phase) so the "+" reverts to white the instant
+    // a node lands. `dragend` alone is unreliable here — the canvas re-renders when
+    // the node is added, so the source's dragend can be missed. Capture fires before
+    // the edge/placeholder/end drop handlers' stopPropagation(), and the rAF in
+    // clearDragging lets those handlers land the node first.
+    document.addEventListener('drop', clearDragging, true);
+    window.addEventListener('blur', clearDragging);
     return () => {
       document.removeEventListener('dragstart', onDragStart);
-      document.removeEventListener('dragend', onDragEnd);
+      document.removeEventListener('dragend', clearDragging);
+      document.removeEventListener('drop', clearDragging, true);
+      window.removeEventListener('blur', clearDragging);
     };
   }, []);
 
@@ -678,35 +941,68 @@ function FlowCanvasInner({
   const handleNodeClick = useCallback(
     (event, node) => {
       if (event.target.closest('.cnh__toggle')) return;
-      onNodeClick?.(node);
-      // Read width after React has flushed the re-render (RHS panel may open,
-      // making the canvas narrower). Using rAF gives us the post-layout width.
+      // No handler means the canvas is non-interactive (e.g. a read-only log run) — bail before
+      // the recentre below, which would otherwise pan on every click for no reason.
+      if (!onNodeClick) return;
+      onNodeClick(node);
+      // Read layout after React has flushed the re-render (RHS panel may open).
+      // Using rAF gives us the post-layout width / overlay rects.
       requestAnimationFrame(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const { width } = canvas.getBoundingClientRect();
         const { y, zoom: currentZoom } = getViewport();
-        setViewport({ x: width / 2, y, zoom: currentZoom }, { duration: 300 });
+        setViewport({ x: getVisibleCenterX(canvas), y, zoom: currentZoom }, { duration: 300 });
       });
     },
-    [onNodeClick, getViewport, setViewport]
+    [onNodeClick, getViewport, setViewport, getVisibleCenterX]
   );
 
   const handleDragOver = useCallback((event) => {
-    if (isDraggingFlowKind(event.dataTransfer, 'trigger')) return;
+    // Some drag sources don't reliably trigger our document-level dragstart hook.
+    // Promote to "active flow drag" as soon as we see our MIME type on canvas.
+    if (event.dataTransfer?.types?.includes('application/reactflow-type')) {
+      if (!isDraggingFromLHS) setIsDraggingFromLHS(true);
+      if (!draggingLhsKind) setDraggingLhsKind(getDraggingFlowKind(event.dataTransfer) || 'task');
+    }
+
+    // Allow dropping a trigger on the empty canvas (no trigger yet); otherwise
+    // only non-trigger kinds may land on free canvas / mid-flow.
+    if (isDraggingFlowKind(event.dataTransfer, 'trigger')) {
+      const hasTrigger = getNodes().some((n) => n.type === 'trigger');
+      if (hasTrigger) return;
+    }
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
-  }, []);
+  }, [getNodes, isDraggingFromLHS, draggingLhsKind]);
 
-  // Canvas-wide drop — skip if landed inside a foreignObject (edge buttons handle their own drops)
+  // Canvas-wide drop — skip if landed on an edge/end connector (they handle their own drops)
   const handleDrop = useCallback(
     (event) => {
       event.preventDefault();
       if (event.target.closest('foreignObject')) return;
+      if (event.target.closest('.flow-canvas__edge-add-wrapper')) return;
+      if (event.target.closest('.end-node__add-slot')) return;
+      // Dropped on the dedicated trigger placeholder — it handles its own drop.
+      if (event.target.closest('.trigger-placeholder')) return;
+
       const type = event.dataTransfer.getData('application/reactflow-type');
       const label = event.dataTransfer.getData('application/reactflow-label');
       const description = event.dataTransfer.getData('application/reactflow-description');
-      if (!type || type === 'trigger') return;
+      if (!type) return;
+
+      // Triggers may only land when no trigger exists yet (empty slot). Accept a
+      // canvas-level drop as a fallback if the placeholder miss-fires.
+      if (type === 'trigger') {
+        const hasTrigger = getNodes().some((n) => n.type === 'trigger');
+        if (hasTrigger) return;
+        onDropNodeRef.current?.({
+          type,
+          label,
+          description,
+          afterNodeId: '__start__',
+        });
+        return;
+      }
 
       const dropY = event.clientY; // screen Y — no coordinate conversion needed
 
@@ -763,10 +1059,13 @@ function FlowCanvasInner({
           isDraggingFromLHS,
           draggingLhsKind,
           viewOnly,
+          draftBlocked,
+          onEditDraft,
           product,
           agentName,
           hasClipboard,
-          onDropOnEdge: viewOnly ? undefined : (type, label, description) => {
+          singleAddStepSearch,
+          onDropOnEdge: viewOnly || draftBlocked ? undefined : (type, label, description) => {
             if (type === 'trigger') return;
             onDropNodeRef.current?.({
               type,
@@ -776,17 +1075,63 @@ function FlowCanvasInner({
               branchPathId: edge.data?.branchPathId,
             });
           },
-          onPasteAtEdge: (viewOnly || !edge.data?.betweenCards) ? undefined : () => {
+          onPasteAtEdge: (viewOnly || draftBlocked || !edge.data?.betweenCards) ? undefined : () => {
             onPasteAtConnectorRef.current?.(edge.data?.afterNodeId ?? edge.source);
           },
         },
       })),
-    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, product, agentName, hasClipboard]
+    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, draftBlocked, onEditDraft, product, agentName, hasClipboard, singleAddStepSearch]
   );
 
   const handleViewportChange = useCallback(({ zoom: z }) => {
     setZoom(Math.round(z * 100));
   }, []);
+
+  // View-only canvases (log run view, workflow tab) — Ctrl/Cmd + +/- and numpad zoom.
+  useEffect(() => {
+    if (!viewOnly) return undefined;
+
+    const ZOOM_STEP = 0.25;
+
+    const onKeyDown = (e) => {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+
+      const mod = e.ctrlKey || e.metaKey;
+      const numpad = e.key === 'Add' || e.key === 'Subtract';
+      const canvasFocused = Boolean(canvasRef.current?.contains(document.activeElement));
+      const zoomInKey = e.key === '=' || e.key === '+' || e.key === 'Add';
+      const zoomOutKey = e.key === '-' || e.key === '_' || e.key === 'Subtract';
+
+      const applyZoom = (next) => {
+        const clamped = Math.min(2, Math.max(0.1, +next.toFixed(2)));
+        zoomTo(clamped, { duration: 200 });
+      };
+
+      if (mod && zoomInKey) {
+        e.preventDefault();
+        applyZoom(getViewport().zoom + ZOOM_STEP);
+        return;
+      }
+      if (mod && zoomOutKey) {
+        e.preventDefault();
+        applyZoom(getViewport().zoom - ZOOM_STEP);
+        return;
+      }
+      if (mod && e.key === '0') {
+        e.preventDefault();
+        applyZoom(initialZoom);
+        return;
+      }
+      if (numpad && canvasFocused) {
+        e.preventDefault();
+        if (e.key === 'Add') applyZoom(getViewport().zoom + ZOOM_STEP);
+        if (e.key === 'Subtract') applyZoom(getViewport().zoom - ZOOM_STEP);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewOnly, zoomTo, getViewport, initialZoom]);
 
   return (
     <div
@@ -795,10 +1140,12 @@ function FlowCanvasInner({
       style={{
         '--flow-connector-gap': `${FLOW_CONNECTOR_GAP}px`,
       }}
+      tabIndex={viewOnly ? -1 : undefined}
+      onMouseDown={viewOnly ? () => canvasRef.current?.focus() : undefined}
       onDragOver={viewOnly ? undefined : handleDragOver}
       onDrop={viewOnly ? undefined : handleDrop}
     >
-      <div className="flow-canvas__toolbar-anchor">
+      <div className={`flow-canvas__toolbar-anchor${rrChrome ? ' flow-canvas__toolbar-anchor--rr-chrome' : ''}`}>
         <GraphControls
           orientation={orientation}
           onOrientationChange={onOrientationChange}
@@ -812,10 +1159,15 @@ function FlowCanvasInner({
           viewOnly={viewOnly}
           runDisabled={runDisabled}
           agentName={agentName}
+          rrChrome={rrChrome}
           onUndo={onUndo}
           onRedo={onRedo}
           canUndo={canUndo}
           canRedo={canRedo}
+          hideUndoRedo={hideUndoRedo}
+          onHelpToggle={onHelpToggle}
+          helpOpen={helpOpen}
+          combineControlsLeft={combineControlsLeft}
         />
       </div>
 

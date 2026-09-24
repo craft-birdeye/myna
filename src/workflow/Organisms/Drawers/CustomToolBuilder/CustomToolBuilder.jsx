@@ -10,9 +10,9 @@ function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   }, [isOpen]);
   if (!isOpen) return null;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
-      <div style={{ position: 'relative', width, maxWidth: '95vw', height: '100%', background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'absolute', right: 8, top: 8, width, maxWidth: 'calc(92vw - 8px)', height: 'calc(100% - 16px)', borderRadius: 16, background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>

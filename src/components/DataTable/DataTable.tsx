@@ -1,11 +1,155 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { Icon } from '../Icon/Icon'
+import type { LucideIcon } from 'lucide-react'
+import {
+  ChevronDown, ChevronUp, MoreVertical,
+  Pencil, Trash2, Eye, EyeOff, Check, X, Phone, Mail,
+  Settings, User, Plus, Minus, Copy, Download, Upload,
+  Search, ListFilter, Calendar, Clock, RefreshCw, Send,
+  Paperclip, Headphones, AlertCircle, AlertTriangle, Info,
+  BookOpen, FileText, Star, Tag, Link, ExternalLink,
+  MessageSquare, CalendarPlus, Wrench,
+} from 'lucide-react'
 import { Tooltip } from '../Tooltip/Tooltip'
 import { Column, DataTableProps, SortDir } from './DataTable.types'
 
+/** Map from legacy Material Symbols names → Lucide components, for dynamic icon props. */
+const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
+  edit: Pencil,
+  delete: Trash2,
+  visibility: Eye,
+  visibility_off: EyeOff,
+  check: Check,
+  close: X,
+  cancel: X,
+  more_vert: MoreVertical,
+  phone: Phone,
+  phone_in_talk: Phone, // TODO: check icon
+  call: Phone,
+  email: Mail,
+  settings: Settings,
+  person: User,
+  add: Plus,
+  remove: Minus,
+  content_copy: Copy,
+  copy_all: Copy,
+  download: Download,
+  upload: Upload,
+  search: Search,
+  filter_list: ListFilter,
+  calendar_today: Calendar,
+  event: Calendar,
+  schedule: Clock,
+  access_time: Clock,
+  refresh: RefreshCw,
+  send: Send,
+  attach_file: Paperclip,
+  headset: Headphones,
+  support_agent: Headphones,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+  menu_book: BookOpen,
+  description: FileText,
+  article: FileText,
+  star: Star,
+  label: Tag,
+  link: Link,
+  open_in_new: ExternalLink,
+  chat: MessageSquare,
+  chat_bubble: MessageSquare,
+  chat_bubble_outline: MessageSquare,
+  calendar_add_on: CalendarPlus,
+  sms: MessageSquare,
+  build: Wrench,
+}
+
+/** Renders a Lucide icon looked up by Material Symbols name. Returns null for unmapped names. */
+function DynamicIcon({ name, className }: { name: string; className?: string }) {
+  const Component = LUCIDE_ICON_MAP[name]
+  if (!Component) return null
+  return <Component className={className ?? 'size-5'} strokeWidth={1.6} absoluteStrokeWidth />
+}
+
 const DEFAULT_WIDTH = 160
 const DEFAULT_MIN_WIDTH = 80
+
+const STICKY_HEAD_CLASS =
+  'sticky z-20 bg-surface transition-[box-shadow,border-color] duration-200 ease-out'
+const STICKY_CELL_CLASS =
+  'sticky z-10 bg-surface transition-[box-shadow,border-color] duration-200 ease-out group-hover/row:bg-surface-hover'
+const STICKY_EDGE_CLASS =
+  'border-r border-border shadow-[8px_0_24px_-10px_rgba(15,23,42,0.1)]'
+
+function sumWidthsBefore<T>(columns: Column<T>[], widths: Record<string, number>, beforeIndex: number) {
+  let sum = 0
+  for (let i = 0; i < beforeIndex; i++) {
+    sum += widths[String(columns[i].key)] ?? DEFAULT_WIDTH
+  }
+  return sum
+}
+
+/** Header label that shows a tooltip only when `line-clamp-2` actually truncates. */
+function HeaderLabel({ label, className }: { label: string; className: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [truncated, setTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [label])
+
+  return (
+    <Tooltip content={label} variant="detail" disabled={!truncated} className="!block min-w-0 max-w-full flex-1 overflow-hidden">
+      <span ref={ref} className={className}>
+        {label}
+      </span>
+    </Tooltip>
+  )
+}
+
+/** Body cell that shows a tooltip with the full value only when single-line truncation applies. */
+function TruncatedCell({ children, tooltip }: { children: ReactNode; tooltip?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [truncated, setTruncated] = useState(false)
+  const [measuredText, setMeasuredText] = useState('')
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1)
+      setMeasuredText(el.textContent?.trim() ?? '')
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [children, tooltip])
+
+  const tooltipText = tooltip ?? measuredText
+
+  return (
+    <Tooltip
+      content={tooltipText}
+      variant="detail"
+      side="top"
+      disabled={!truncated || !tooltipText}
+      className="!block min-w-0 max-w-full overflow-hidden"
+    >
+      <span ref={ref} className="block min-w-0 truncate">
+        {children}
+      </span>
+    </Tooltip>
+  )
+}
 
 export function DataTable<T extends Record<string, unknown>>({
   columns,
@@ -16,18 +160,31 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   rowMenuItems,
   scrollOnHover = false,
+  initialSortKey,
+  initialSortDir = 'asc',
   rowClassName,
   rowHeight = 48,
+  stickyFirstColumn = false,
+  stickyLeadingColumnCount: stickyLeadingColumnCountProp,
 }: DataTableProps<T>) {
   const [widths, setWidths] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
     columns.forEach((c) => (init[String(c.key)] = c.width ?? DEFAULT_WIDTH))
     return init
   })
-  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: 'asc' })
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({
+    key: initialSortKey ?? null,
+    dir: initialSortDir,
+  })
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ rowIndex: number; top: number; left: number } | null>(null)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [stickyHScroll, setStickyHScroll] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const effectiveStickyCount = stickyFirstColumn
+    ? Math.min(stickyLeadingColumnCountProp ?? 1, columns.length)
+    : 0
 
   useEffect(() => {
     setWidths((prev) => {
@@ -36,6 +193,10 @@ export function DataTable<T extends Record<string, unknown>>({
       return next
     })
   }, [columns])
+
+  useEffect(() => {
+    setSort({ key: initialSortKey ?? null, dir: initialSortDir })
+  }, [initialSortKey, initialSortDir])
 
   const sortedData = useMemo(() => {
     if (!sort.key) return data
@@ -94,8 +255,15 @@ export function DataTable<T extends Record<string, unknown>>({
   const hasRowCtas = !!rowAction || !!(rowActions && rowActions.length) || !!(rowMenuItems && rowMenuItems.length)
 
   return (
-    <div className={`overflow-x-auto${scrollOnHover ? ' scroll-on-hover' : ''}`}>
-      <table className="text-left" style={{ tableLayout: 'fixed', width: '100%', minWidth: totalWidth }}>
+    <div
+      ref={scrollRef}
+      onScroll={() => setStickyHScroll((scrollRef.current?.scrollLeft ?? 0) > 0)}
+      className={`overflow-x-auto${scrollOnHover ? ' scroll-on-hover' : ''}`}
+    >
+      {/* minWidth on an inner wrapper — `min-width` on <table> is ignored, which lets
+          columns squeeze and header labels paint into the next column. */}
+      <div className="w-full" style={{ minWidth: totalWidth }}>
+      <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           {columns.map((col) => (
             <col key={String(col.key)} style={{ width: widths[String(col.key)] ?? DEFAULT_WIDTH }} />
@@ -108,8 +276,17 @@ export function DataTable<T extends Record<string, unknown>>({
               const sorted = sort.key === key
               const resizable = col.resizable !== false
               const showDivider = i < columns.length - 1
+              const isStickyLeader = effectiveStickyCount > 0 && i < effectiveStickyCount
+              const isLastStickyLeader = isStickyLeader && i === effectiveStickyCount - 1
+              const stickyLeft = isStickyLeader ? sumWidthsBefore(columns, widths, i) : undefined
               return (
-                <th key={key} className="relative h-12 border-b border-border px-[10px] align-middle font-normal">
+                <th
+                  key={key}
+                  style={stickyLeft !== undefined ? { left: stickyLeft } : undefined}
+                  className={`relative min-h-12 min-w-0 whitespace-normal border-b border-border px-[10px] py-xs align-middle font-normal ${
+                    isStickyLeader ? STICKY_HEAD_CLASS : 'overflow-hidden'
+                  } ${isLastStickyLeader && stickyHScroll ? STICKY_EDGE_CLASS : ''}`}
+                >
                   {col.headerRender ? (
                     col.headerRender({
                       sorted,
@@ -120,17 +297,22 @@ export function DataTable<T extends Record<string, unknown>>({
                     <button
                       type="button"
                       onClick={() => toggleSort(col)}
-                      className={`group/hdr flex min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
+                      className={`group/hdr flex w-full min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
                     >
-                      <span className={`truncate text-small ${sorted ? 'text-text-primary' : 'text-text-secondary'}`}>
-                        {col.label}
-                      </span>
+                      <HeaderLabel
+                        label={col.label}
+                        className={`w-full min-w-0 overflow-hidden text-left text-small line-clamp-2 max-h-[2lh] ${sorted ? 'text-text-primary' : 'text-text-icon'}`}
+                      />
                       {col.sortable && (
-                        <Icon
-                          name={sorted && sort.dir === 'asc' ? 'expand_less' : 'expand_more'}
-                          size={16}
-                          className={`shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
-                        />
+                        sorted && sort.dir === 'asc'
+                          ? <ChevronUp
+                              className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
+                              strokeWidth={1.6} absoluteStrokeWidth
+                            />
+                          : <ChevronDown
+                              className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
+                              strokeWidth={1.6} absoluteStrokeWidth
+                            />
                       )}
                     </button>
                   )}
@@ -166,17 +348,35 @@ export function DataTable<T extends Record<string, unknown>>({
             >
               {columns.map((col, ci) => {
                 const isLast = ci === columns.length - 1
-                const content = col.render ? col.render(row[col.key], row) : String(row[col.key] ?? '')
-                const wrapTruncate = isLast && col.truncate !== false
+                const isStickyLeader = effectiveStickyCount > 0 && ci < effectiveStickyCount
+                const isLastStickyLeader = isStickyLeader && ci === effectiveStickyCount - 1
+                const stickyLeft = isStickyLeader ? sumWidthsBefore(columns, widths, ci) : undefined
+                const rowHighlighted = menu?.rowIndex === i
+                const rawValue = row[col.key]
+                const content = col.render ? col.render(rawValue, row) : String(rawValue ?? '')
+                const useTruncatedCell = col.truncate !== false
+                const cellTooltip = col.tooltip?.(rawValue, row)
+                const cellContent = useTruncatedCell ? (
+                  <TruncatedCell tooltip={cellTooltip}>{content}</TruncatedCell>
+                ) : (
+                  content
+                )
                 return (
                   <td
                     key={String(col.key)}
-                    style={{ height: rowHeight }}
+                    style={{
+                      ...(stickyLeft !== undefined ? { left: stickyLeft } : {}),
+                      ...(rowClassName?.(row, i)?.includes('h-auto') ? {} : { height: rowHeight }),
+                    }}
                   className={`px-[10px] align-middle text-body text-text-primary ${
-                      isLast ? 'relative' : 'truncate'
-                    }`}
+                      isStickyLeader
+                        ? `${STICKY_CELL_CLASS}${rowHighlighted ? ' !bg-surface-hover' : ''}`
+                        : isLast
+                          ? 'relative min-w-0 overflow-hidden'
+                          : 'min-w-0 overflow-hidden'
+                    } ${isLastStickyLeader && stickyHScroll ? STICKY_EDGE_CLASS : ''}`}
                   >
-                    {wrapTruncate ? <span className="block truncate">{content}</span> : content}
+                    {cellContent}
 
                     {/* Row hover CTAs anchored to the right edge */}
                     {isLast && hasRowCtas && (
@@ -190,9 +390,9 @@ export function DataTable<T extends Record<string, unknown>>({
                               onClick={(e) => { e.stopPropagation(); rowAction.onClick(row) }}
                               onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTooltip({ text: tooltipText, x: r.left + r.width / 2, y: r.bottom + 6 }) }}
                               onMouseLeave={() => setTooltip(null)}
-                              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                             >
-                              {rowAction.iconElement ?? <Icon name={rowAction.icon!} size={20} />}
+                              {rowAction.iconElement ?? (rowAction.icon && <DynamicIcon name={rowAction.icon} />)}
                             </button>
                           )
                         })()}
@@ -207,9 +407,9 @@ export function DataTable<T extends Record<string, unknown>>({
                               onClick={(e) => { e.stopPropagation(); action.onClick(row) }}
                               onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTooltip({ text: tip, x: r.left + r.width / 2, y: r.bottom + 6 }) }}
                               onMouseLeave={() => setTooltip(null)}
-                              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                             >
-                              {action.iconElement ?? <Icon name={action.icon!} size={20} />}
+                              {action.iconElement ?? (action.icon && <DynamicIcon name={action.icon} />)}
                             </button>
                           )
                         })}
@@ -226,9 +426,9 @@ export function DataTable<T extends Record<string, unknown>>({
                                   : { rowIndex: i, top: r.bottom + 4, left: r.right - 216 },
                               )
                             }}
-                            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                           >
-                            <Icon name="more_vert" size={20} />
+                            <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                           </button>
                         )}
                       </div>
@@ -240,6 +440,7 @@ export function DataTable<T extends Record<string, unknown>>({
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Tooltip — fixed so it is never clipped by overflow containers */}
       {tooltip && (
@@ -264,46 +465,22 @@ export function DataTable<T extends Record<string, unknown>>({
                 const row = sortedData[menu.rowIndex]
                 return item.visible ? item.visible(row) : true
               })
-              .map((item) => {
-                const row = sortedData[menu.rowIndex]
-                const isDisabled = item.disabled?.(row) ?? false
-                const itemClass = `flex w-full items-center justify-between px-md py-md text-left text-body ${
-                  isDisabled
-                    ? 'cursor-not-allowed text-text-tertiary'
-                    : `hover:bg-surface-hover ${item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'}`
-                }`
-
-                if (isDisabled) {
-                  return (
-                    <Tooltip
-                      key={item.label}
-                      content={item.disabledTooltip ?? ''}
-                      variant="detail"
-                      className="block w-full"
-                    >
-                      <span className={itemClass} role="menuitem" aria-disabled="true">
-                        {item.label}
-                        {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
-                      </span>
-                    </Tooltip>
-                  )
-                }
-
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => {
-                      item.onClick(row)
-                      setMenu(null)
-                    }}
-                    className={itemClass}
-                  >
-                    {item.label}
-                    {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
-                  </button>
-                )
-              })}
+              .map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    item.onClick(sortedData[menu.rowIndex])
+                    setMenu(null)
+                  }}
+                  className={`flex w-full items-center justify-between px-md py-md text-left text-body hover:bg-surface-hover ${
+                    item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'
+                  }`}
+                >
+                  {item.label}
+                  {item.icon && <DynamicIcon name={item.icon} className="size-4 shrink-0 text-text-icon" />}
+                </button>
+              ))}
           </div>
         </>
       )}

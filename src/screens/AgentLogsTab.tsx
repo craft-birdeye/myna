@@ -1,4 +1,5 @@
-import { Chip, DataTable, type ChipVariant, type Column } from '../components'
+import { Chip, DataTable, getUserRatingForLogStatus, Icon, Tooltip, type ChipVariant, type Column } from '../components'
+import { REVIEW_SOURCE_LOGOS } from '../data/reviewSourceLogos'
 import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
@@ -14,49 +15,220 @@ import {
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Complete: 'success',
+  Completed: 'success',
   Failed: 'danger',
   'In progress': 'warning',
+  Resolved: 'success',
+  'Not resolved': 'danger',
+  Aborted: 'neutral',
+}
+
+/** Front desk exploration Logs tab — display labels only (underlying data stays Complete/Failed). */
+const EXPLORATION_FRONTDESK_STATUS_LABEL: Record<string, string> = {
+  Complete: 'Resolved',
+  Failed: 'Not resolved',
+  'In progress': 'In progress',
+}
+
+const EXPLORATION_NOT_RESOLVED_INTENTS = ['Aborted', 'Transferred to human'] as const
+
+const NEGATIVE_LOG_STATUS_TOOLTIP = 'Placeholder for actual error'
+
+const NEGATIVE_LOG_STATUSES = new Set(['Failed', 'Not resolved', 'Aborted'])
+
+function renderLogStatusCell(
+  value: unknown,
+  variantMap: Record<string, ChipVariant> = STATUS_VARIANT,
+) {
+  const label = String(value)
+  const variant = variantMap[label] ?? 'neutral'
+  const chip = <Chip label={label} variant={variant} />
+  if (!NEGATIVE_LOG_STATUSES.has(label)) return chip
+  return (
+    <Tooltip variant="detail" side="top" content={NEGATIVE_LOG_STATUS_TOOLTIP}>
+      <span className="inline-flex">{chip}</span>
+    </Tooltip>
+  )
+}
+
+function mapExplorationFrontDeskStatus(status: string): string {
+  return EXPLORATION_FRONTDESK_STATUS_LABEL[status] ?? status
+}
+
+/** Same mapping as call-details User rating; numeric so the logs column can reuse the star cell. */
+function userRatingFromLogStatus(status: string): number | undefined {
+  const label = getUserRatingForLogStatus(status)
+  if (!label) return undefined
+  const n = parseFloat(label)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/** Maps statuses + Not resolved intents; adds a second Not resolved row when needed. */
+function withExplorationFrontDeskLogs(rows: HealthcareLogRow[]): HealthcareLogRow[] {
+  let notResolvedIdx = 0
+  const mapped = rows.map((row) => {
+    const status = mapExplorationFrontDeskStatus(row.status)
+    const userRating = userRatingFromLogStatus(status)
+    if (status !== 'Not resolved') return { ...row, status, userRating }
+    const topic = EXPLORATION_NOT_RESOLVED_INTENTS[notResolvedIdx % EXPLORATION_NOT_RESOLVED_INTENTS.length]
+    notResolvedIdx += 1
+    return { ...row, status, topic, userRating }
+  })
+
+  if (notResolvedIdx === 1) {
+    mapped.push({
+      timestamp: 'Jan 22, 2024, 3:12 pm',
+      status: 'Not resolved',
+      contact: '+1 (415) 555-0142',
+      channel: 'Voice call',
+      duration: '2:18',
+      topic: EXPLORATION_NOT_RESOLVED_INTENTS[1],
+      implementedSteps: ['trigger'],
+      userRating: userRatingFromLogStatus('Not resolved'),
+    })
+  }
+
+  return mapped
 }
 
 const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
 
+const RATING_CELL = (v: unknown) =>
+  typeof v === 'number' ? (
+    <span className="inline-flex items-center gap-xs">
+      {v}
+      <Icon name="star" size={14} fill className="text-rating-star" />
+    </span>
+  ) : (
+    <span>-</span>
+  )
+
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
     width: 130,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Source', width: 120, sortable: true },
 ]
 
-const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+/** Front desk exploration — short AI-summary blurbs for Intent hover tooltips. */
+const EXPLORATION_INTENT_SUMMARIES: Record<string, string> = {
+  'Appointment booked':
+    'Caller scheduled a visit. Agent confirmed availability, collected contact details, and sent a booking confirmation.',
+  'Appointment cancelled':
+    'Caller cancelled an upcoming visit. Agent confirmed the cancellation, released the slot, and noted any follow-up preferences.',
+  'Insurance inquiry':
+    'Caller asked about checkup coverage. Agent reviewed eligibility, explained likely copay, and noted remaining questions for billing follow-up.',
+  Aborted:
+    'Caller disconnected before the request was resolved. Partial intent was captured; no appointment or handoff was completed.',
+  'Transferred to human':
+    'Agent could not fully resolve the request and warm-transferred the caller with context packaged for a live representative.',
+}
+
+function explorationIntentSummary(intent: string): string {
+  return (
+    EXPLORATION_INTENT_SUMMARIES[intent] ??
+    `Conversation focused on ${intent.toLowerCase()}. Agent gathered key details and guided the caller to next steps.`
+  )
+}
+
+function ExplorationIntentCell({ intent }: { intent: string }) {
+  const summary = explorationIntentSummary(intent)
+  return (
+    <Tooltip variant="detail" side="top" content={summary}>
+      <span className="block truncate">{intent}</span>
+    </Tooltip>
+  )
+}
+
+const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'contact', label: 'Contact', width: 180, sortable: true },
+  { key: 'channel', label: 'Channel', width: 140, sortable: true },
+  { key: 'duration', label: 'Duration', width: 120, sortable: true },
   {
     key: 'status',
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
+  },
+  {
+    key: 'topic',
+    label: 'Intent',
+    width: 220,
+    sortable: true,
+    truncate: false,
+    render: (v) => <ExplorationIntentCell intent={String(v ?? '')} />,
+  },
+  { key: 'userRating', label: 'User rating', width: 140, sortable: true, truncate: false, render: RATING_CELL },
+]
+
+const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
-const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+const TEXT_CELL = (v: unknown) => (v ? String(v) : '-')
+const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
+
+const SOURCE_CELL = (v: unknown) => {
+  const label = v ? String(v) : ''
+  const logo = REVIEW_SOURCE_LOGOS[label]
+  if (!logo) return TEXT_CELL(v)
+  return (
+    <Tooltip variant="brief" content={label}>
+      <img src={logo} alt={label} className="size-[18px]" />
+    </Tooltip>
+  )
+}
+
+/** Shared by review generation's Logs tab, which doesn't carry duration/rating/comment. */
+const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true },
   {
     key: 'status',
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
-  { key: 'source', label: 'Source', width: 180, sortable: true },
+  { key: 'source', label: 'Source', width: 180, sortable: true, truncate: false, render: SOURCE_CELL },
+]
+
+function withoutLogDuration<T>(columns: Column<T>[]): Column<T>[] {
+  return columns.filter((col) => col.key !== 'duration')
+}
+
+const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Time', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'duration', label: 'Duration', width: 110, sortable: true, tooltip: TEXT_TOOLTIP },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 130,
+    sortable: true,
+    truncate: false,
+    render: (v) => renderLogStatusCell(v),
+  },
+  { key: 'contact', label: 'Reviewer', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'rating', label: 'Rating', width: 140, truncate: false, render: RATING_CELL },
+  { key: 'source', label: 'Source', width: 160, sortable: true, truncate: false, render: SOURCE_CELL },
+  { key: 'comment', label: 'Review', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -66,15 +238,13 @@ const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => (
-      <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />
-    ),
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Channel', width: 120, sortable: true },
@@ -82,30 +252,158 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
 ]
 
 const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 240, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
 ]
+
+/**
+ * Rows this agent's Logs tab shows. Mirrors the branch order in `AgentLogsTab` below — keep the
+ * two in step if a new agent branch is added.
+ */
+function logRowsForAgent(agentName?: string): Record<string, unknown>[] {
+  if (agentName === 'Reminder agent') return REMINDER_LOGS_ROWS
+  if (agentName?.startsWith('Review response agent')) return REVIEW_RESPONSE_LOGS_ROWS
+  if (agentName && /review generation agent/i.test(agentName)) return REVIEW_GENERATION_LOGS_ROWS
+  if (agentName === 'Pre-visit agent' || agentName === 'Waitlist agent') return PREVISIT_LOGS_ROWS
+  if (agentName === 'Tagging & routing agent') return PREVISIT_LOGS_ROWS
+  return HEALTHCARE_LOGS_ROWS
+}
+
+/**
+ * Filter fields for the Logs tab, with options derived from the agent's own rows so the panel
+ * can never offer a value that filters to nothing. Ids match the row keys they filter on.
+ */
+export function getLogFilterFields(agentName?: string, opts?: { explorationFrontDeskStatus?: boolean }) {
+  const rows = logRowsForAgent(agentName)
+  const distinct = (pick: (r: Record<string, unknown>) => unknown) =>
+    Array.from(
+      new Set(rows.map(pick).filter((v): v is string => typeof v === 'string' && v.length > 0)),
+    ).sort()
+  const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }))
+
+  const statusValues = distinct((r) => r.status)
+  const statusOptions = opts?.explorationFrontDeskStatus
+    ? asOptions(statusValues.map(mapExplorationFrontDeskStatus))
+    : asOptions(statusValues)
+
+  return [
+    { id: 'status', label: 'Status', options: statusOptions },
+    // The two log shapes name this column `source` (reviews) or `channel` (conversations).
+    {
+      id: 'source',
+      label: opts?.explorationFrontDeskStatus ? 'Channel' : 'Source',
+      options: asOptions(distinct((r) => r.source ?? r.channel)),
+    },
+  ]
+}
+
+/**
+ * Applies the header search + filter selections to a log table's rows.
+ *
+ * Search matches any string field on the row (contact, source, timestamp, …). Filters match by
+ * key; a row missing the filtered key is left in rather than silently dropped. `source` also
+ * checks `channel`, because the two log shapes name that column differently.
+ */
+export function applyLogFilters<T extends Record<string, unknown>>(
+  rows: T[],
+  query: string,
+  filters: Record<string, string[]>,
+  opts?: { explorationFrontDeskStatus?: boolean },
+): T[] {
+  const q = query.trim().toLowerCase()
+  return rows.filter((row) => {
+    if (q && !Object.values(row).some((v) => typeof v === 'string' && v.toLowerCase().includes(q))) {
+      return false
+    }
+    return Object.entries(filters).every(([key, values]) => {
+      if (!values?.length) return true
+      const cell = key === 'source' ? (row.source ?? row.channel) : row[key]
+      if (cell == null) return true
+      const cellStr = String(cell)
+      if (key === 'status' && opts?.explorationFrontDeskStatus) {
+        return values.includes(mapExplorationFrontDeskStatus(cellStr))
+      }
+      return values.includes(cellStr)
+    })
+  })
+}
+
+/**
+ * Healthcare log rows the run detail view can page through for this agent
+ * (same set as the Logs table, after search/filters).
+ */
+export function getNavigableLogRows(
+  agentName?: string,
+  searchQuery = '',
+  filters: Record<string, string[]> = {},
+  opts?: { explorationFrontDeskStatus?: boolean },
+): HealthcareLogRow[] {
+  let rows: HealthcareLogRow[]
+  if (agentName === 'Reminder agent') {
+    rows = REMINDER_LOGS_ROWS
+  } else if (agentName?.startsWith('Review response agent')) {
+    rows = REVIEW_RESPONSE_LOGS_ROWS.map((r) => toHealthcareLogRow(r))
+  } else if (agentName && /review generation agent/i.test(agentName)) {
+    rows = REVIEW_GENERATION_LOGS_ROWS.map((r) => toReviewGenerationLogRow(r))
+  } else if (
+    agentName === 'Pre-visit agent'
+    || agentName === 'Waitlist agent'
+    || agentName === 'Tagging & routing agent'
+  ) {
+    // These tables don't open RunDetailView yet.
+    return []
+  } else {
+    rows = HEALTHCARE_LOGS_ROWS
+  }
+  const filtered = applyLogFilters(rows, searchQuery, filters, opts)
+  return opts?.explorationFrontDeskStatus
+    ? withExplorationFrontDeskLogs(filtered)
+    : filtered
+}
 
 interface AgentLogsTabProps {
   agentName?: string
   onNavigateToInbox?: (conversationId?: string) => void
   onViewRun?: (row: HealthcareLogRow) => void
+  /** Header search query — matches any string field on a row. */
+  searchQuery?: string
+  /** Header filter selections, keyed by `LOG_FILTER_FIELDS` id. */
+  filters?: Record<string, string[]>
+  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved. */
+  explorationFrontDeskStatus?: boolean
+  /** Marketing suite exploration: hide Duration on review/listings logs. */
+  hideLogDuration?: boolean
 }
 
-export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
+export function AgentLogsTab({
+  agentName,
+  onViewRun,
+  searchQuery = '',
+  filters = {},
+  explorationFrontDeskStatus = false,
+  hideLogDuration = false,
+}: AgentLogsTabProps) {
+  /** Narrows a row set by the header search + filters. */
+  const f = <T extends Record<string, unknown>>(rows: T[]) =>
+    applyLogFilters(rows, searchQuery, filters, { explorationFrontDeskStatus })
+
+  const mapStatus = (rows: HealthcareLogRow[]) =>
+    explorationFrontDeskStatus ? withExplorationFrontDeskLogs(rows) : rows
+
+
   if (agentName === 'Reminder agent') {
     return (
       <div className="px-lg py-lg">
         <DataTable
           columns={REMINDER_LOG_COLUMNS}
-          data={REMINDER_LOGS_ROWS}
+          data={f(REMINDER_LOGS_ROWS)}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
@@ -118,11 +416,15 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
   }
 
   if (agentName?.startsWith('Review response agent')) {
+    const columns = hideLogDuration
+      ? withoutLogDuration(REVIEW_RESPONSE_LOG_COLUMNS)
+      : REVIEW_RESPONSE_LOG_COLUMNS
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={REVIEW_RESPONSE_LOG_COLUMNS}
-          data={REVIEW_RESPONSE_LOGS_ROWS}
+          columns={columns}
+          data={f(REVIEW_RESPONSE_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -137,8 +439,9 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={REVIEW_RESPONSE_LOG_COLUMNS}
-          data={REVIEW_GENERATION_LOGS_ROWS}
+          columns={REVIEW_GENERATION_LOG_COLUMNS}
+          data={f(REVIEW_GENERATION_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toReviewGenerationLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -154,7 +457,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={PREVISIT_COLUMNS}
-          data={PREVISIT_LOGS_ROWS}
+          data={f(PREVISIT_LOGS_ROWS)}
           rowAction={{ icon: 'visibility', label: 'View log', onClick: () => {} }}
         />
       </div>
@@ -166,7 +469,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={TAGGING_ROUTING_LOG_COLUMNS}
-          data={PREVISIT_LOGS_ROWS}
+          data={f(PREVISIT_LOGS_ROWS)}
           rowAction={{ icon: 'visibility', label: 'View details', onClick: () => {} }}
         />
       </div>
@@ -177,8 +480,8 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
     <>
       <div className="px-lg py-lg">
         <DataTable
-          columns={LOG_COLUMNS}
-          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
+          columns={explorationFrontDeskStatus ? EXPLORATION_FRONTDESK_LOG_COLUMNS : LOG_COLUMNS}
+          data={mapStatus(f(agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS) as HealthcareLogRow[])}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',

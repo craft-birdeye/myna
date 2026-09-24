@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
+import { CONDITION_OPERATORS } from '../../../constants/conditionOperators';
+import descStyles from './TriggerDescription.module.css';
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
@@ -13,13 +15,7 @@ const DEFAULT_CONDITION_OPTIONS = {
     { value: 'location', label: 'Location' },
     { value: 'keyword', label: 'Keyword' },
   ],
-  operator: [
-    { value: 'is', label: 'is' },
-    { value: 'is_not', label: 'is not' },
-    { value: 'contains', label: 'contains' },
-    { value: 'greater_than', label: 'is greater than' },
-    { value: 'less_than', label: 'is less than' },
-  ],
+  operator: [...CONDITION_OPERATORS],
   value: [
     { value: 'review_received', label: 'Review received' },
     { value: 'google', label: 'Google' },
@@ -36,6 +32,9 @@ const makeCondition = (id) => ({ id, fieldValue: '', operatorValue: '', valueVal
 export default function EntityTriggerBody({ initialValues = {}, onFieldChange }) {
   const [triggerName, setTriggerName] = useState(initialValues.triggerName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
+  const [descriptionOpen, setDescriptionOpen] = useState(
+    () => Boolean(String(initialValues.description ?? '').trim()),
+  );
   const [conditions, setConditions] = useState(
     initialValues.conditions?.length ? initialValues.conditions : DEFAULT_CONDITIONS
   );
@@ -107,14 +106,27 @@ export default function EntityTriggerBody({ initialValues = {}, onFieldChange })
         onChange={handleTriggerName}
         required
       />
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={description}
-        onChange={handleDescription}
-        noFloatingLabel
-      />
+      {descriptionOpen ? (
+        <div className={descStyles.descriptionField}>
+          <TextArea
+            name="description"
+            label="Description"
+            placeholder="Enter description"
+            value={description}
+            onChange={handleDescription}
+            noFloatingLabel
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={descStyles.addDescriptionBtn}
+          onClick={() => setDescriptionOpen(true)}
+        >
+          <span className="material-symbols-outlined">add_circle</span>
+          Add description
+        </button>
+      )}
       <Conditions
         conditions={conditions}
         logic={logic}

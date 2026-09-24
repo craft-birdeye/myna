@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
 import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
+import { Check, ChevronRight, ChevronDown, Search, X, PlusCircle, Link } from 'lucide-react'
 import {
   DEFAULT_CONTEXT_BRAND,
   DEFAULT_CONTEXT_FIELDS,
@@ -36,7 +37,7 @@ function CheckBox({
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </button>
   )
 }
@@ -55,7 +56,7 @@ function ModalTabs({
   showSearch: boolean
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-md px-2xl">
+    <div className="flex h-[42px] shrink-0 items-center justify-between gap-md px-2xl pb-md">
       <div className="flex items-end gap-xs">
         {TABS.map((tab) => {
           const active = tab === activeTab
@@ -78,9 +79,9 @@ function ModalTabs({
           )
         })}
       </div>
-      {showSearch && (
-        <div className="flex h-9 w-[240px] shrink-0 items-center gap-sm rounded-sm border border-border-input bg-surface px-md">
-          <Icon name="search" size={20} className="text-text-icon" />
+      {showSearch ? (
+        <div className="flex h-[34px] w-[240px] shrink-0 items-center gap-sm rounded-md border border-border-input bg-surface px-md">
+          <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           <input
             type="text"
             value={search}
@@ -90,10 +91,12 @@ function ModalTabs({
           />
           {search && (
             <button type="button" onClick={() => onSearchChange('')} aria-label="Clear search">
-              <Icon name="close" size={18} className="text-text-icon" />
+              <X className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           )}
         </div>
+      ) : (
+        <div className="h-[34px] w-[240px] shrink-0" aria-hidden />
       )}
     </div>
   )
@@ -122,10 +125,10 @@ function FieldGroup({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-sm bg-surface-l2 px-2xl py-sm text-left hover:bg-surface-hover"
       >
-        <Icon
-          name="chevron_right"
-          size={20}
-          className={`text-text-icon transition-transform ${open ? 'rotate-90' : ''}`}
+        <ChevronRight
+          className={`size-5 text-text-icon transition-transform ${open ? 'rotate-90' : ''}`}
+          strokeWidth={1.6}
+          absoluteStrokeWidth
         />
         <span className="text-body text-text-primary">{groupName}</span>
         <span className="text-small text-text-secondary">
@@ -199,11 +202,11 @@ function FieldsTab({
           <div className="w-12 shrink-0" />
           <div className="flex min-w-0 flex-1 items-center gap-xs pr-md text-small text-text-secondary">
             Name
-            <Icon name="expand_more" size={16} className="text-text-icon" />
+            <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           </div>
           <div className="flex w-[120px] shrink-0 items-center gap-xs text-small text-text-secondary">
             Source
-            <Icon name="expand_more" size={16} className="text-text-icon" />
+            <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           </div>
           <div className="w-[200px] shrink-0 text-small text-text-secondary">Sample data</div>
         </div>
@@ -253,7 +256,7 @@ function KnowledgeTab({
   }
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto px-2xl py-lg">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto px-2xl py-lg">
       <div className="mb-2xl">
         <div className="mb-sm flex items-center gap-xs">
           <span className="text-body text-text-primary">Files</span>
@@ -267,7 +270,7 @@ function KnowledgeTab({
               </span>
               <span className="min-w-0 flex-1 truncate text-body text-text-primary">{file.name}</span>
               <button type="button" onClick={() => onRemoveFile(file.id)} aria-label="Remove file">
-                <Icon name="close" size={18} className="text-text-icon hover:text-text-primary" />
+                <X className="size-5 text-text-icon hover:text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           ))}
@@ -277,7 +280,7 @@ function KnowledgeTab({
           onClick={() => onAddFile(`Document-${Date.now()}.pdf`)}
           className="mt-sm flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
         >
-          <Icon name="add_circle" size={16} />
+          <PlusCircle className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
           Add
         </button>
       </div>
@@ -287,19 +290,19 @@ function KnowledgeTab({
         <div className="flex flex-col gap-sm">
           {links.map((link) => (
             <div key={link.id} className="flex items-center gap-sm">
-              <span className="flex size-8 items-center justify-center rounded-sm bg-surface-selected text-text-icon">
-                <Icon name="link" size={18} />
+              <span className="flex size-8 items-center justify-center rounded-md bg-surface-selected text-text-icon">
+                <Link className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </span>
               <span className="min-w-0 flex-1 truncate text-body text-text-primary">{link.url}</span>
               <button type="button" onClick={() => onRemoveLink(link.id)} aria-label="Remove link">
-                <Icon name="close" size={18} className="text-text-icon hover:text-text-primary" />
+                <X className="size-5 text-text-icon hover:text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           ))}
           {addingLink && (
             <div className="flex items-center gap-sm">
-              <span className="flex size-8 items-center justify-center rounded-sm bg-surface-selected text-text-icon">
-                <Icon name="link" size={18} />
+              <span className="flex size-8 items-center justify-center rounded-md bg-surface-selected text-text-icon">
+                <Link className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </span>
               <input
                 type="text"
@@ -325,7 +328,7 @@ function KnowledgeTab({
           onClick={() => setAddingLink(true)}
           className="mt-sm flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
         >
-          <Icon name="add_circle" size={16} />
+          <PlusCircle className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
           Add
         </button>
       </div>
@@ -344,7 +347,7 @@ function BrandTab({
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)))
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
       {items.map((item) => (
         <div key={item.id} className="flex gap-md border-b border-border px-2xl py-lg">
           <CheckBox checked={item.enabled} onChange={() => toggle(item.id)} ariaLabel={`Enable ${item.name}`} />
@@ -366,7 +369,7 @@ function IndustryTab({
   setEnabled: (v: boolean) => void
 }) {
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto px-2xl py-lg">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto px-2xl py-lg">
       <div className="flex items-start justify-between gap-2xl">
       <div className="min-w-0 flex-1">
         <p className="text-body text-text-primary">Industry context</p>
@@ -396,7 +399,18 @@ function IndustryTab({
   )
 }
 
-export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: ContextModalProps) {
+const CONTEXT_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/context-in-workflows'
+
+export function ContextModal({
+  open,
+  onClose,
+  onSave,
+  overlayZIndex = 110,
+  learnMoreHref = CONTEXT_LEARN_MORE_HREF,
+  onLearnMore,
+  learnMoreLabel = 'Learn more',
+}: ContextModalProps) {
   const [activeTab, setActiveTab] = useState<ContextModalTab>('Fields')
   const [fieldsSearch, setFieldsSearch] = useState('')
   const [fields, setFields] = useState<ContextField[]>(DEFAULT_CONTEXT_FIELDS)
@@ -423,32 +437,56 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
     onClose()
   }
 
+  if (!open) return null
+
   return createPortal(
     <div
-      className={`fixed inset-0 flex items-center justify-center ${open ? '' : 'pointer-events-none'}`}
+      className={`fixed inset-0 flex items-start justify-center pt-[72px] ${open ? '' : 'pointer-events-none'}`}
       style={{ zIndex: overlayZIndex }}
       aria-hidden={!open}
     >
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="context-modal-title"
-        className={`relative flex h-[calc(100vh-130px)] w-full max-w-[1200px] flex-col overflow-hidden rounded-md bg-surface shadow-modal transition-opacity duration-200 ${
+        className={`relative flex h-[calc(100vh-96px)] w-full max-w-[1200px] flex-col overflow-hidden rounded-md bg-surface shadow-modal transition-opacity duration-200 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between px-2xl py-md">
           <div>
-            <h2 id="context-modal-title" className="text-body text-text-primary">
+            <h2 id="context-modal-title" className="text-h3 text-text-primary">
               Context
             </h2>
             <p className="text-small text-text-secondary">
-              This is sent to the LLM to improve the accuracy and quality of responses.
+              This is sent to the LLM to improve the accuracy and quality of responses.{' '}
+              {onLearnMore ? (
+                <button
+                  type="button"
+                  className="m-0 cursor-pointer border-0 bg-transparent p-0 text-small text-text-action hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onLearnMore()
+                  }}
+                >
+                  {learnMoreLabel}
+                </button>
+              ) : (
+                <a
+                  href={learnMoreHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-text-action no-underline hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {learnMoreLabel}
+                </a>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-md">
@@ -465,7 +503,7 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
               aria-label="Close"
               className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
             >
-              <Icon name="close" size={20} />
+              <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>

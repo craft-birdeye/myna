@@ -5,6 +5,6 @@ export interface TopNavProps {
   avatarUrl?: string
   initials?: string
   onAdd?: () => void
-  onHelp?: () => void
+  onAskBirdGPT?: () => void
   onMenu?: () => void
 }

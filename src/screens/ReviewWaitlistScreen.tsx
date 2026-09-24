@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { type LucideIcon, Columns3, ListFilter, MessageSquare, Phone } from 'lucide-react'
 import { Chip, CustomizeColumnsDrawer, DataTable, FilterPanel, FormDrawer, HeaderSearchField, Icon, MessageDrawer, PatientCell, QuickSendModal, QuickViewDrawer, Tabs, Toast, TopNav, ViewActivityDrawer, type ChipVariant, type Column, type ColumnOption, type FilterField, type PatientDetail, type QuickViewWaitlist, type RecordDetailScreenProps } from '../components'
 
 type WaitlistStatus = 'Waitlisted' | 'Slot offered' | 'Slot filled'
@@ -112,10 +113,10 @@ const STATUS_VARIANT: Record<WaitlistStatus, ChipVariant> = {
   'Slot filled':   'success',
 }
 
-const OUTREACH_ICON: Record<OutreachChannel, string> = {
-  chat: 'sms',
-  call: 'phone',
-  text: 'sms',
+const OUTREACH_ICON: Record<OutreachChannel, LucideIcon> = {
+  chat: MessageSquare,
+  call: Phone,
+  text: MessageSquare,
 }
 
 const STATUS_COLUMN: Column<WaitlistRow> = {
@@ -135,7 +136,8 @@ const COLUMN_DEFS: ColumnDef[] = [
     key: 'outreach',
     label: 'Outreach channel',
     sortable: false,
-    render: (v) => <Icon name={OUTREACH_ICON[v as OutreachChannel]} size={20} className="text-text-icon" />,
+    render: (v) => { const OutreachIcon = OUTREACH_ICON[v as OutreachChannel]; return <OutreachIcon className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> },
+
   },
   { key: 'waitingSince', label: 'Waiting since',    sortable: true },
   { key: 'priority',     label: 'Priority',         sortable: true },
@@ -164,7 +166,7 @@ function AddToWaitlistButton({ onSelect }: { onSelect: (mode: 'existing' | 'new'
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
       >
         Add to waitlist
       </button>
@@ -357,16 +359,16 @@ export function ReviewWaitlistScreen({ onViewDetail }: { onViewDetail?: (args: W
               type="button"
               aria-label="Customize columns"
               onClick={() => setCustomizeOpen(true)}
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
             >
-              <Icon name="view_column" size={20} />
+              <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <button
               type="button"
               onClick={() => setFilterOpen((o) => !o)}
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
             >
-              <Icon name="filter_list" size={20} />
+              <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>

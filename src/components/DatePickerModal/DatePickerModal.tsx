@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { DatePickerModalProps } from './DatePickerModal.types'
+import { ChevronDown, ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 
 // ─── Shared constants ────────────────────────────────────────────────────────
 
@@ -128,18 +128,18 @@ function CalendarPanel({
       {/* Month & year nav */}
       <div className="flex items-center justify-between px-[12px] py-[8px]">
         <button type="button" onClick={onPrevMonth} className="flex size-6 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-hover">
-          <Icon name="chevron_left" size={16} />
+          <ChevronLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
         <div className="flex items-center">
           <button type="button" className="flex items-center gap-[4px] rounded-sm px-sm py-[4px] text-[12px] leading-[18px] text-text-secondary hover:bg-surface-hover">
-            {MONTHS[viewMonth]} <Icon name="expand_more" size={16} className="text-text-tertiary" />
+            {MONTHS[viewMonth]} <ChevronDown className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
           <button type="button" className="flex items-center gap-[4px] rounded-sm px-sm py-[4px] text-[12px] leading-[18px] text-text-secondary hover:bg-surface-hover">
-            {viewYear} <Icon name="expand_more" size={16} className="text-text-tertiary" />
+            {viewYear} <ChevronDown className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
         <button type="button" onClick={onNextMonth} className="flex size-6 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-hover">
-          <Icon name="chevron_right" size={16} />
+          <ChevronRight className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
 
@@ -267,7 +267,7 @@ function RangeVariant({ onClose, onApply }: { onClose: () => void; onApply: (v: 
         {/* Actions */}
         <div className="flex items-center justify-end gap-sm border-t border-border px-[16px] py-[12px]">
           <button type="button" onClick={onClose} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">Cancel</button>
-          <button type="button" onClick={() => { onApply(applyLabel); onClose() }} className="rounded-sm bg-primary px-lg py-[7px] text-body text-white hover:bg-primary-hover">Apply</button>
+          <button type="button" onClick={() => { onApply(applyLabel); onClose() }} className="rounded-md bg-primary px-lg py-[7px] text-body text-white hover:bg-primary-hover">Apply</button>
         </div>
       </div>
     </div>
@@ -326,7 +326,7 @@ function DatetimeVariant({ onClose, onApply }: { onClose: () => void; onApply: (
             {selectedDate ? formatDateHeader(selectedDate) : '—'}
           </span>
           <div className="flex items-center gap-[4px]">
-            <Icon name="language" size={12} className="text-text-tertiary" />
+            <Globe className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
             <span className="text-[12px] leading-[18px] text-text-tertiary">Eastern Daylight Time</span>
           </div>
         </div>

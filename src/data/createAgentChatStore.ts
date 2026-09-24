@@ -1,15 +1,21 @@
 /** Store for co-pilot chats saved via "Save agent" from the create flow.
  *  Persisted to sessionStorage so the transcript survives a reload / HMR. */
 
+export type CreateChatVariant = 'frontdesk' | 'reminder'
+
 export type CreateChatTurn =
   | { kind: 'user'; text: string }
   | { kind: 'user-files'; labels: string[] }
   | { kind: 'thoughts'; text: string; label?: string }
-  | { kind: 'agent'; paragraphs: string[] }
+  | { kind: 'agent'; paragraphs: string[]; choices?: string[] }
   | { kind: 'status'; text: string }
-  | { kind: 'draft'; title: string; description: string }
-
-export type CreateChatVariant = 'frontdesk' | 'reminder'
+  | {
+      kind: 'draft'
+      title: string
+      description: string
+      variant?: CreateChatVariant | 'review-response'
+      refillAdded?: boolean
+    }
 
 export type SavedCreateChat = {
   id: string
@@ -39,6 +45,40 @@ type DraftStore = Record<string, CreateAiDraftSession>
 
 let memoryStore: Store = readStore()
 let draftMemoryStore: DraftStore = readDraftStore()
+
+/** Built-in transcripts for demo agents (e.g. Front desk East region). */
+const builtinDraftTrails: Record<string, CreateChatTurn[]> = {}
+
+type DraftListener = (agentKey: string) => void
+const draftListeners = new Set<DraftListener>()
+
+function notifyDraftListeners(agentKey: string) {
+  draftListeners.forEach((listener) => {
+    try {
+      listener(agentKey)
+    } catch {
+      // Ignore subscriber errors so one bad listener can't break writers.
+    }
+  })
+}
+
+/** Subscribe to Create-with-AI draft trail writes (LHS create flow ↔ AI Builder panel). */
+export function subscribeCreateAiDraft(listener: DraftListener): () => void {
+  draftListeners.add(listener)
+  return () => {
+    draftListeners.delete(listener)
+  }
+}
+
+function normalizeAgentKey(agentKey: string): string {
+  return (agentKey || 'agent').trim().toLowerCase()
+}
+
+/** Register a demo Create-with-AI transcript for an agent / instance name. */
+export function registerBuiltinCreateAiDraft(agentKey: string, trail: CreateChatTurn[]) {
+  if (!trail.length) return
+  builtinDraftTrails[normalizeAgentKey(agentKey)] = trail
+}
 
 function readStore(): Store {
   try {
@@ -74,10 +114,6 @@ function writeDraftStore(store: DraftStore) {
   }
 }
 
-function normalizeAgentKey(agentKey: string): string {
-  return (agentKey || 'agent').trim().toLowerCase()
-}
-
 export function rememberCreateAgentChat(variant: CreateChatVariant, chat: SavedCreateChat) {
   memoryStore = { ...readStore(), ...memoryStore, [variant]: chat }
   writeStore(memoryStore)
@@ -105,11 +141,24 @@ export function createChatVariantForAgent(name: string): CreateChatVariant | nul
 export function getCreateAiDraftSession(agentKey: string): CreateAiDraftSession | null {
   const key = normalizeAgentKey(agentKey)
   const store = { ...readDraftStore(), ...draftMemoryStore }
-  return store[key] ?? null
+  if (store[key]) return store[key]!
+  const builtin = builtinDraftTrails[key]
+  if (builtin?.length) {
+    return { agentKey: key, trail: builtin, updatedAt: 0 }
+  }
+  return null
 }
 
 export function setCreateAiDraftTrail(agentKey: string, trail: CreateChatTurn[]): CreateAiDraftSession {
   const key = normalizeAgentKey(agentKey)
+  const existing = getCreateAiDraftSession(agentKey)
+  if (
+    existing &&
+    existing.trail.length === trail.length &&
+    JSON.stringify(existing.trail) === JSON.stringify(trail)
+  ) {
+    return existing
+  }
   const next: CreateAiDraftSession = {
     agentKey: key,
     trail,
@@ -117,6 +166,7 @@ export function setCreateAiDraftTrail(agentKey: string, trail: CreateChatTurn[])
   }
   draftMemoryStore = { ...readDraftStore(), ...draftMemoryStore, [key]: next }
   writeDraftStore(draftMemoryStore)
+  notifyDraftListeners(key)
   return next
 }
 
@@ -134,6 +184,7 @@ export function clearCreateAiDraftSession(agentKey: string) {
   delete store[key]
   draftMemoryStore = store
   writeDraftStore(draftMemoryStore)
+  notifyDraftListeners(key)
 }
 
 /** Prefer an in-progress LHS draft; fall back to the last saved create chat. */

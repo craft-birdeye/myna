@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { MoreVertical } from 'lucide-react'
 import { ChartCardButton } from './ChartCardButton'
 import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
 
@@ -41,7 +42,7 @@ function MoreMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <ChartCardButton icon="more_vert" label="More" onClick={() => setOpen((v) => !v)} />
+      <ChartCardButton icon={MoreVertical} label="More" onClick={() => setOpen((v) => !v)} />
       {open && (
         <div className="absolute right-0 top-full z-50 mt-xs w-48 rounded-sm bg-surface p-md shadow-dropdown">
           {['Download', 'Email'].map((option) => (

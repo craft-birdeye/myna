@@ -31,11 +31,13 @@ export interface StackedBarChartProps {
   wrapXLabels?: boolean
   /** Show value labels above each bar and hide the Y-axis + horizontal grid lines. */
   showBarLabels?: boolean
+  /** When true with showBarLabels, labels the stacked total instead of the top segment only. */
+  showStackTotalLabels?: boolean
   /** Hide the bottom legend. */
   hideLegend?: boolean
 }
 
-const axisTick = { fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }
+const axisTick = { fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }
 
 function WrapTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
   const value = String(payload?.value ?? '')
@@ -44,8 +46,8 @@ function WrapTick({ x, y, payload }: { x?: number; y?: number; payload?: { value
   const line2 = spaceIdx > -1 ? value.slice(spaceIdx + 1) : ''
   return (
     <g transform={`translate(${x ?? 0},${y ?? 0})`}>
-      <text x={0} dy={14} textAnchor="middle" fill="#212121" fontSize={12} fontFamily="Roboto">{line1}</text>
-      {line2 && <text x={0} dy={28} textAnchor="middle" fill="#212121" fontSize={12} fontFamily="Roboto">{line2}</text>}
+      <text x={0} dy={14} textAnchor="middle" fill="#0d0d12" fontSize={12} fontFamily="Inter, sans-serif">{line1}</text>
+      {line2 && <text x={0} dy={28} textAnchor="middle" fill="#0d0d12" fontSize={12} fontFamily="Inter, sans-serif">{line2}</text>}
     </g>
   )
 }
@@ -101,7 +103,26 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend }: StackedBarChartProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function StackTotalLabel({ x, y, width, index, data, series }: any) {
+  if (x == null || y == null || width == null || index == null) return null
+  const row = data[index]
+  const total = series.reduce((sum: number, s: BarSeries) => sum + Number(row?.[s.key] ?? 0), 0)
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      textAnchor="middle"
+      fill="#0d0d12"
+      fontSize={12}
+      fontFamily="Inter, sans-serif"
+    >
+      {kFormat(total)}
+    </text>
+  )
+}
+
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, showStackTotalLabels, hideLegend }: StackedBarChartProps) {
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -138,8 +159,8 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             align="left"
             iconType="circle"
             iconSize={8}
-            formatter={(value) => <span style={{ color: '#555555' }}>{value}</span>}
-            wrapperStyle={{ fontSize: 12, fontFamily: 'Roboto', paddingTop: 8 }}
+            formatter={(value) => <span style={{ color: '#717182' }}>{value}</span>}
+            wrapperStyle={{ fontSize: 12, fontFamily: 'Inter, sans-serif', paddingTop: 8 }}
           />
         )}
         {series.map((s, i) => (
@@ -154,12 +175,16 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             isAnimationActive={false}
           >
             {showBarLabels && i === series.length - 1 && (
-              <LabelList
-                dataKey={s.key}
-                position="top"
-                formatter={kFormat}
-                style={{ fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }}
-              />
+              showStackTotalLabels
+                ? <LabelList content={(props) => <StackTotalLabel {...props} data={data} series={series} />} />
+                : (
+                  <LabelList
+                    dataKey={s.key}
+                    position="top"
+                    formatter={kFormat}
+                    style={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
+                  />
+                )
             )}
           </Bar>
         ))}

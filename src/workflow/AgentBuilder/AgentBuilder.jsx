@@ -1,16 +1,35 @@
-import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
+import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import LHSDrawer, {
+  isFrontDeskAgent as agentNameIsFrontDesk,
+  isFrontDeskCanvasAgent,
+  INITIATE_VOICE_CALL_TASK,
+  REVIEWS_TASK_SUB_ITEMS,
+  DELAY_VARIANT_PRESETS,
+  delayVariantDescription,
+  DELAY_GENERIC_DESCRIPTION,
+} from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
+import { defaultUpdateStateDetails } from '../Organisms/Panels/RHS/UpdateStateTaskBody';
 import RHS from '../Organisms/Panels/RHS/RHS';
+import { formatDelaySummary } from '../Organisms/Panels/RHS/DelayBody';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
 import ShareModal from '../Organisms/Modals/ShareModal/ShareModal';
 import EmptyStates from '../Patterns/EmptyStates/EmptyStates';
 import { Button } from '../elemental-stubs';
-import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools } from '../services/agentService';
+import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools, resolveToolForViewer } from '../services/agentService';
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
+import { SLASH_TOOLS } from '../Molecules/Inputs/ToolSlashMenu/ToolSlashMenu';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
+import { RR_GOALS, RR_TRIGGER_DESC, RR_BRANCH_TITLE, RR_BRANCH_DESC } from '../../data/reviewResponseCopy';
+import { FD_GOALS } from '../../data/frontDeskCopy';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
+import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
+import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
+import { WorkflowCoachTour } from '../../components/WorkflowCoachTour/WorkflowCoachTour';
+import { buildWorkflowCoachSteps } from '../../components/WorkflowCoachTour/WorkflowCoachTour.types';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -18,6 +37,7 @@ import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfi
 import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
 import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDrawer/AssignConversationDrawer';
 import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
+import HandleResponseDrawer, { isHandleResponseConfigComplete, isHandleResponseTool } from '../Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
 import {
@@ -39,12 +59,126 @@ import {
   FLOW_TRIGGER_PLACEHOLDER_HEIGHT,
 } from '../flowLayoutConstants';
 import { computeLoopCanvasHeight, computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
+import { useCardBadge } from '../Molecules/Canvas/CardBadgeContext';
+import { GHOSTWRITER_CANVAS_SEED_PROMPT } from '../../data/reviewResponseCopy';
+import { clearCreateAiDraftSession } from '../../data/createAgentChatStore';
+import SpamGatePanel from '../Organisms/Panels/RHS/SpamGatePanel';
+import { getBadgeForSection } from '../Molecules/Canvas/nodeTypeBadges';
+import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
+import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
+import iconRrProcedures from '../../assets/rr-chrome/icon-procedures.svg';
+import iconRrControls from '../../assets/rr-chrome/icon-controls.svg';
+import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
+import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
+import { Tooltip } from '../../components/Tooltip/Tooltip';
+import { Icon } from '../../components/Icon/Icon';
+import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
+import { TestRunPanel } from '../../components/TestRunPanel/TestRunPanel';
+import { Toast } from '../../components/Toast/Toast';
+import { buildTestRunSteps } from '../../data/testRunSteps';
+import { useTestRun } from '../../hooks/useTestRun';
+import { getAgentIssues } from '../../data/agentIssues';
+import VersionHistoryPanel, { DEFAULT_VERSIONS as VERSION_HISTORY_VERSIONS, DRAFT_VERSION } from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
+/* Stable identity — `useTestRun` restarts whenever its `steps` reference changes. */
+const EMPTY_TEST_RUN_STEPS = [];
 const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
+
+/** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
+function RrChromeAgentTitle({ text, onClick }) {
+  const textRef = useRef(null);
+  const [truncated, setTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1);
+    };
+
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+    return () => ro.disconnect();
+  }, [text]);
+
+  return (
+    <Tooltip
+      content={text}
+      variant="detail"
+      side="bottom"
+      className="rr-chrome-top__title-tip"
+      disabled={!truncated}
+    >
+      {onClick ? (
+        <button
+          type="button"
+          className="ab-header-title ab-header-title--button"
+          onClick={onClick}
+          aria-label={`Open agent details for ${text}`}
+        >
+          <span ref={textRef} className="ab-header-title__text">
+            {text}
+          </span>
+          <span className="material-symbols-outlined ab-header-title__edit" aria-hidden>
+            edit
+          </span>
+        </button>
+      ) : (
+        <span ref={textRef} className="ab-header-title">
+          {text}
+        </span>
+      )}
+    </Tooltip>
+  );
+}
+
+/** Exploration identity title truncates past this many characters. */
+const IDENTITY_NAME_MAX_CHARS = 38;
+
+/**
+ * Exploration chrome identity title (Review response). Unlike `RrChromeAgentTitle`
+ * — which ellipsizes on available width and only reveals the name when it actually
+ * clipped — this truncates on a fixed character count and always offers the full
+ * name plus the agent's location summary on hover.
+ */
+function RrChromeIdentityTitle({ fullName, locationSummary, onClick }) {
+  const displayName =
+    fullName.length > IDENTITY_NAME_MAX_CHARS
+      ? `${fullName.slice(0, IDENTITY_NAME_MAX_CHARS).trimEnd()}…`
+      : fullName;
+
+  return (
+    <Tooltip
+      // `brief` (nowrap), not `detail` (max-w-280px): the name has to stay on one
+      // line however long it is, so the second line belongs to the location alone.
+      variant="brief"
+      side="bottom"
+      className="rr-chrome-identity__name-tip"
+      content={
+        <>
+          <span className="block">{fullName}</span>
+          {locationSummary && <span className="block">{locationSummary}</span>}
+        </>
+      }
+    >
+      <button
+        type="button"
+        className="rr-chrome-identity__title"
+        onClick={onClick}
+        aria-label={`Open agent details for ${fullName}`}
+      >
+        <span className="rr-chrome-identity__name">{displayName}</span>
+      </button>
+    </Tooltip>
+  );
+}
 
 /* ─── Error boundary for RHS panel — prevents blank screen on render error ─── */
 class RHSErrorBoundary extends React.Component {
@@ -88,10 +222,10 @@ class RHSErrorBoundary extends React.Component {
 // is dropped as a trigger (Review response / Review generation agents only — see
 // handleDropNode). The last entry matches REVIEW_RESPONSE_WORKFLOW's rr-1 node verbatim.
 const REVIEWS_TRIGGER_LEAF_COPY = {
-  'When a new review is received': 'Agent triggers when a new review is received across all sources and locations.',
-  'When a review is updated': 'Agent triggers when an existing review is updated across all sources and locations.',
-  'When a review is responded': 'Agent triggers when a review receives a response across all sources and locations.',
-  'When a new review is received or updated': 'Agent triggers on new or updated reviews across all sources and locations.',
+  'When a new review is received': 'Starts when a customer leaves a new review on any connected source or location',
+  'When a review is updated': 'Starts when an existing review is edited, including rating or comment changes',
+  'When a review is responded': 'Starts when a response is posted to a review by your agent or a team member',
+  'When a new review is received or updated': RR_TRIGGER_DESC,
 };
 
 function makeNodeDetails(type, label) {
@@ -108,9 +242,7 @@ function makeNodeDetails(type, label) {
     return {
       triggerName: '',
       description: '',
-      conditions: [
-        { id: 1, fieldValue: '', operatorValue: '', valueValue: '' },
-      ],
+      conditions: [],
     };
   }
   if (type === 'procedures') {
@@ -131,7 +263,20 @@ function makeNodeDetails(type, label) {
     const firstId = label && label !== 'Custom' ? label : null;
     return { procedureIds: firstId ? [firstId] : [] };
   }
-  if (type === 'branch') return { basedOn: 'conditions', branches: [] };
+  if (type === 'branch') {
+    return {
+      basedOn: 'conditions',
+      branchNodeTitle: RR_BRANCH_TITLE,
+      description: RR_BRANCH_DESC,
+      mergeBranches: true,
+      // Paths are fully seeded on drop (with node-scoped ids). Keep a named
+      // placeholder here so the RHS never opens on an empty Branches list.
+      branches: [
+        { id: 'pending-path-1', name: 'Branch 1' },
+        { id: 'pending-path-fallback', name: 'Fallback branch', isFallback: true },
+      ],
+    };
+  }
   if (type === 'subagent') return { selectedAgent: '', name: '', description: '' };
   if (type === 'delay') return { name: '', duration: '', unit: '' };
   if (type === 'parallel') return { nodeName: '', description: '', branches: [{ name: '' }, { name: '' }] };
@@ -151,34 +296,57 @@ function makeNodeDetails(type, label) {
   };
 }
 
+/** Seed canvas/RHS description (and optional tools) from the LHS palette leaf name. */
+function reviewsTaskDropDefaults() {
+  const defaults = {};
+  Object.values(REVIEWS_TASK_SUB_ITEMS).forEach((group) => {
+    (group.items || []).forEach((item) => {
+      if (!item?.label || !item?.description) return;
+      defaults[item.label] = { description: item.description };
+    });
+  });
+  return defaults;
+}
+
 const TASK_DROP_DEFAULTS = {
   'Initiate voice call': { description: 'Call the customer' },
-  'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
-  'Send response': { selectedTools: ['send-response'] },
-  'Schedule appointment': { description: 'Book a new appointment for the customer' },
-  'Reschedule appointment': { description: 'Change an existing appointment date or time' },
-  'Cancel appointment': { description: 'Cancel a scheduled appointment' },
-  'Confirm appointment': { description: 'Confirm appointment details with the customer' },
+  'Send text during call': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
+  'In-call SMS': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
+  'Send response': { description: 'Sends the drafted response to the contact', selectedTools: ['send-response'] },
+  'Update state': {
+    description: 'Update dynamic variables when this step runs',
+    selectedTools: ['update-state'],
+    stateUpdates: defaultUpdateStateDetails().stateUpdates,
+  },
+  'Schedule appointment': { description: 'Books a new appointment for the patient' },
+  'Book new appointment': { description: 'Books a new appointment for the patient' },
+  'Reschedule appointment': { description: 'Changes an existing appointment date or time' },
+  'Cancel appointment': { description: 'Cancels a scheduled appointment' },
+  'Confirm appointment': { description: 'Confirms appointment details with the patient' },
   'Appointment reminder': { description: '3 weeks, 3 days and 24 hours before · Email & text', selectedTools: ['reminder-tool'] },
-  'Update contact property': { description: 'Update a field on the contact record' },
-  'Add contact to list': { description: 'Add the contact to a marketing or CRM list' },
-  'Remove contact from list': { description: 'Remove the contact from a list' },
+  'Update contact property': { description: 'Updates a field on the contact record' },
+  'Add contact to list': { description: 'Adds the contact to a marketing or CRM list' },
+  'Remove contact from list': { description: 'Removes the contact from a list' },
+  'Create Zendesk ticket': { description: 'Creates a ticket in Zendesk' },
+  Zendesk: { description: 'Creates a ticket in Zendesk' },
+  FreshDesk: { description: 'FreshDesk CRM tool', selectedTools: ['freshdesk'] },
+  'QuickBooks Online': { description: 'QuickBooks tool' },
+  ServiceTitan: { description: 'ServiceTitan CRM tool' },
+  Salesforce: { description: 'Creates or updates the contact record in Salesforce' },
+  'Update Salesforce contact': { description: 'Creates or updates the contact record in Salesforce' },
   'Send data to external app': { description: 'Push data to a connected external application' },
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
-  'Triage review': {
+  // Legacy leaf names still used by older workflows / add-step shortcuts
+  'Extract review details': {
     description:
-      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
   },
   'Review details extraction': {
     description:
-      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
   },
   'Review responder': { description: 'Reply to the review using the generated response' },
-  'Response generation': {
-    description:
-      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
-  },
   'Message assembly': {
     description:
       'Combine the crafted approach, extracted insights, and brand voice to create the final reply.',
@@ -188,7 +356,117 @@ const TASK_DROP_DEFAULTS = {
   'Enroll in campaign': { description: 'Add the contact to a review or recovery campaign sequence.' },
   'Send referral invite': { description: 'Invite happy reviewers to refer friends or leave additional feedback.' },
   'Send survey': { description: 'Send a follow-up survey after a review to capture more structured feedback.' },
+  // Reviews AI palette copy is the source of truth for leaf descriptions
+  ...reviewsTaskDropDefaults(),
+  // Tool pre-selection overrides (keep LHS description from the spread above)
+  'Assign tags': {
+    description: 'Add tags to a review',
+    selectedTools: ['assign-tags'],
+  },
+  'Classify tags': {
+    description: 'Manage review tags and their descriptions',
+    selectedTools: ['classify-tags'],
+  },
+  'Generate recommendations': {
+    description: 'Suggests recommended next steps for the team based on the review\'s content and sentiment.',
+    selectedTools: ['generate-recommendations'],
+  },
+  'Update contact preference': {
+    description: 'Updates permissions on a contact record',
+    selectedTools: ['update-contact-preference'],
+  },
+  'Discover competitor keywords': {
+    description: 'Finds keywords your competitors rank for',
+    selectedTools: ['discover-competitor-keywords'],
+  },
+  'Discover business keywords': {
+    description: 'Finds high-impact keywords for your business category and location',
+    selectedTools: ['discover-business-keywords'],
+  },
+  'Create ticket in Birdeye': {
+    description: 'Creates a Birdeye ticket for a review or survey response',
+    selectedTools: ['create-ticket-birdeye'],
+  },
+  'Localize media': {
+    description: 'Adds location details to your images before publishing',
+    selectedTools: ['localize-media'],
+  },
+  'Social sentiment classifier': {
+    description: 'Reads a social message and classifies its emotional tone as positive, negative, or neutral.',
+    selectedTools: ['social-sentiment-classifier'],
+  },
+  'Generate response': {
+    description:
+      'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
+  },
+  'Handle response': {
+    description:
+      'Decide what the agent will do with the response composed for a review — have a human in the loop or post it directly',
+    selectedTools: ['handle-response'],
+  },
+  'Select template': {
+    description: 'Choose which templates can be used as review responses',
+    selectedTools: ['select-template'],
+  },
+  'Publish response': {
+    description:
+      'Sends the response automatically or holds it for approval',
+    selectedTools: ['publish-response'],
+  },
+  'Route response for approval or publish': {
+    description:
+      'Sends the response automatically or holds it for approval',
+    selectedTools: ['handle-response'],
+  },
 };
+
+const DROPPED_TASK_COPY = {
+  Salesforce: {
+    taskName: 'Update Salesforce contact',
+    description: 'Creates or updates the contact record in Salesforce',
+  },
+  'Update Salesforce contact': {
+    taskName: 'Update Salesforce contact',
+    description: 'Creates or updates the contact record in Salesforce',
+  },
+  'Classify tags': {
+    taskName: 'Classify tags',
+    description: 'Manage review tags and their descriptions',
+  },
+  // Alias: normalizes nodes saved under the older palette label onto the current copy.
+  'Manage review tags': {
+    taskName: 'Classify tags',
+    description: 'Manage review tags and their descriptions',
+  },
+  'Extract review details': {
+    taskName: 'Extract review details',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Review details extraction': {
+    taskName: 'Extract review details',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Review analysis': {
+    taskName: 'Review analysis',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Generate response': {
+    taskName: 'Generate response',
+    description:
+      "Writes a reply that matches the review's language and rating, and follows the rules for tone, length, and escalation",
+  },
+  'Apply escalation rules': {
+    taskName: 'Apply escalation rules',
+    description: 'Sends alerts or updates tickets when TAT is missed',
+  },
+};
+
+function remapDroppedTaskCopy(taskName, description) {
+  return DROPPED_TASK_COPY[taskName] || { taskName, description };
+}
 
 function makeNodeConfig(id, type, label, description) {
   let flowType = 'task';
@@ -209,7 +487,10 @@ function makeNodeConfig(id, type, label, description) {
   } else if (type === 'delay') {
     flowType = 'delay';
     titlePlaceholder = 'Configure delay settings';
-    descriptionPlaceholder = 'Wait for specific time or event.';
+    descriptionPlaceholder =
+      delayVariantDescription({ variantLabel: description })
+      || delayVariantDescription({ variantLabel: label })
+      || DELAY_GENERIC_DESCRIPTION;
   } else if (type === 'parallel') {
     flowType = 'parallel';
   } else if (type === 'loop') {
@@ -306,6 +587,20 @@ function computeLoopFlowWidth(nodes, nodeDetails) {
   return maxWidth;
 }
 
+/** Task incomplete warning — hidden for design; re-enable checks below when needed. */
+function isTaskConfigIncomplete(_item, _details = {}) {
+  return false;
+}
+
+/**
+ * True when a task's tool still has unfilled mandatory config. Checked on RHS Save (not on
+ * drop), so the canvas card only flags an error once the user has tried to commit the task.
+ */
+function taskHasToolConfigError(details = {}) {
+  const tools = details.selectedTools || [];
+  return tools.some(isHandleResponseTool) && !isHandleResponseConfigComplete(details.handleResponse);
+}
+
 function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
   if (item?.flowType === 'procedures') {
     const ids = nodeDetails?.[nodeId]?.procedureIds ?? [];
@@ -318,7 +613,9 @@ function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
     const childCount = loopNodes.length;
     return computeLoopCanvasHeight(Math.max(childCount, 1));
   }
-  return FLOW_STANDARD_NODE_HEIGHT;
+  const base = FLOW_STANDARD_NODE_HEIGHT;
+  if (isTaskConfigIncomplete(item, nodeDetails?.[nodeId])) return base + 24;
+  return base;
 }
 
 function getFlowVerticalStep(item, nodeId, nodeDetails, product = 'automotive') {
@@ -338,7 +635,8 @@ function mapProcedureItems(procedureIds = [], nodeDetails, nodeId, product) {
   });
 }
 
-function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive') {
+function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}, options = {}) {
+  const { hideStartNode = false } = options;
   let y = 0;
   const nodes = [];
   const edges = [];
@@ -349,21 +647,23 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   // Shared sequential step counter — incremented for every rendered content node
   let stepCounter = hasTrigger ? 0 : 1;
 
-  nodes.push({
-    id: START_NODE_ID,
-    type: 'start',
-    position: { x: 0, y },
-    data: {
-      title: startData.title,
-      subtitle: startData.subtitle,
-      subtitleIsLink: startData.subtitleIsLink,
-      onSubtitleClick: startData.onSubtitleClick,
-    },
-  });
-  y += FLOW_START_GAP;
+  if (!hideStartNode) {
+    nodes.push({
+      id: START_NODE_ID,
+      type: 'start',
+      position: { x: 0, y },
+      data: {
+        title: startData.title,
+        subtitle: startData.subtitle,
+        subtitleIsLink: startData.subtitleIsLink,
+        onSubtitleClick: startData.onSubtitleClick,
+      },
+    });
+    y += FLOW_START_GAP;
+  }
 
   let lastNodeY = 0;
-  let lastNodeBlockHeight = FLOW_START_NODE_HEIGHT;
+  let lastNodeBlockHeight = hideStartNode ? 0 : FLOW_START_NODE_HEIGHT;
 
   // Trigger placeholder — sits at step 1's position, above any tasks, until a trigger lands.
   if (!hasTrigger) {
@@ -373,22 +673,31 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       position: { x: 0, y },
       data: {},
     });
-    edges.push({
-      id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
-      source: START_NODE_ID,
-      target: TRIGGER_PLACEHOLDER_ID,
-      type: 'addButton',
-    });
+    if (!hideStartNode) {
+      edges.push({
+        id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
+        source: START_NODE_ID,
+        target: TRIGGER_PLACEHOLDER_ID,
+        type: 'addButton',
+      });
+    }
     lastNodeY = y;
     lastNodeBlockHeight = FLOW_TRIGGER_PLACEHOLDER_HEIGHT;
     y += FLOW_TRIGGER_PLACEHOLDER_HEIGHT + FLOW_CONNECTOR_GAP;
   }
 
-  const entryId = hasTrigger ? START_NODE_ID : TRIGGER_PLACEHOLDER_ID;
+  const entryId = hasTrigger
+    ? (hideStartNode ? null : START_NODE_ID)
+    : TRIGGER_PLACEHOLDER_ID;
 
   nodeList.forEach((item, i) => {
     const nodeId = item.id;
-    const prevId = i === 0 ? entryId : nodeList[i - 1].id;
+    const prevItem = i === 0 ? null : nodeList[i - 1];
+    const prevId = i === 0
+      ? entryId
+      : (prevItem.flowType === 'branch' && collapsedBranches[prevItem.id]
+        ? `${prevItem.id}__collapse`
+        : prevItem.id);
     lastNodeY = y;
     lastNodeBlockHeight = getNodeBlockHeight(item, nodeId, nodeDetails, product);
     const topLevelStep = ++stepCounter;
@@ -400,8 +709,29 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         ? {
             ...item.data,
             stepNumber: topLevelStep,
-            title: 'Based on conditions',
-            subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
+            title:
+              (nodeDetails[nodeId]?.basedOn === 'percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Based on percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Split traffic'
+                || item.data?.title === 'Based on percentage')
+                ? 'Split traffic'
+                : (nodeDetails[nodeId]?.branchNodeTitle
+              || item.data?.title
+              || (nodeDetails[nodeId]?.basedOn === 'field'
+                  ? 'Based on field'
+                  : nodeDetails[nodeId]?.basedOn === 'prompts'
+                    ? 'Based on prompts'
+                    : 'Based on conditions')),
+            subtitle:
+              (nodeDetails[nodeId]?.basedOn === 'percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Based on percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Split traffic'
+                || item.data?.title === 'Based on percentage')
+                ? 'Splits traffic across paths by percentage, useful for testing variations'
+                : (nodeDetails[nodeId]?.description
+              || item.data?.description
+              || item.data?.descriptionPlaceholder
+              || 'Build condition-specific flows'),
           }
         : item.data?.subtype === 'Schedule-based'
           ? {
@@ -456,7 +786,11 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                   ...(item.flowType === 'delay'
                     ? {
                         titlePlaceholder: 'Configure delay settings',
-                        descriptionPlaceholder: 'Wait for specific time or event.',
+                        descriptionPlaceholder:
+                          delayVariantDescription({
+                            delayOption: nodeDetails[nodeId]?.delayOption,
+                            variantLabel: item.data?.description,
+                          }) || DELAY_GENERIC_DESCRIPTION,
                       }
                     : item.flowType === 'subagent'
                       ? {
@@ -466,27 +800,35 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                       : {}),
                   // Pull title and subtitle from saved nodeDetails so canvas nodes
                   // show real content instead of placeholder text
-                  title: nodeDetails[nodeId]?.taskName
-                    ?? nodeDetails[nodeId]?.triggerName
-                    ?? item.data.title,
-                  subtitle: nodeDetails[nodeId]?.description ?? item.data.subtitle,
+                  ...(() => {
+                    const mapped = remapDroppedTaskCopy(
+                      nodeDetails[nodeId]?.taskName
+                        ?? nodeDetails[nodeId]?.triggerName
+                        ?? item.data.title,
+                      nodeDetails[nodeId]?.description ?? item.data.subtitle,
+                    );
+                    return { title: mapped.taskName, subtitle: mapped.description };
+                  })(),
+                  showConfigWarning: isTaskConfigIncomplete(item, nodeDetails[nodeId]),
                 },
     });
-    const prevIsProcedures = i > 0 && nodeList[i - 1].flowType === 'procedures';
     // No "+" between the trigger placeholder and the first task — that slot is reserved for
     // the trigger, so nothing may be inserted above the first real node there.
     const fromPlaceholder = i === 0 && prevId === TRIGGER_PLACEHOLDER_ID;
-    edges.push({
-      id: `e-${prevId}-${nodeId}`,
-      source: prevId,
-      target: nodeId,
-      type: 'addButton',
-      data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
-    });
+    if (prevId != null) {
+      edges.push({
+        id: `e-${prevId}-${nodeId}`,
+        source: prevId,
+        target: nodeId,
+        type: 'addButton',
+        data: { betweenCards: true, ...(fromPlaceholder ? { hideAddButton: true } : {}) },
+      });
+    }
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
       const isVoiceCall = item.flowType === 'voiceCall';
       const branches = nodeDetails[nodeId]?.branches || [];
+      const parentCollapsed = !isVoiceCall && !!collapsedBranches[nodeId];
 
       // Detect nesting depth to set spacing:
       // level-1: voiceCall directly in a branch arm → 1100
@@ -503,29 +845,84 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         )
       );
       const spacing = hasDoublyNestedVoiceCall ? 2400 : hasNestedVoiceCall ? 1100 : 480;
+      // Every arm node (path chip, task card, End) uses the same 432px centered
+      // wrapper, so sharing position.x keeps source/target handles on one vertical line.
       const startX = -((branches.length - 1) * spacing) / 2;
-      const branchChipY = y + 150;
-      const branchNodeStartY = y + 260;
+      const branchChipY = y + 260;
+      const branchNodeStartY = y + 370;
+
+      // Stem control between the Branch card and the fan (Reviews-style collapse).
+      let fanSourceId = nodeId;
+      if (!isVoiceCall) {
+        const stemId = `${nodeId}__collapse`;
+        const stemY = y + 154;
+        const taskCount = branches.reduce(
+          (sum, b) => sum + (nodeDetails[b.id]?.nodes || []).length,
+          0,
+        );
+        nodes.push({
+          id: stemId,
+          type: 'branchCollapse',
+          position: { x: 0, y: stemY },
+          data: {
+            collapsed: parentCollapsed,
+            branchCount: branches.length,
+            taskCount,
+            parentBranchId: nodeId,
+          },
+        });
+        edges.push({
+          id: `e-${nodeId}-${stemId}`,
+          source: nodeId,
+          target: stemId,
+          type: 'straight',
+        });
+        fanSourceId = stemId;
+        if (parentCollapsed) {
+          lastNodeY = stemY;
+          lastNodeBlockHeight = 36;
+        }
+      }
 
       // Helper: fan out a voiceCall node's sub-branches
       const renderVoiceCallBranches = (vcNodeId, baseX, baseY) => {
         const vcBranches = nodeDetails[vcNodeId]?.branches || [];
         const vcSpacing = 480;
         const vcStartX = baseX - ((vcBranches.length - 1) * vcSpacing) / 2;
-        const vcChipY = baseY + 150;
-        const vcNodeStartY = baseY + 260;
+        const vcChipY = baseY + 260;
+        const vcNodeStartY = baseY + 370;
         vcBranches.forEach((vcBranch, vcBi) => {
           const vcBranchX = vcStartX + vcBi * vcSpacing;
           const vcBranchNodes = nodeDetails[vcBranch.id]?.nodes || [];
-          nodes.push({ id: vcBranch.id, type: 'branchPath', position: { x: vcBranchX, y: vcChipY }, data: { label: vcBranch.name, parentId: vcNodeId, isFallback: !!vcBranch.isFallback, isVoiceCallBranch: true } });
+          const vcPathCollapsed = !!collapsedBranchPaths[vcBranch.id];
+          nodes.push({
+            id: vcBranch.id,
+            type: 'branchPath',
+            position: { x: vcBranchX, y: vcChipY },
+            data: {
+              label: vcBranch.name,
+              description: nodeDetails[vcBranch.id]?.description || '',
+              parentId: vcNodeId,
+              isFallback: !!vcBranch.isFallback,
+              isVoiceCallBranch: true,
+              collapsed: vcPathCollapsed,
+              hiddenCount: vcBranchNodes.length,
+            },
+          });
           edges.push({ id: `e-${vcNodeId}-${vcBranch.id}`, source: vcNodeId, target: vcBranch.id, type: 'branchFan' });
+          if (vcPathCollapsed) return;
           let vcPrevId = vcBranch.id;
           vcBranchNodes.forEach((vcChild, vcIdx) => {
             const vcChildId = vcChild.id;
             const vcChildDet = nodeDetails[vcChildId] || {};
             let vcChildData = { ...vcChild.data, stepNumber: ++stepCounter };
             if (vcChild.flowType !== 'delay' && vcChild.flowType !== 'branch') {
-              vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
+              vcChildData = {
+                ...vcChildData,
+                title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title,
+                subtitle: vcChildDet.description ?? vcChildData.subtitle,
+                showConfigWarning: isTaskConfigIncomplete(vcChild, vcChildDet),
+              };
             }
             nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * FLOW_NODE_STEP }, data: vcChildData });
             edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
@@ -537,94 +934,184 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         });
       };
 
-      branches.forEach((branch, bi) => {
-        const branchX = startX + bi * spacing;
-        const branchNodes = nodeDetails[branch.id]?.nodes || [];
-        nodes.push({
-          id: branch.id,
-          type: 'branchPath',
-          position: { x: branchX, y: branchChipY },
-          data: { label: branch.name, parentId: nodeId, isFallback: !!branch.isFallback, isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch },
-        });
-        edges.push({ id: `e-${nodeId}-${branch.id}`, source: nodeId, target: branch.id, type: 'branchFan' });
+      if (!parentCollapsed) {
+        branches.forEach((branch, bi) => {
+          const branchX = startX + bi * spacing;
+          const branchNodes = nodeDetails[branch.id]?.nodes || [];
+          const pathCollapsed = !!collapsedBranchPaths[branch.id];
+          nodes.push({
+            id: branch.id,
+            type: 'branchPath',
+            position: { x: branchX, y: branchChipY },
+            data: {
+              label: branch.name,
+              description: nodeDetails[branch.id]?.description || '',
+              parentId: nodeId,
+              isFallback: !!branch.isFallback,
+              isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch,
+              collapsed: pathCollapsed,
+              hiddenCount: branchNodes.length,
+              // Keep at least two paths (e.g. Branch 1 + Fallback).
+              canDeletePath: !isVoiceCall && !branch.isVoiceCallBranch && !branch.isFallback && branches.length > 2,
+            },
+          });
+          edges.push({ id: `e-${fanSourceId}-${branch.id}`, source: fanSourceId, target: branch.id, type: 'branchFan' });
 
-        let previousId = branch.id;
-        let previousChildFlowType = null;
-        let childYOffset = 0;
-        branchNodes.forEach((childNode, childIndex) => {
-          const childId = childNode.id;
-          const childDet = nodeDetails[childId] || {};
-          let childData = { ...childNode.data, stepNumber: ++stepCounter };
-          if (childNode.flowType === 'procedures') {
-            childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
-          } else if (childNode.flowType !== 'delay' && childNode.flowType !== 'branch') {
-            childData = { ...childData, title: childDet.taskName ?? childDet.triggerName ?? childData.title, subtitle: childDet.description ?? childData.subtitle };
-          }
-          const childY = branchNodeStartY + childYOffset;
-          nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
-          previousId = childNode.id;
-          previousChildFlowType = childNode.flowType;
-          childYOffset += FLOW_NODE_STEP;
+          if (pathCollapsed) return;
 
-          // Fan out voiceCall sub-branches when voiceCall is nested inside a branch path
-          if (childNode.flowType === 'voiceCall') {
-            renderVoiceCallBranches(childId, branchX, childY);
-          }
+          let previousId = branch.id;
+          let childYOffset = 0;
+          branchNodes.forEach((childNode) => {
+            const childId = childNode.id;
+            const childDet = nodeDetails[childId] || {};
+            let childData = { ...childNode.data, stepNumber: ++stepCounter };
+            if (childNode.flowType === 'procedures') {
+              childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
+            } else if (childNode.flowType === 'delay') {
+              childData = {
+                ...childData,
+                titlePlaceholder: 'Configure delay settings',
+                descriptionPlaceholder:
+                  delayVariantDescription({
+                    delayOption: childDet.delayOption,
+                    variantLabel: childData.description,
+                  }) || DELAY_GENERIC_DESCRIPTION,
+              };
+            } else if (childNode.flowType !== 'branch') {
+              const mappedChild = remapDroppedTaskCopy(
+                childDet.taskName ?? childDet.triggerName ?? childData.title,
+                childDet.description ?? childData.subtitle,
+              );
+              childData = {
+                ...childData,
+                title: mappedChild.taskName,
+                subtitle: mappedChild.description,
+                showConfigWarning: isTaskConfigIncomplete(childNode, childDet),
+              };
+            }
+            const childY = branchNodeStartY + childYOffset;
+            nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
+            edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id } });
+            previousId = childNode.id;
+            childYOffset += FLOW_NODE_STEP;
 
-          // Fan out a nested branch node inside this branch path
-          if (childNode.flowType === 'branch') {
-            const innerBranches = childDet.branches || [];
-            // Detect if any inner arm contains a voiceCall to size inner spacing
-            const innerHasVoiceCall = innerBranches.some(nb =>
-              (nodeDetails[nb.id]?.nodes || []).some(nn => nn.flowType === 'voiceCall')
-            );
-            const innerSpacing = innerHasVoiceCall ? 1100 : 480;
-            const innerStartX = branchX - ((innerBranches.length - 1) * innerSpacing) / 2;
-            const innerChipY = childY + 150;
-            const innerNodeStartY = childY + 260;
-            innerBranches.forEach((innerBranch, innerBi) => {
-              const innerBranchX = innerStartX + innerBi * innerSpacing;
-              const innerBranchNodes = nodeDetails[innerBranch.id]?.nodes || [];
-              nodes.push({ id: innerBranch.id, type: 'branchPath', position: { x: innerBranchX, y: innerChipY }, data: { label: innerBranch.name, parentId: childId, isFallback: !!innerBranch.isFallback, isVoiceCallBranch: false } });
-              edges.push({ id: `e-${childId}-${innerBranch.id}`, source: childId, target: innerBranch.id, type: 'branchFan' });
-              let innerPrevId = innerBranch.id;
-              let innerYOff = 0;
-              innerBranchNodes.forEach((innerChild) => {
-                const innerChildId = innerChild.id;
-                const innerChildDet = nodeDetails[innerChildId] || {};
-                let innerChildData = { ...innerChild.data, stepNumber: ++stepCounter };
-                if (innerChild.flowType !== 'delay' && innerChild.flowType !== 'branch') {
-                  innerChildData = { ...innerChildData, title: innerChildDet.taskName ?? innerChildDet.triggerName ?? innerChildData.title, subtitle: innerChildDet.description ?? innerChildData.subtitle };
-                }
-                const innerChildY = innerNodeStartY + innerYOff;
-                nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
-                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
-                innerPrevId = innerChildId;
-                innerYOff += FLOW_NODE_STEP;
-                if (innerChild.flowType === 'voiceCall') {
-                  renderVoiceCallBranches(innerChildId, innerBranchX, innerChildY);
-                }
+            if (childNode.flowType === 'voiceCall') {
+              renderVoiceCallBranches(childId, branchX, childY);
+            }
+
+            if (childNode.flowType === 'branch') {
+              const innerBranches = childDet.branches || [];
+              const innerCollapsed = !!collapsedBranches[childId];
+              const innerHasVoiceCall = innerBranches.some(nb =>
+                (nodeDetails[nb.id]?.nodes || []).some(nn => nn.flowType === 'voiceCall')
+              );
+              const innerSpacing = innerHasVoiceCall ? 1100 : 480;
+              const innerStartX = branchX - ((innerBranches.length - 1) * innerSpacing) / 2;
+              const innerChipY = childY + 260;
+              const innerNodeStartY = childY + 370;
+              const innerStemId = `${childId}__collapse`;
+              const innerStemY = childY + 154;
+              const innerTaskCount = innerBranches.reduce(
+                (sum, b) => sum + (nodeDetails[b.id]?.nodes || []).length,
+                0,
+              );
+              nodes.push({
+                id: innerStemId,
+                type: 'branchCollapse',
+                position: { x: branchX, y: innerStemY },
+                data: {
+                  collapsed: innerCollapsed,
+                  branchCount: innerBranches.length,
+                  taskCount: innerTaskCount,
+                  parentBranchId: childId,
+                },
               });
-              const lastInnerIsVoiceCall = innerBranchNodes.length > 0 && innerBranchNodes[innerBranchNodes.length - 1].flowType === 'voiceCall';
-              if (!lastInnerIsVoiceCall) {
-                const innerEndId = `${innerBranch.id}-end`;
-                nodes.push({ id: innerEndId, type: 'branchEnd', position: { x: innerBranchX, y: innerNodeStartY + innerYOff }, data: { parentId: innerBranch.id } });
-                edges.push({ id: `e-${innerPrevId}-${innerEndId}`, source: innerPrevId, target: innerEndId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+              edges.push({
+                id: `e-${childId}-${innerStemId}`,
+                source: childId,
+                target: innerStemId,
+                type: 'straight',
+              });
+              if (innerCollapsed) {
+                const innerEndId = `${childId}-end`;
+                nodes.push({
+                  id: innerEndId,
+                  type: 'branchEnd',
+                  position: { x: branchX, y: innerStemY + 50 },
+                  data: { parentId: branch.id },
+                });
+                edges.push({
+                  id: `e-${innerStemId}-${innerEndId}`,
+                  source: innerStemId,
+                  target: innerEndId,
+                  type: 'addButton',
+                  data: { branchPathId: branch.id, afterNodeId: childId },
+                });
+              } else {
+                innerBranches.forEach((innerBranch, innerBi) => {
+                  const innerBranchX = innerStartX + innerBi * innerSpacing;
+                  const innerBranchNodes = nodeDetails[innerBranch.id]?.nodes || [];
+                  const innerPathCollapsed = !!collapsedBranchPaths[innerBranch.id];
+                  nodes.push({
+                    id: innerBranch.id,
+                    type: 'branchPath',
+                    position: { x: innerBranchX, y: innerChipY },
+                    data: {
+                      label: innerBranch.name,
+                      description: nodeDetails[innerBranch.id]?.description || '',
+                      parentId: childId,
+                      isFallback: !!innerBranch.isFallback,
+                      isVoiceCallBranch: false,
+                      collapsed: innerPathCollapsed,
+                      hiddenCount: innerBranchNodes.length,
+                      canDeletePath: !innerBranch.isFallback && innerBranches.length > 2,
+                    },
+                  });
+                  edges.push({ id: `e-${innerStemId}-${innerBranch.id}`, source: innerStemId, target: innerBranch.id, type: 'branchFan' });
+                  if (innerPathCollapsed) return;
+                  let innerPrevId = innerBranch.id;
+                  let innerYOff = 0;
+                  innerBranchNodes.forEach((innerChild) => {
+                    const innerChildId = innerChild.id;
+                    const innerChildDet = nodeDetails[innerChildId] || {};
+                    let innerChildData = { ...innerChild.data, stepNumber: ++stepCounter };
+                    if (innerChild.flowType !== 'delay' && innerChild.flowType !== 'branch') {
+                      innerChildData = {
+                        ...innerChildData,
+                        title: innerChildDet.taskName ?? innerChildDet.triggerName ?? innerChildData.title,
+                        subtitle: innerChildDet.description ?? innerChildData.subtitle,
+                        showConfigWarning: isTaskConfigIncomplete(innerChild, innerChildDet),
+                      };
+                    }
+                    const innerChildY = innerNodeStartY + innerYOff;
+                    nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
+                    edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
+                    innerPrevId = innerChildId;
+                    innerYOff += FLOW_NODE_STEP;
+                    if (innerChild.flowType === 'voiceCall') {
+                      renderVoiceCallBranches(innerChildId, innerBranchX, innerChildY);
+                    }
+                  });
+                  const lastInnerIsVoiceCall = innerBranchNodes.length > 0 && innerBranchNodes[innerBranchNodes.length - 1].flowType === 'voiceCall';
+                  if (!lastInnerIsVoiceCall) {
+                    const innerEndId = `${innerBranch.id}-end`;
+                    nodes.push({ id: innerEndId, type: 'branchEnd', position: { x: innerBranchX, y: innerNodeStartY + innerYOff }, data: { parentId: innerBranch.id } });
+                    edges.push({ id: `e-${innerPrevId}-${innerEndId}`, source: innerPrevId, target: innerEndId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+                  }
+                });
               }
-            });
+            }
+          });
+
+          const lastChild = branchNodes.length > 0 ? branchNodes[branchNodes.length - 1] : null;
+          const lastChildIsBranchLike = lastChild && (lastChild.flowType === 'voiceCall' || lastChild.flowType === 'branch');
+          if (!lastChildIsBranchLike) {
+            const branchEndId = `${branch.id}-end`;
+            nodes.push({ id: branchEndId, type: 'branchEnd', position: { x: branchX, y: branchNodeStartY + childYOffset }, data: { parentId: branch.id } });
+            edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback } });
           }
         });
-
-        // Skip branchEnd when last child is a voiceCall or nested branch (they render their own ends)
-        const lastChild = branchNodes.length > 0 ? branchNodes[branchNodes.length - 1] : null;
-        const lastChildIsBranchLike = lastChild && (lastChild.flowType === 'voiceCall' || lastChild.flowType === 'branch');
-        if (!lastChildIsBranchLike) {
-          const branchEndId = `${branch.id}-end`;
-          nodes.push({ id: branchEndId, type: 'branchEnd', position: { x: branchX, y: branchNodeStartY + childYOffset }, data: { parentId: branch.id } });
-          edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
-        }
-      });
+      }
       // Branch paths fan out to the side — do not inflate main-spine y or spine edges stretch.
     }
 
@@ -632,20 +1119,21 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   });
 
   const lastId = nodeList.length > 0 ? nodeList[nodeList.length - 1].id : entryId;
-  const lastNodeIsProcedures = nodeList.length > 0 && nodeList[nodeList.length - 1].flowType === 'procedures';
   const lastFlowType = nodeList.length > 0 ? nodeList[nodeList.length - 1].flowType : null;
-  if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall')) {
+  const lastBranchCollapsed = lastFlowType === 'branch' && !!collapsedBranches[lastId];
+  if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall') || lastBranchCollapsed) {
     const endY = lastNodeY + lastNodeBlockHeight;
+    const endSourceId = lastBranchCollapsed ? `${lastId}__collapse` : lastId;
     nodes.push({
       id: END_NODE_ID,
       type: 'end',
       // Top of End node aligns with the bottom of the preceding block; connector fills FLOW_CONNECTOR_GAP
       position: { x: 0, y: endY },
-      data: { afterNodeId: lastId, hideAddBeforeEnd: lastNodeIsProcedures },
+      data: { afterNodeId: lastId },
     });
     edges.push({
-      id: `e-${lastId}-${END_NODE_ID}`,
-      source: lastId,
+      id: `e-${endSourceId}-${END_NODE_ID}`,
+      source: endSourceId,
       target: END_NODE_ID,
       type: 'addButton',
     });
@@ -732,6 +1220,22 @@ function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
   return clonedEntry;
 }
 
+function publishBlockedCopy(reason, count) {
+  if (reason === 'locations') {
+    return {
+      title: 'Add locations to activate',
+      body: 'You must select at least one location for this agent to be activated.',
+      primaryLabel: 'Add location',
+    };
+  }
+  const label = count === 1 ? 'error' : 'errors';
+  return {
+    title: 'Resolve errors to activate',
+    body: `Fix ${count} ${label} in your workflow before activating.`,
+    primaryLabel: 'View errors',
+  };
+}
+
 export default function AgentBuilder({
   agentId: propAgentId,
   agentSlug: propAgentSlug,
@@ -745,20 +1249,29 @@ export default function AgentBuilder({
   templateId,
   templateSource,
   initialStatus = 'Draft',
+  /** Live Active instance also has an unpublished draft — block Active RHS edits. */
+  hasUnpublishedDraft = false,
   initialDescription = '',
   initialNodes = null,
   initialNodeDetails = null,
   onSaveAgent,
   onSaveTemplate,
   onClose,
+  /** Confirmed delete — falls back to `onClose` when the parent doesn't handle it. */
+  onDeleted,
   onEdit,
   onView,
   viewOnly = false,
+  /** View-only canvases that should show edit/run actions instead of the name + status chrome. */
+  viewChromeActions = false,
+  /** Set false to make node cards inert (no RHS on click) — used by the read-only log run view. */
+  nodesInteractive = true,
   product = 'automotive',
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
   issueCount = 0,
+  issues = null,
   defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
@@ -768,6 +1281,11 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Opens Settings > Account > Product research (Help center "Learn more"). */
+  onOpenProductResearchSettings = null,
+  /** Parent-controlled AI Builder dock (reopened after fullscreen expand). */
+  aiBuilderPanelOpen: aiBuilderPanelOpenProp = false,
+  onAiBuilderPanelOpenChange = null,
   /** Initial LHS drawer tab. */
   lhsDefaultTab = 'Create manually',
   /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
@@ -779,7 +1297,55 @@ export default function AgentBuilder({
   aiTranscript = null,
   /** Editing an already-built agent (Create with AI uses help copy, not build copy). */
   existingAgent = false,
+  /** When set by the parent, forces the Procedures floater on/off (preferred over name sniffing). */
+  showProceduresPalette = null,
+  /** Hides in-canvas agent name + status (identity rendered in the header back cluster). */
+  hideTopIdentity = false,
+  /** Suppresses the floating canvas back/identity cluster — for shells that already
+   *  render their own pinned header above the canvas (Ghostwriter's tabbed shell). */
+  hideCanvasBackCluster = false,
+  /** Suppresses the Run test / Activate / kebab cluster, for shells that render their own. */
+  hideHeaderActions = false,
+  /** Ghostwriter canvas geometry: LHS panels docked like the RHS (8px inset, full
+   *  height) and the bottom controls right-aligned. Adds `agent-builder--gw`. */
+  ghostwriterChrome = false,
+  /** `{ type, nonce }` — lets a shell that owns the visible CTAs fire the real handlers in
+   *  here. Bump `nonce` to re-fire the same `type`. Types: run-test | activate | save-draft |
+   *  delete. Ignored when nonce is 0 so a mount doesn't trigger anything. */
+  externalHeaderAction = null,
+  /** RHS Save follows the content instead of pinning to the panel bottom (Sep 1 only). */
+  inlineRhsFooter = false,
+  /** Sep 1 chrome: inline RHS footer + other Sep-1-only treatments. */
+  sep1Chrome = false,
+  /**
+   * Action RHS layout explorations (Option 1/2, R1–R4). True only for Response /
+   * Front desk exploration — not Sep 1. Prefer this over `explorationChrome && !sep1Chrome`
+   * because sep1Chrome is now true for the whole exploration family.
+   */
+  llmTaskExplorationLayout = false,
+  /**
+   * Location-aware identity header — Add location CTA until locations exist, 38-char
+   * name truncation, name + location hover card. True only for Response agents
+   * exploration: the Sep 1 and coach-cue navs share both this agent's name and
+   * `explorationChrome`, so neither the name nor those flags can gate this.
+   */
+  identityLocationChrome = false,
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
+  hideCanvasStartNode = hideTopIdentity,
+  /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
+  explorationChrome = hideTopIdentity,
+  /** Log run view: node IDs that completed in this run — show green check on the header icon. */
+  logDoneNodeIds = null,
+  /** External canvas focus (e.g. clicking a log step in RunDetailView). */
+  externalFocusNodeId = null,
+  /** Bumped when the same node is focused again so the canvas re-pans. */
+  externalFocusNonce = 0,
+  /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
+  autoOpenCoachTour = false,
 }) {
+  /** Full canvas: the floater rail buttons wear the canvas node-badge colours. */
+  const fullCanvasChrome = useCardBadge();
+
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
   const urlAgentSlug = propAgentSlug || '';
@@ -801,12 +1367,34 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  /** When a canvas branch-path chip is clicked, expand that path in the Branch RHS. */
+  const [focusBranchPathId, setFocusBranchPathId] = useState(null);
+  const [focusBranchPathNonce, setFocusBranchPathNonce] = useState(0);
+  /** Parent branch nodes whose path arms are collapsed on the canvas. */
+  const [collapsedBranches, setCollapsedBranches] = useState({});
+  /** Individual branch-path chips whose child steps are collapsed. */
+  const [collapsedBranchPaths, setCollapsedBranchPaths] = useState({});
   // Canvas node clipboard — holds a copied node's entry + a snapshot of its (and any referenced branch/loop) details
   const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
+  /** Exploration LLM task: Setup vs Configure tab (footer Continue / prompt strength). */
+  const [llmTaskTab, setLlmTaskTab] = useState('setup');
+  /** Exploration LLM task: Option 1 = body tabs, Option 2 = header Setup/Configure menu. */
+  const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
+  /** Exploration only: Option 1 / Option 2 layouts for tool-based Action RHS. */
+  const [entityTaskLayoutOption, setEntityTaskLayoutOption] = useState('option1');
+  /** Exploration Procedures RHS: Option 1 = flat list; Option 2 = Basic / Advanced tabs. */
+  const [procedureLayoutOption, setProcedureLayoutOption] = useState('option1');
+  /** R1 only: true while a required field inside an accordion is empty — disables
+   *  the RHS footer's Save and shows the "Mandatory fields missing" warning. */
+  const [llmTaskSaveBlocked, setLlmTaskSaveBlocked] = useState(false);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
   const externalPreviewRef = useRef(null);
+
+  useEffect(() => {
+    setLlmTaskSaveBlocked(false);
+  }, [selectedNodeId]);
 
   /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
   useEffect(() => {
@@ -838,9 +1426,52 @@ export default function AgentBuilder({
   const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
   const [assignConversationToolOpen, setAssignConversationToolOpen] = useState(false);
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
+  const [handleResponseToolOpen, setHandleResponseToolOpen] = useState(false);
+  /** Node ids whose Task details were saved while a tool still had missing mandatory config. */
+  const [taskErrorNodeIds, setTaskErrorNodeIds] = useState(() => new Set());
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // RHS panel stays mounted a beat past `drawerOpen` turning false so it can
+  // play its slide-out animation instead of vanishing instantly.
+  const [rhsRendered, setRhsRendered] = useState(false);
+  const [rhsClosing, setRhsClosing] = useState(false);
+  const rhsRenderedRef = useRef(false);
+  const rhsCloseTimeoutRef = useRef(null);
+  // Exploration: Help center shares the node-config RHS slot, so it needs the same
+  // stay-mounted-through-the-slide-out treatment.
+  const [helpRendered, setHelpRendered] = useState(false);
+  const [helpClosing, setHelpClosing] = useState(false);
+  const helpRenderedRef = useRef(false);
+  const helpCloseTimeoutRef = useRef(null);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  /** Review-response left floater: which palette section is open (Trigger / Tasks / Controls). */
+  const [paletteSection, setPaletteSection] = useState(
+    defaultOpenSection === 'Trigger' ? 'Trigger' : null,
+  );
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  /** Draft agent toggled to "View active version" — read-only active canvas, no history panel. */
+  const [previewingActiveVersion, setPreviewingActiveVersion] = useState(false);
+  /**
+   * True only when history was opened from a Draft agent's "View active version" link.
+   * That entry point prepends the unpublished draft as the first card; the three-dots
+   * menu leaves the list untouched.
+   */
+  const [draftVersionHistory, setDraftVersionHistory] = useState(false);
+  /** Which version the history panel is previewing (first entry = the live one). */
+  const [versionHistorySelectedId, setVersionHistorySelectedId] = useState(
+    () => VERSION_HISTORY_VERSIONS[0]?.id ?? null,
+  );
+  /** Version id the "Version restored" toast can send you back to via Undo. */
+  const [restoredVersionId, setRestoredVersionId] = useState(null);
+  const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
+  const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
+  const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
+  /** Opened by the "Spam and abuse gate" link in the Ghostwriter scripted reply. */
+  const [spamGateOpen, setSpamGateOpen] = useState(false);
+  const [paletteInstant, setPaletteInstant] = useState(false);
+  const rrAiPanelRenderedRef = useRef(!!aiBuilderPanelOpenProp);
+  const rrAiPanelCloseTimeoutRef = useRef(null);
+  const [canvasOrientation, setCanvasOrientation] = useState('vertical');
   const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
   // AI assist panel is controlled by the parent when it needs to render the
   // panel itself (e.g. spanning the full app height, above this editor's own
@@ -859,6 +1490,9 @@ export default function AgentBuilder({
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
     const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
+    const overlayFrontDeskGoals = agentNameIsFrontDesk(pageTitleStr)
+      ? { goals: FD_GOALS }
+      : {};
     if (!startNode || !startNode.agentName) {
       return {
         ...base,
@@ -867,13 +1501,53 @@ export default function AgentBuilder({
           outcomes: '',
           locations: [],
           ...(startNode || {}),
+          ...overlayFrontDeskGoals,
           agentName: startNode?.agentName || pageTitleStr,
         },
       };
     }
-    return base;
+    return overlayFrontDeskGoals.goals
+      ? { ...base, [START_NODE_ID]: { ...startNode, ...overlayFrontDeskGoals } }
+      : base;
   });
   const [agentStatus, setAgentStatus] = useState(initialStatus || 'Draft');
+
+  /* ─── Test run ─── */
+  const [testRunOpen, setTestRunOpen] = useState(false);
+  // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
+  const [coachTourOpen, setCoachTourOpen] = useState(false);
+  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  useEffect(() => {
+    if (autoOpenCoachTour && !viewOnly) setCoachTourOpen(true);
+  }, [autoOpenCoachTour, viewOnly]);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [glossaryTermId, setGlossaryTermId] = useState(undefined);
+  const openGlossary = (termId) => {
+    setGlossaryTermId(termId || undefined);
+    setGlossaryOpen(true);
+  };
+  const closeGlossary = () => {
+    setGlossaryOpen(false);
+    setGlossaryTermId(undefined);
+  };
+  // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
+  const testRunSteps = useMemo(
+    () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
+    [testRunOpen, nodeList, nodeDetails],
+  );
+  const testRun = useTestRun(testRunSteps);
+  const testRunActiveId = testRunOpen ? testRun.activeNodeId : null;
+  // Canvas highlighting for the executing / finished nodes, keyed by react-flow's data-id.
+  const testRunCss = testRunOpen
+    ? [
+        ...testRun.doneNodeIds.map(
+          (id) => `.react-flow__node[data-id="${id}"] .canvas-node { border: 1px solid #4caf50 !important; box-shadow: 0 2px 12px 0 rgba(33, 33, 33, 0.06) !important; }`,
+        ),
+        testRunActiveId
+          ? `.react-flow__node[data-id="${testRunActiveId}"] .canvas-node { border: 1px solid #1976d2 !important; animation: ab-test-run-pulse 2.6s ease-in-out infinite; }`
+          : '',
+      ].join('\n')
+    : '';
 
   /* ─── Sync live procedure library into the procedureService registry ─── */
   useEffect(() => {
@@ -885,44 +1559,205 @@ export default function AgentBuilder({
     if (drawerOpen || previewOpen) setAiAssistOpen(false);
   }, [drawerOpen, previewOpen]);
 
-  /* ─── View-only: keep canvas state in sync when workflow props change ─── */
+  /* ─── RHS panel slide in/out: keep it mounted through the close animation ─── */
   useEffect(() => {
-    if (!viewOnly) return;
-    if (initialNodes) setNodeList(initialNodes);
-    if (initialNodeDetails) {
-      setNodeDetails((prev) => {
-        const base = initialNodeDetails;
-        const startNode = base[START_NODE_ID];
-        const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
-        if (!startNode || !startNode.agentName) {
-          return {
-            ...base,
-            [START_NODE_ID]: {
-              goals: '',
-              outcomes: '',
-              locations: [],
-              ...(startNode || {}),
-              agentName: startNode?.agentName || pageTitleStr,
-            },
-          };
-        }
-        return base;
-      });
+    if (drawerOpen) {
+      if (rhsCloseTimeoutRef.current) {
+        clearTimeout(rhsCloseTimeoutRef.current);
+        rhsCloseTimeoutRef.current = null;
+      }
+      setRhsClosing(false);
+      setRhsRendered(true);
+      rhsRenderedRef.current = true;
+    } else if (rhsRenderedRef.current) {
+      setRhsClosing(true);
+      rhsCloseTimeoutRef.current = setTimeout(() => {
+        rhsRenderedRef.current = false;
+        setRhsRendered(false);
+        setRhsClosing(false);
+      }, 260);
     }
-  }, [viewOnly, initialNodes, initialNodeDetails, pageTitle]);
+    return () => {
+      if (rhsCloseTimeoutRef.current) clearTimeout(rhsCloseTimeoutRef.current);
+    };
+  }, [drawerOpen]);
+
+  /* ─── Help center panel: same slide in/out lifecycle as the node RHS ─── */
+  useEffect(() => {
+    if (helpCenterOpen) {
+      if (helpCloseTimeoutRef.current) {
+        clearTimeout(helpCloseTimeoutRef.current);
+        helpCloseTimeoutRef.current = null;
+      }
+      setHelpClosing(false);
+      setHelpRendered(true);
+      helpRenderedRef.current = true;
+    } else if (helpRenderedRef.current) {
+      setHelpClosing(true);
+      helpCloseTimeoutRef.current = setTimeout(() => {
+        helpRenderedRef.current = false;
+        setHelpRendered(false);
+        setHelpClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (helpCloseTimeoutRef.current) clearTimeout(helpCloseTimeoutRef.current);
+    };
+  }, [helpCenterOpen]);
+
+  /* ─── Review-response AI panel slide in/out ─── */
+  useEffect(() => {
+    if (rrAiPanelOpen) {
+      if (rrAiPanelCloseTimeoutRef.current) {
+        clearTimeout(rrAiPanelCloseTimeoutRef.current);
+        rrAiPanelCloseTimeoutRef.current = null;
+      }
+      setRrAiPanelClosing(false);
+      setRrAiPanelRendered(true);
+      rrAiPanelRenderedRef.current = true;
+    } else if (rrAiPanelRenderedRef.current) {
+      setRrAiPanelClosing(true);
+      rrAiPanelCloseTimeoutRef.current = setTimeout(() => {
+        rrAiPanelRenderedRef.current = false;
+        setRrAiPanelRendered(false);
+        setRrAiPanelClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (rrAiPanelCloseTimeoutRef.current) clearTimeout(rrAiPanelCloseTimeoutRef.current);
+    };
+  }, [rrAiPanelOpen]);
+
+  /* ─── Reopen AI Builder when parent asks (e.g. View agent builder after expand) ─── */
+  useEffect(() => {
+    if (aiBuilderPanelOpenProp) setRrAiPanelOpen(true);
+  }, [aiBuilderPanelOpenProp]);
+
+  /** Trail key for the docked AI panel — must match the `agentName` passed to it below. */
+  const aiPanelAgentKey = (typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName;
+
+  /* Ghostwriter reopens the panel at its initial state. The trail is otherwise persisted in
+     createAgentChatStore (shared between the docked panel and fullscreen expand), so it
+     survives the unmount and would come back on reopen — drop it on close. */
+  const resetGhostwriterAiPanel = useCallback(() => {
+    if (!ghostwriterChrome) return;
+    clearCreateAiDraftSession(aiPanelAgentKey);
+  }, [ghostwriterChrome, aiPanelAgentKey]);
+
+  const closeAiBuilderPanel = useCallback(() => {
+    resetGhostwriterAiPanel();
+    setRrAiPanelOpen(false);
+    onAiBuilderPanelOpenChange?.(false);
+  }, [onAiBuilderPanelOpenChange, resetGhostwriterAiPanel]);
+
+  const closeAiBuilderPanelInstant = useCallback(() => {
+    resetGhostwriterAiPanel();
+    if (rrAiPanelCloseTimeoutRef.current) {
+      clearTimeout(rrAiPanelCloseTimeoutRef.current);
+      rrAiPanelCloseTimeoutRef.current = null;
+    }
+    rrAiPanelRenderedRef.current = false;
+    setRrAiPanelRendered(false);
+    setRrAiPanelClosing(false);
+    setRrAiPanelOpen(false);
+    onAiBuilderPanelOpenChange?.(false);
+  }, [onAiBuilderPanelOpenChange, resetGhostwriterAiPanel]);
+
+  /* Re-enable palette position transition after an instant AI → palette swap. */
+  useEffect(() => {
+    if (!paletteInstant) return undefined;
+    const frame = requestAnimationFrame(() => setPaletteInstant(false));
+    return () => cancelAnimationFrame(frame);
+  }, [paletteInstant, paletteSection]);
+
+  /* ─── Keep canvas in sync when seed workflow copy changes (edit + view-only) ───
+     Edit mode used to ignore `initialNodeDetails` after first mount, so HMR / source
+     copy edits never reached the RHS or canvas until a full remount. */
+  const seedFingerprint = JSON.stringify(initialNodeDetails ?? null);
+  const seedFpRef = useRef(seedFingerprint);
+  useEffect(() => {
+    if (seedFingerprint === seedFpRef.current) return;
+    seedFpRef.current = seedFingerprint;
+    if (viewOnly && initialNodes) setNodeList(initialNodes);
+    if (!initialNodeDetails) return;
+    setNodeDetails(() => {
+      const base = initialNodeDetails;
+      const startNode = base[START_NODE_ID];
+      const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
+      const overlayFrontDeskGoals = agentNameIsFrontDesk(pageTitleStr)
+        ? { goals: FD_GOALS }
+        : {};
+      if (!startNode || !startNode.agentName) {
+        return {
+          ...base,
+          [START_NODE_ID]: {
+            goals: '',
+            outcomes: '',
+            locations: [],
+            ...(startNode || {}),
+            ...overlayFrontDeskGoals,
+            agentName: startNode?.agentName || pageTitleStr,
+          },
+        };
+      }
+      return overlayFrontDeskGoals.goals
+        ? { ...base, [START_NODE_ID]: { ...startNode, ...overlayFrontDeskGoals } }
+        : base;
+    });
+  }, [seedFingerprint, viewOnly, initialNodes, initialNodeDetails, pageTitle]);
 
   /* ─── Open a tool viewer by tool name or id (used when clicking a tool chip in prompts) ─── */
   const openToolByName = useCallback((nameOrId) => {
-    const all = getSeedTools();
-    const found = all.find(t => t.id === nameOrId || t.name === nameOrId || t.id === nameOrId.toLowerCase().replace(/\s+/g, '-'));
-    if (found) {
-      setViewingTool(found);
-      // Look up saved field values for the filled state
-      const savedValues = selectedNodeId
-        ? (nodeDetails[selectedNodeId]?.toolFieldValues?.[found.id] ?? {})
-        : {};
-      setViewingToolValues(savedValues);
+    if (!nameOrId) return;
+    const raw = String(nameOrId).trim();
+    const norm = (s) => String(s || '').toLowerCase().replace(/[_\s-]+/g, '');
+    const key = norm(raw);
+
+    // Dedicated drawers for known conversation tools.
+    if (key === 'initiatevoicecall' || raw === 'initiate-voice-call') {
+      setVoiceCallToolOpen(true);
+      return;
     }
+    if (key === 'transfercall' || key === 'transfer' || raw === 'transfer-call' || raw === 'transfer') {
+      setTransferToolOpen(true);
+      return;
+    }
+    if (key === 'remindertool' || raw === 'reminder-tool') {
+      setReminderToolOpen(true);
+      return;
+    }
+
+    const all = getSeedTools();
+    let found = all.find(
+      (t) => t.id === raw
+        || t.name === raw
+        || t.id === raw.toLowerCase().replace(/\s+/g, '-')
+        || norm(t.id) === key
+        || norm(t.name) === key,
+    );
+
+    // Slash-menu tools (e.g. Intent identifier) may not be in the seed catalog yet.
+    if (!found) {
+      const slash = SLASH_TOOLS.find((t) => t.id === raw || t.name === raw || norm(t.id) === key || norm(t.name) === key);
+      if (slash) {
+        found = {
+          id: slash.id,
+          name: slash.name,
+          icon: slash.icon || 'build',
+          description: slash.desc,
+          fields: [],
+        };
+      }
+    }
+
+    if (!found) return;
+
+    const viewerTool = resolveToolForViewer(found.id) || found;
+    setViewingTool(viewerTool);
+    const savedValues = selectedNodeId
+      ? (nodeDetails[selectedNodeId]?.toolFieldValues?.[found.id] ?? {})
+      : {};
+    setViewingToolValues(savedValues);
   }, [selectedNodeId, nodeDetails]);
 
   /* ─── Load agent from URL slugs — re-runs whenever the URL params change ─── */
@@ -993,8 +1828,17 @@ export default function AgentBuilder({
 
   /* ─── Header three-dots menu ─── */
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
+  /** 'errors' | 'locations' — which Activate gate opened the blocked modal. */
+  const [publishBlockedReason, setPublishBlockedReason] = useState('errors');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
+  const publishMenuRef = useRef(null);
+  const resolveIssuesRef = useRef(null);
   const importInputRef = useRef(null);
+  const blockActiveEditsForDraftRef = useRef(false);
   useEffect(() => {
     if (!headerMenuOpen) return;
     const handler = (e) => {
@@ -1005,22 +1849,117 @@ export default function AgentBuilder({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [headerMenuOpen]);
+  useEffect(() => {
+    if (!publishMenuOpen) return;
+    const handler = (e) => {
+      if (publishMenuRef.current && !publishMenuRef.current.contains(e.target)) {
+        setPublishMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [publishMenuOpen]);
+  useEffect(() => {
+    if (!resolveIssuesOpen) return;
+    const handler = (e) => {
+      if (resolveIssuesRef.current && !resolveIssuesRef.current.contains(e.target)) {
+        setResolveIssuesOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [resolveIssuesOpen]);
   /* ─── Agent name is derived from nodeDetails (single source of truth) ─── */
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
-  const isReminderAgent = /reminder/i.test(agentName);
-  const isReviewResponseAgent = /review response/i.test(agentName);
-  const isReviewGenerationAgent = /review generation/i.test(agentName);
-  const isReviewsAgent = isReviewResponseAgent || isReviewGenerationAgent;
+  // Shell/chrome identity must stay stable while the user edits the start-node
+  // name in Agent details — otherwise renaming off "Review response…" flips the
+  // canvas back to the classic LHS drawer mid-edit.
+  const entryAgentName = (typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName;
+  const isReminderAgent = /reminder/i.test(entryAgentName);
+  const isWaitlistAgent = /\bwaitlist\b/i.test(entryAgentName);
+  const isPreVisitAgent = /\bpre-visit\b/i.test(entryAgentName);
+  const appTitleStr = typeof appTitle === 'string' ? appTitle : '';
+  // Front-desk-specific behaviour (task filters, etc.) — name / parent flag.
+  const isFrontDeskAgentName =
+    !!showProceduresPalette ||
+    isFrontDeskCanvasAgent(entryAgentName, agentName, appTitleStr);
+  const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
+  const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
+  const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
+  // All exploration-family canvases (Sep 1 + exploration) — grouped bottom-left controls.
+  const combineControlsLeft = sep1Chrome;
+  const hideProceduresFloater =
+    isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
+  // Procedures floater: Front desk family only — not Reviews AI, Waitlist, Pre-visit, or Reminder.
+  const showProceduresFloater =
+    !hideProceduresFloater &&
+    (isFrontDeskAgentName || showProceduresPalette == null);
+  const isHcProduct = product === 'healthcare' || product === 'dental';
+  // All agent canvases use floating chrome (left floater + Create with AI panel + RHS config).
+  const isReviewResponseChrome = true;
 
-  // Undo/redo history for the canvas (nodeList + nodeDetails) — Reviews AI only,
-  // per product decision; other agents keep today's (inert) toolbar unchanged.
+  // Close Procedures palette if it was open when landing on a canvas without the floater.
+  useEffect(() => {
+    if (!showProceduresFloater && paletteSection === 'Procedures') {
+      setPaletteSection(null);
+    }
+  }, [showProceduresFloater, paletteSection]);
+  const resolveIssuesList =
+    (Array.isArray(issues) && issues.length > 0 ? issues : null) ||
+    getAgentIssues(entryAgentName);
+
+  const issuesByNodeId = useMemo(() => {
+    const map = new Map();
+    resolveIssuesList.forEach((issue) => {
+      if (!issue.nodeId) return;
+      const existing = map.get(issue.nodeId) || [];
+      map.set(issue.nodeId, [...existing, issue]);
+    });
+    return map;
+  }, [resolveIssuesList]);
+
+  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState(null);
+
+  // Parent-driven focus (log step click) — also expand any collapsed branch that holds the node.
+  useEffect(() => {
+    if (!externalFocusNodeId) return;
+    const located = locateNodeContainer(externalFocusNodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+    }
+    // Clear first so re-focusing the same id still triggers FlowCanvas's pan effect.
+    setCanvasFocusNodeId(null);
+    const frame = requestAnimationFrame(() => setCanvasFocusNodeId(externalFocusNodeId));
+    return () => cancelAnimationFrame(frame);
+  }, [externalFocusNodeId, externalFocusNonce, nodeList, nodeDetails]);
+
+  /* Shell-owned header CTAs (Ghostwriter's top bar) call straight into these handlers, so
+     the visible buttons live outside but the behaviour stays here. */
+  const externalActionNonce = externalHeaderAction?.nonce ?? 0;
+  const externalActionType = externalHeaderAction?.type ?? null;
+  useEffect(() => {
+    if (!externalActionNonce || !externalActionType) return;
+    if (externalActionType === 'run-test') handleRunTest();
+    else if (externalActionType === 'activate') handleActivateMain();
+    else if (externalActionType === 'save-draft') handleSaveAsDraft();
+    else if (externalActionType === 'delete') handleDeleteAgent();
+    // Only react to a new nonce — the handlers are recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalActionNonce, externalActionType]);
+
+  // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);
   const [historyFuture, setHistoryFuture] = useState([]);
   const historySnapshotRef = useRef(null);
   const isApplyingHistoryRef = useRef(false);
 
   useEffect(() => {
-    if (!isReviewsAgent) return;
+    if (!isReviewResponseChrome) return;
     if (isApplyingHistoryRef.current) {
       isApplyingHistoryRef.current = false;
       historySnapshotRef.current = { nodeList, nodeDetails };
@@ -1031,7 +1970,7 @@ export default function AgentBuilder({
       setHistoryFuture([]);
     }
     historySnapshotRef.current = { nodeList, nodeDetails };
-  }, [nodeList, nodeDetails, isReviewsAgent]);
+  }, [nodeList, nodeDetails, isReviewResponseChrome]);
 
   const handleUndo = useCallback(() => {
     setHistoryPast((prev) => {
@@ -1059,13 +1998,28 @@ export default function AgentBuilder({
 
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
-  const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
+  const isTemplateMode = !!agentTemplateId && agentStatus !== 'Active';
 
   /* ─── Always-fresh ref so publish never reads stale closure values ─── */
   const latestRef = useRef({});
   useLayoutEffect(() => {
-    latestRef.current = { agentId, agentName, agentDesc, moduleContext: agentModuleContext, sectionContext: agentSectionContext, agentStatus, nodeList, nodeDetails, templateId: agentTemplateId, templateSource: agentTemplateSource, moduleSlug: agentModuleSlug, agentSlug };
-  }, [agentId, agentName, agentDesc, agentModuleContext, agentSectionContext, agentStatus, nodeList, nodeDetails, agentTemplateId, agentTemplateSource, agentModuleSlug, agentSlug]);
+    latestRef.current = { agentId, agentName, agentDesc, moduleContext: agentModuleContext, sectionContext: agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, templateId: agentTemplateId, templateSource: agentTemplateSource, moduleSlug: agentModuleSlug, agentSlug };
+  }, [agentId, agentName, agentDesc, agentModuleContext, agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, agentTemplateId, agentTemplateSource, agentModuleSlug, agentSlug]);
+
+  const handleCoachTourClose = useCallback(() => {
+    setCoachTourOpen(false);
+    const nodes = latestRef.current.nodeList ?? nodeList;
+    const hasBuiltWorkflow = nodes.some((n) => n.flowType === 'trigger');
+    if (hasBuiltWorkflow || viewOnly) return;
+    setVersionHistoryOpen(false);
+    if (rrAiPanelOpen) {
+      setPaletteInstant(true);
+      closeAiBuilderPanelInstant();
+    } else {
+      closeAiBuilderPanel();
+    }
+    setPaletteSection('Trigger');
+  }, [nodeList, viewOnly, rrAiPanelOpen, closeAiBuilderPanel, closeAiBuilderPanelInstant]);
 
   /* ─── Auto-save to Firestore (debounced 1.5 s) ─── */
   const saveTimerRef = useRef(null);
@@ -1106,7 +2060,7 @@ export default function AgentBuilder({
     };
   }, [initialDescription]);
 
-  const buildAgentPayload = useCallback((status = 'Running') => {
+  const buildAgentPayload = useCallback((status = 'Active') => {
     const { agentId: id, agentName: name, agentDesc: desc, moduleContext: mod, sectionContext: sec, nodeList: nodes, nodeDetails: details, moduleSlug: msSlug, agentSlug: asSlug, templateId: tmplId } = latestRef.current;
     const finalName = (name || details?.[START_NODE_ID]?.agentName || '').trim();
     if (!finalName) return null;
@@ -1139,7 +2093,7 @@ export default function AgentBuilder({
 
   const handlePublish = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
-    const payload = buildAgentPayload('Running');
+    const payload = buildAgentPayload('Active');
     if (!payload) {
       // No agent name — reschedule auto-save so the pending changes are not lost
       saveTimerRef.current = setTimeout(() => {
@@ -1150,7 +2104,7 @@ export default function AgentBuilder({
     }
     try {
       await saveAgent(payload.id, payload);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
       onSaveAgent?.(true, payload);
     } catch (e) {
       console.error('Publish failed', e);
@@ -1162,15 +2116,159 @@ export default function AgentBuilder({
     }
   }, [buildAgentPayload, onSaveAgent]);
 
+  const handlePublishAttempt = useCallback(() => {
+    // Response agents require at least one location before Activate.
+    if (identityLocationChrome) {
+      const start = latestRef.current.nodeDetails?.[START_NODE_ID] || {};
+      const locs = start.locations || [];
+      const selectBy = start.locationsSelectBy || null;
+      if (locs.length === 0 && !selectBy) {
+        setPublishMenuOpen(false);
+        setPublishBlockedReason('locations');
+        setPublishBlockedModalOpen(true);
+        return;
+      }
+    }
+    if (issueCount > 0) {
+      setPublishMenuOpen(false);
+      setPublishBlockedReason('errors');
+      setPublishBlockedModalOpen(true);
+      return;
+    }
+    handlePublish();
+  }, [identityLocationChrome, issueCount, handlePublish]);
+
+  const handleViewPublishErrors = useCallback(() => {
+    setPublishBlockedModalOpen(false);
+    if (publishBlockedReason === 'locations') {
+      setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      setStartLocationsOpenToken((t) => t + 1);
+      return;
+    }
+    setResolveIssuesOpen(true);
+  }, [publishBlockedReason]);
+
+  const handleSaveAsDraft = useCallback(async () => {
+    setPublishMenuOpen(false);
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Draft');
+    if (!payload) return;
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Draft');
+      onSaveAgent?.(false, payload);
+    } catch (e) {
+      console.error('Save as draft failed', e);
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handlePause = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Inactive');
+    if (!payload) {
+      setAgentStatus('Inactive');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Inactive');
+      onSaveAgent?.(false, payload);
+    } catch (e) {
+      console.error('Pause failed', e);
+      setAgentStatus('Inactive');
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handleResume = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Active');
+    if (!payload) {
+      setAgentStatus('Active');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Active');
+      onSaveAgent?.(true, payload);
+    } catch (e) {
+      console.error('Resume failed', e);
+      setAgentStatus('Active');
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handleActivateMain = useCallback(() => {
+    if (agentStatus === 'Inactive') {
+      handleResume();
+      return;
+    }
+    handlePublishAttempt();
+  }, [agentStatus, handleResume, handlePublishAttempt]);
+
+  const handleOpenVersionHistory = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setPaletteSection(null);
+    if (!versionHistoryOpen) closeAiBuilderPanel();
+    setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
+    setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+    setVersionHistoryOpen((open) => !open);
+    setHelpCenterOpen(false);
+  }, [versionHistoryOpen, closeAiBuilderPanel]);
+
+  /**
+   * Toggle to the live Active canvas (read-only) without opening version history.
+   * From a Draft agent with an existing published version.
+   */
+  const handleViewActiveVersion = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setPaletteSection(null);
+    closeAiBuilderPanel();
+    setDrawerOpen(false);
+    setPreviewingActiveVersion(true);
+    setHelpCenterOpen(false);
+  }, [closeAiBuilderPanel]);
+
+  /** Toggle back to the unpublished draft for editing. */
+  const handleGoToDraftVersion = useCallback(() => {
+    setVersionHistoryOpen(false);
+    setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
+    setAgentStatus('Draft');
+  }, []);
+
+  /** Delete is destructive and irreversible — always confirm before acting. */
+  const handleDeleteAgent = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  /**
+   * Confirmed delete. `onClose` is what returns the user to the agent list, so it runs
+   * whether or not the service call succeeds — the agent is gone from their view either
+   * way, and stranding them on a deleted agent's canvas would be worse.
+   */
+  const handleConfirmDeleteAgent = useCallback(async () => {
+    setDeleteConfirmOpen(false);
+    try {
+      await deleteAgent(agentId);
+    } catch (e) {
+      console.error('Delete agent failed', e);
+    }
+    // `onDeleted` lands on the agent list; `onClose` would restore the deleted agent's
+    // own instance screen, so it's only the fallback when the parent opts out.
+    (onDeleted ?? onClose)?.();
+  }, [agentId, onDeleted, onClose]);
+
   const handleSaveAndPublish = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
     const templatePayload = buildTemplatePayload();
-    const agentPayload = buildAgentPayload('Running');
+    const agentPayload = buildAgentPayload('Active');
     if (!templatePayload || !agentPayload) return;
     try {
       await onSaveTemplate?.(templatePayload);
       await saveAgent(agentPayload.id, agentPayload);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
     } catch (e) {
       console.error('Save and publish failed', e);
       return;
@@ -1240,6 +2338,7 @@ export default function AgentBuilder({
 
   /* ─── Live node sync: RHS → canvas ─── */
   const handleNodeFieldChange = useCallback((nodeId, field, value) => {
+    if (blockActiveEditsForDraftRef.current) return;
     setNodeDetails((prev) => {
       const nodeDet = prev[nodeId] || {};
       const updated = { ...prev, [nodeId]: { ...nodeDet, [field]: value } };
@@ -1312,6 +2411,7 @@ export default function AgentBuilder({
   /* ─── Node management ─── */
 
   const handleDeleteNode = useCallback((nodeId) => {
+    if (blockActiveEditsForDraftRef.current) return;
     const target = (latestRef.current.nodeList || []).find((n) => n.id === nodeId);
     const wasTrigger = target?.flowType === 'trigger';
 
@@ -1338,6 +2438,12 @@ export default function AgentBuilder({
       });
       return copy;
     });
+    setCollapsedBranches((prev) => {
+      if (!prev[nodeId]) return prev;
+      const next = { ...prev };
+      delete next[nodeId];
+      return next;
+    });
     if (selectedNodeId === nodeId) {
       setSelectedNodeId(null);
       setDrawerOpen(false);
@@ -1353,6 +2459,7 @@ export default function AgentBuilder({
   }, [selectedNodeId]);
 
   const handleCopyNode = useCallback((nodeId) => {
+    if (blockActiveEditsForDraftRef.current) return;
     const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
     if (!located) return;
     const nodeEntry = located.containerId
@@ -1398,6 +2505,7 @@ export default function AgentBuilder({
       });
       setNodeDetails((prev) => ({ ...prev, ...extraOut }));
     }
+    setClipboard(null);
   }, [clipboard, nodeList, nodeDetails]);
 
   const handlePasteReplace = useCallback((nodeId) => {
@@ -1437,33 +2545,8 @@ export default function AgentBuilder({
       setSelectedNodeId(null);
       setDrawerOpen(false);
     }
+    setClipboard(null);
   }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
-
-  const handleAddBranchPath = useCallback((branchNodeId) => {
-    const newPathId = `${branchNodeId}-path-${Date.now()}`;
-    setNodeDetails((prev) => {
-      const nodeD = prev[branchNodeId] || {};
-      const existing = nodeD.branches || [];
-      const nonFallback = existing.filter((b) => !b.isFallback);
-      const fallback = existing.filter((b) => b.isFallback);
-      const pathNumber = nonFallback.length + 1;
-      const newPath = { id: newPathId, name: `Branch ${pathNumber}` };
-      return {
-        ...prev,
-        [branchNodeId]: {
-          ...nodeD,
-          branches: [...nonFallback, newPath, ...fallback],
-        },
-        [newPathId]: {
-          branchName: newPath.name,
-          description: '',
-          conditions: [],
-          parentId: branchNodeId,
-          isBranchPath: true,
-        },
-      };
-    });
-  }, []);
 
   const handleMoveNode = useCallback((nodeId, direction) => {
     setNodeList((prev) => {
@@ -1478,6 +2561,7 @@ export default function AgentBuilder({
   }, []);
 
   const handleNodeToggleChange = useCallback((nodeId, enabled) => {
+    if (blockActiveEditsForDraftRef.current) return;
     setNodeList((prev) => {
       const inMain = prev.some((n) => n.id === nodeId);
       if (inMain) {
@@ -1508,6 +2592,10 @@ export default function AgentBuilder({
     setNodeDetails((prev) => {
       const copy = { ...prev };
       const parentId = copy[branchPathId]?.parentId;
+      const siblingCount = parentId ? (copy[parentId]?.branches || []).length : 0;
+      // Never drop below two paths on a condition branch.
+      if (parentId && siblingCount <= 2) return prev;
+      if (copy[branchPathId]?.isFallback) return prev;
       if (parentId) {
         copy[parentId] = {
           ...copy[parentId],
@@ -1519,11 +2607,60 @@ export default function AgentBuilder({
       delete copy[branchPathId];
       return copy;
     });
+    setCollapsedBranches((prev) => {
+      if (!prev[branchPathId]) return prev;
+      const next = { ...prev };
+      delete next[branchPathId];
+      return next;
+    });
+    setCollapsedBranchPaths((prev) => {
+      if (!prev[branchPathId]) return prev;
+      const next = { ...prev };
+      delete next[branchPathId];
+      return next;
+    });
     if (selectedNodeId === branchPathId) {
       setSelectedNodeId(null);
       setDrawerOpen(false);
     }
   }, [selectedNodeId]);
+
+  const handleToggleBranchCollapse = useCallback((branchNodeId) => {
+    setCollapsedBranches((prev) => {
+      const nextCollapsed = !prev[branchNodeId];
+      if (nextCollapsed) {
+        const details = latestRef.current.nodeDetails || {};
+        const childIds = new Set();
+        (details[branchNodeId]?.branches || []).forEach((b) => {
+          childIds.add(b.id);
+          (details[b.id]?.nodes || []).forEach((n) => childIds.add(n.id));
+        });
+        const selected = latestRef.current.selectedNodeId;
+        if (selected && childIds.has(selected)) {
+          setSelectedNodeId(null);
+          setDrawerOpen(false);
+        }
+      }
+      return { ...prev, [branchNodeId]: nextCollapsed };
+    });
+  }, []);
+
+  const handleToggleBranchPathCollapse = useCallback((branchPathId) => {
+    setCollapsedBranchPaths((prev) => {
+      const nextCollapsed = !prev[branchPathId];
+      if (nextCollapsed) {
+        const childIds = new Set(
+          (latestRef.current.nodeDetails?.[branchPathId]?.nodes || []).map((n) => n.id),
+        );
+        const selected = latestRef.current.selectedNodeId;
+        if (selected && childIds.has(selected)) {
+          setSelectedNodeId(null);
+          setDrawerOpen(false);
+        }
+      }
+      return { ...prev, [branchPathId]: nextCollapsed };
+    });
+  }, []);
 
   // "Add locations" link on the start node — opens the agent-details RHS panel straight
   // into its Locations picker, whether or not that panel is already open.
@@ -1533,30 +2670,159 @@ export default function AgentBuilder({
     setStartLocationsOpenToken((t) => t + 1);
   };
 
+  // Shared open path for the header agent name and the canvas start-node card.
+  const handleOpenAgentDetails = useCallback(() => {
+    setPaletteSection(null);
+    setVersionHistoryOpen(false);
+    setSelectedNodeId(START_NODE_ID);
+    setDrawerOpen(true);
+    // Agent details opens on its own fields, never straight into Locations. The token
+    // has to be cleared, not just left alone: the RHS unmounts when it closes, so a
+    // stale non-zero token would re-fire the auto-open effect on the next mount.
+    setStartLocationsOpenToken(0);
+  }, []);
+
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
+  const locationsSelectBy = nodeDetails[START_NODE_ID]?.locationsSelectBy || null;
   const locationCount = startLocations.length;
-  const startSubtitle = locationCount === 0
-    ? 'Add locations'
-    : locationCount === 1
-      ? '1 location'
-      : `${locationCount} locations`;
+  const hasLocationSelection = locationCount > 0 || !!locationsSelectBy;
+  /** "Locations assigned to Sarah Chen" / "2 locations" — null until something is picked. */
+  const locationSummary = (() => {
+    const byGroup = formatSelectByCanvasSubtitle(locationsSelectBy);
+    if (byGroup) return byGroup;
+    if (locationCount === 0) return null;
+    if (locationCount === 1) return '1 location';
+    return `${locationCount} locations`;
+  })();
+  const startSubtitle = locationSummary || 'Add locations';
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
-    subtitleIsLink: locationCount === 0,
-    onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
+    subtitleIsLink: !hasLocationSelection,
+    onSubtitleClick: hasLocationSelection ? undefined : handleAddLocationsFromCanvas,
   };
-  const { nodes: rawNodes, edges } = buildFlow(nodeList, startData, nodeDetails, product);
+  // Response agents (exploration) only — every other canvas keeps the plain title +
+  // pencil. Until locations exist the pencil gives way to Add location.
+  const identityFullName = agentName || 'Untitled agent';
+  const showAddLocationCta = identityLocationChrome && !hasLocationSelection;
+  // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
+  const isScratchCreate = explorationChrome && !existingAgent;
+  /** Exploration: a Trigger alone is not enough — Activate needs an Actions-palette step. */
+  const hasCanvasTrigger = nodeList.some((n) => n.flowType === 'trigger');
+  const hasCanvasActions = nodeList.some((n) =>
+    n.flowType === 'task'
+    || n.flowType === 'voiceCall'
+    || n.flowType === 'procedures'
+    || n.flowType === 'subagent',
+  );
+  /**
+   * Exploration only: while the version history panel is open the canvas turns into a
+   * read-only "browsing an old version" surface — no add-node palette, no build/run
+   * actions, and Publish is swapped for a Restore CTA.
+   */
+  const versionHistoryMode = versionHistoryOpen && explorationChrome;
+  /** Browsing the live Active version (opened as Active, or toggled from Draft). */
+  const isViewingActiveVersion =
+    (Boolean(hasUnpublishedDraft) && agentStatus === 'Active')
+    || (previewingActiveVersion && existingAgent);
+  /** Live Active + unpublished draft — block canvas/RHS edits with inline tooltips. */
+  const blockActiveEditsForDraft =
+    isViewingActiveVersion && !viewOnly && !versionHistoryMode;
+  blockActiveEditsForDraftRef.current = blockActiveEditsForDraft;
+  const rhsDraftProps = blockActiveEditsForDraft
+    ? { draftBlocked: true, onEditDraft: handleGoToDraftVersion }
+    : {};
+  /** Draft entry point prepends the working copy; every other entry point uses the plain list. */
+  const versionHistoryList = draftVersionHistory
+    ? [DRAFT_VERSION, ...VERSION_HISTORY_VERSIONS]
+    : VERSION_HISTORY_VERSIONS;
+  const selectedVersion =
+    versionHistoryList.find((v) => v.id === versionHistorySelectedId)
+    || versionHistoryList[0];
+  /**
+   * Cancel/Restore is hidden only where restoring would be a no-op:
+   *  - the draft — it already *is* the working copy;
+   *  - the live version, except in the draft flow, where restoring it is meaningful:
+   *    it discards the draft and puts the canvas back on what's running.
+   */
+  const hideVersionActions =
+    selectedVersion?.status === 'Draft'
+    || (selectedVersion?.status === 'Active' && !draftVersionHistory);
+  const rhsViewOnly = viewOnly || versionHistoryMode;
+  const closeVersionHistory = () => {
+    setVersionHistoryOpen(false);
+    setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
+    setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+  };
+  /**
+   * Anything occupying the 450px right slot — node config, Help center, or Test details.
+   * Drives the exploration actions pill sliding left so the panel never covers it.
+   */
+  // Preview (Front desk play) sits in the same right slot as node config / Help / Test details —
+  // slide the top-right chrome left so Pause / Publish don't overlap it.
+  const rightPanelOpen =
+    rhsRendered || helpRendered || testRunOpen || (previewOpen && !isReviewResponseAgent);
+  /** Shared by the top-right floater and (exploration) the bottom editor-row pill. */
+  const toggleHelpCenter = () => {
+    setVersionHistoryOpen(false);
+    setHelpCenterOpen((open) => {
+      // Exploration: help occupies the node-config RHS slot, so the two can't coexist.
+      if (!open && explorationChrome) {
+        handleCloseDrawer();
+        setPreviewOpen(false);
+      }
+      return !open;
+    });
+  };
+  const { nodes: rawNodes, edges } = buildFlow(
+    nodeList,
+    startData,
+    nodeDetails,
+    product,
+    collapsedBranches,
+    collapsedBranchPaths,
+    { hideStartNode: hideCanvasStartNode },
+  );
 
   const nodes = rawNodes.map((n) => {
     if (n.id === START_NODE_ID || n.id === END_NODE_ID) return n;
+    if (n.type === 'branchCollapse') {
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          onToggle: () => handleToggleBranchCollapse(n.data.parentBranchId),
+        },
+      };
+    }
     if (n.type === 'branchPath') {
-      return { ...n, data: { ...n.data, onDelete: () => handleDeleteBranchPath(n.id) } };
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          viewOnly,
+          focusBranchPathId,
+          onDelete:
+            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch || !n.data.canDeletePath
+              ? undefined
+              : () => handleDeleteBranchPath(n.id),
+          onToggleCollapse: () => handleToggleBranchPathCollapse(n.id),
+        },
+      };
     }
     if (n.type === 'branchEnd') return n;
+    const nodeIssueList = issuesByNodeId.get(n.id);
+    const hasAgentIssue = !!(nodeIssueList?.length);
+    const hasTaskSaveError = taskErrorNodeIds.has(n.id);
+    const issueLabel = hasAgentIssue ? nodeIssueList[0].title : undefined;
+    const issueTooltip = issueLabel
+      || (hasTaskSaveError ? 'Missing mandatory fields' : undefined);
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
+      draftBlocked: blockActiveEditsForDraft,
+      onEditDraft: handleGoToDraftVersion,
       onDelete: () => handleDeleteNode(n.id),
       onCopy: () => handleCopyNode(n.id),
       hasClipboard: !!clipboard,
@@ -1566,8 +2832,20 @@ export default function AgentBuilder({
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
+      hasError: explorationChrome && (hasTaskSaveError || hasAgentIssue),
+      showConfigWarning: !!(n.data.showConfigWarning && !hasAgentIssue && !hasTaskSaveError),
+      errorTooltip: issueTooltip,
+      // Log run view + exploration Run test: swap the header glyph for a spinner/check.
+      runStatus: logDoneNodeIds?.includes(n.id)
+        ? 'done'
+        : !explorationChrome || !testRunOpen
+          ? undefined
+          : n.id === testRunActiveId
+            ? 'running'
+            : testRun.doneNodeIds.includes(n.id)
+              ? 'done'
+              : undefined,
     };
-    if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
     }
@@ -1639,6 +2917,11 @@ export default function AgentBuilder({
     branchChildNodes.find((n) => n.id === selectedNodeId) ||
     branchPathNodes.find((n) => n.id === selectedNodeId);
 
+  // Procedure RHS is 500px (vs the default 450); chrome needs the wider offset.
+  const rightPanelWide =
+    rhsRendered
+    && (Boolean(lhsPreviewProcedureId) || Boolean(activeProcedureId));
+
   const handleNodesReorder = useCallback((newIdOrder) => {
     setNodeList((prev) => {
       const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
@@ -1663,7 +2946,7 @@ export default function AgentBuilder({
     }
 
     if (
-      isFrontDeskAgent(agentName)
+      agentNameIsFrontDesk(agentName)
       && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK)
     ) {
       return;
@@ -1683,16 +2966,48 @@ export default function AgentBuilder({
       : label;
     let details = makeNodeDetails(effectiveType, effectiveType === 'procedures' ? procedureSeed : label);
     if (effectiveType === 'trigger' && label === 'Reviews' && REVIEWS_TRIGGER_LEAF_COPY[description]) {
-      details = { ...details, triggerName: description, description: REVIEWS_TRIGGER_LEAF_COPY[description] };
+      // Seed trigger name from the palette leaf; description stays optional (+ Add description).
+      details = { ...details, triggerName: description, description: '' };
     }
     if (effectiveType === 'task' && description && label !== 'Custom') {
       const taskDefaults = TASK_DROP_DEFAULTS[description] || {};
+      const seededDescription = taskDefaults.description ?? '';
       details = {
         ...details,
         taskName: description,
-        description: taskDefaults.description ?? '',
+        description: seededDescription,
         ...(taskDefaults.selectedTools ? { selectedTools: taskDefaults.selectedTools } : {}),
+        ...(taskDefaults.stateUpdates ? { stateUpdates: taskDefaults.stateUpdates } : {}),
+        ...(taskDefaults.customVariables ? { customVariables: taskDefaults.customVariables } : {}),
       };
+      // Mirror onto the canvas node so the card shows the LHS blurb immediately
+      if (seededDescription) {
+        newNode.data = { ...newNode.data, subtitle: seededDescription };
+      }
+    }
+
+    // Controls variant name comes through the drag payload's `description`
+    // (both the compact CardRow and the rich LHSEntityGroup cards set it), while
+    // `label` may be the parent group name ('Branch' / 'Delay') for the palette cards.
+    const controlVariant = description || label;
+
+    // Delay dropped from one of the LHS Controls variant cards (Set amount of
+    // time / Calendar date / …) — preselect that delay option.
+    // (Branch variants are handled by the scaffold block below since it owns the
+    // branch/path structure the canvas renders.)
+    if (effectiveType === 'delay' && DELAY_VARIANT_PRESETS[controlVariant]) {
+      const delayBlurb = delayVariantDescription({
+        delayOption: DELAY_VARIANT_PRESETS[controlVariant],
+        variantLabel: controlVariant,
+      });
+      details = { ...details, delayOption: DELAY_VARIANT_PRESETS[controlVariant] };
+      if (delayBlurb) {
+        newNode.data = {
+          ...newNode.data,
+          descriptionPlaceholder: delayBlurb,
+          subtitle: delayBlurb,
+        };
+      }
     }
 
     if (effectiveType === 'trigger' && !branchPathId) {
@@ -1718,12 +3033,18 @@ export default function AgentBuilder({
         return { ...copy, [id]: details };
       });
 
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(null);
       // After the first (or replaced) trigger lands, open Tasks so the next step is ready to drag.
-      setLhsCollapsed(false);
-      setLhsForceOpenSection('Tasks');
+      // Review-response chrome uses the floater palette instead — close it after drop.
+      if (isReviewResponseChrome) {
+        setPaletteSection(null);
+      } else {
+        setLhsCollapsed(false);
+        setLhsForceOpenSection('Tasks');
+      }
       return;
     }
 
@@ -1747,9 +3068,13 @@ export default function AgentBuilder({
           [id]: details,
         };
       });
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
+      if (isReviewResponseChrome) {
+        setPaletteSection(null);
+      }
       return;
     }
 
@@ -1791,20 +3116,55 @@ export default function AgentBuilder({
 
     if (type === 'branch') {
       const path1Id = `${id}-path-1`;
+      const path2Id = `${id}-path-2`;
       const fallbackId = `${id}-path-fallback`;
-      Object.assign(details, {
-        basedOn: 'conditions',
-        description: 'Build condition-specific flows',
-        mergeBranches: true,
-        branches: [
-          { id: path1Id, name: 'Branch 1' },
-          { id: fallbackId, name: 'No conditions met', isFallback: true },
-        ],
-      });
-      extraDetails = {
-        [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
-      };
+      const makePath = (extra) => ({ description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [], ...extra });
+
+      if (controlVariant === 'Based on percentage' || controlVariant === 'Split traffic') {
+        Object.assign(details, {
+          basedOn: 'percentage',
+          branchNodeTitle: 'Split traffic',
+          description: 'Splits traffic across paths by percentage, useful for testing variations',
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Branch 1', percentage: 50 },
+            { id: path2Id, name: 'Branch 2', percentage: 50 },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Branch 1' }),
+          [path2Id]: makePath({ branchName: 'Branch 2' }),
+        };
+      } else if (controlVariant === 'Always run') {
+        Object.assign(details, {
+          basedOn: 'conditions',
+          branchNodeTitle: 'Always run',
+          description: 'Always run this path',
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Always run', isFallback: true },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Always run', isFallback: true }),
+        };
+      } else {
+        // 'Evaluate conditions' (legacy: 'Based on condition' / plain "Branch" card)
+        Object.assign(details, {
+          basedOn: 'conditions',
+          branchNodeTitle: RR_BRANCH_TITLE,
+          description: RR_BRANCH_DESC,
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Branch 1' },
+            { id: fallbackId, name: 'Fallback branch', isFallback: true },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Branch 1' }),
+          [fallbackId]: makePath({ branchName: 'Fallback branch', isFallback: true }),
+        };
+      }
     }
 
     if (effectiveType === 'voiceCall') {
@@ -1838,36 +3198,155 @@ export default function AgentBuilder({
       ...extraDetails,
     }));
 
+    setFocusBranchPathId(null);
     setSelectedNodeId(id);
     setDrawerOpen(true);
     setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
-  }, [agentName, product]);
+    if (isReviewResponseChrome) {
+      setPaletteSection(null);
+    }
+  }, [agentName, product, isReviewResponseChrome]);
 
   const handleNodeClick = useCallback((node) => {
-    if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder') return;
+    if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder' || node.type === 'branchCollapse') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
+    // Start node shares the Agent details panel with the chrome header title.
+    if (node.type === 'start' || node.id === START_NODE_ID) {
+      setPaletteSection(null);
+      // Exploration: version history docks on the left, so it stays open and the
+      // node config opens read-only beside it.
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(null);
+      setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      return;
+    }
+    // Path chips open the parent Branch panel with that path's accordion expanded.
+    if (node.type === 'branchPath') {
+      const parentId = node.data?.parentId
+        || latestRef.current.nodeDetails?.[node.id]?.parentId;
+      if (!parentId) return;
+      setPaletteSection(null);
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(node.id);
+      setFocusBranchPathNonce((n) => n + 1);
+      setSelectedNodeId(parentId);
+      setDrawerOpen(true);
+      return;
+    }
+    // AI Builder docks on the left; node config uses the right pane — both can stay open.
+    setPaletteSection(null);
+    if (!explorationChrome) setVersionHistoryOpen(false);
+    // Exploration: help / preview share the node-config RHS slot, so opening a node closes them.
+    if (explorationChrome) {
+      setHelpCenterOpen(false);
+      setPreviewOpen(false);
+    }
+    setFocusBranchPathId(null);
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, []);
+  }, [explorationChrome]);
+
+  useEffect(() => {
+    setLlmTaskTab('setup');
+  }, [selectedNodeId]);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedNodeId(null);
+    setFocusBranchPathId(null);
     setActiveProcedureId(null);
     setLhsPreviewProcedureId(null);
+    setLlmTaskTab('setup');
+    // Do not reopen AI Builder — user closed config and should return to a clean canvas
+    // (FAB remains available to reopen AI explicitly).
   }, []);
 
-  const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+  /** Open a task on the canvas that has a publish-blocking issue. */
+  const navigateToIssueNode = useCallback((nodeId) => {
+    if (!nodeId) return;
+    setResolveIssuesOpen(false);
+    setPublishBlockedModalOpen(false);
+    setPaletteSection(null);
+    setHelpCenterOpen(false);
+    setVersionHistoryOpen(false);
+
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+      setFocusBranchPathId(branchPathId);
+    } else {
+      setFocusBranchPathId(null);
+    }
+
+    setSelectedNodeId(nodeId);
+    setDrawerOpen(true);
+    setCanvasFocusNodeId(nodeId);
+  }, [nodeList, nodeDetails]);
+
+  const rawDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+  const remappedTask = remapDroppedTaskCopy(rawDetails.taskName, rawDetails.description);
+  const currentDetails = selectedNodeId
+    ? (rawDetails.taskName
+      ? { ...rawDetails, taskName: remappedTask.taskName, description: remappedTask.description }
+      : rawDetails)
+    : {};
+
+  /**
+   * Task details Save — validates the node's tool config and flags the canvas card when a
+   * mandatory field is still missing (cleared again once the tool is configured and re-saved).
+   */
+  const handleSaveTaskDetails = () => {
+    const id = selectedNodeId;
+    if (id) {
+      const hasError = taskHasToolConfigError(nodeDetails[id]);
+      setTaskErrorNodeIds((prev) => {
+        if (hasError === prev.has(id)) return prev;
+        const next = new Set(prev);
+        if (hasError) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
+    handleCloseDrawer();
+  };
 
   /* ─── Shared onFieldChange for the active node ─── */
   const activeFieldChange = useCallback(
     (field, value) => handleNodeFieldChange(selectedNodeId, field, value),
     [selectedNodeId, handleNodeFieldChange]
   );
+
+  /**
+   * Delay Save — retitle the canvas card from the saved config ("Delay for 5 days",
+   * "Delay until Tuesday", …). `name` is one of the fields handleNodeFieldChange already
+   * mirrors into `data.title`, on the top-level list and inside branch paths alike.
+   */
+  const handleSaveDelayDetails = () => {
+    const id = selectedNodeId;
+    if (id) {
+      const summary = formatDelaySummary(nodeDetails[id]);
+      if (summary) handleNodeFieldChange(id, 'name', summary);
+    }
+    handleCloseDrawer();
+  };
 
   const handleSaveCustomProcedure = useCallback(() => {
     if (!selectedNodeId) return;
@@ -1966,13 +3445,16 @@ export default function AgentBuilder({
           key={`lhs-preview-${lhsPreviewProcedureId}`}
           variant="procedureDetail"
           title={mergedProc.name}
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           onBack={closeLhsPreview}
           bodyProps={{
             initialValues: mergedProc,
             onFieldChange: () => {},
             onOpenToolDrawer: () => setToolPickerOpen(true),
+            onOpenTool: openToolByName,
           }}
           onClose={closeLhsPreview}
           onSave={closeLhsPreview}
@@ -1985,12 +3467,25 @@ export default function AgentBuilder({
     if (selectedNodeId === START_NODE_ID) {
       const isReviewGeneration = /review generation/i.test(pageTitle || '');
       const isReviewResponse = /review response/i.test(pageTitle || '');
-      const startDetails = nodeDetails[START_NODE_ID] || {
+      const isFrontDesk = agentNameIsFrontDesk(pageTitle);
+      const rawStart = nodeDetails[START_NODE_ID];
+      const startDetails = rawStart
+        ? {
+            ...rawStart,
+            goals: isFrontDesk
+              ? FD_GOALS
+              : isReviewResponse && !rawStart.goals
+                ? RR_GOALS
+                : rawStart.goals,
+          }
+        : {
         agentName: pageTitle,
-        goals: isReviewGeneration
+        goals: isFrontDesk
+          ? FD_GOALS
+          : isReviewGeneration
           ? 'Request reviews from customers after a completed transaction, using email and text to maximize response rates.'
           : isReviewResponse
-            ? 'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review'
+            ? RR_GOALS
             : 'Respond to customer reviews promptly and professionally, maintaining brand voice and addressing specific customer feedback.',
         outcomes: isReviewGeneration
           ? 'Increase review volume across locations while saving staff time on manual follow-up.'
@@ -2003,17 +3498,21 @@ export default function AgentBuilder({
         <RHS
           variant="agentDetails"
           title="Agent details"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             values: startDetails,
             onChange: (field, value) => {
+              if (blockActiveEditsForDraftRef.current) return;
               setNodeDetails((prev) => ({
                 ...prev,
                 [START_NODE_ID]: { ...(prev[START_NODE_ID] || startDetails), [field]: value },
               }));
             },
             autoOpenLocationsToken: startLocationsOpenToken,
+            includeCustomFields: explorationChrome,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2026,7 +3525,9 @@ export default function AgentBuilder({
         <RHS
           variant="branch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2071,7 +3572,9 @@ export default function AgentBuilder({
         <RHS
           variant="conversationTrigger"
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2085,7 +3588,9 @@ export default function AgentBuilder({
         <RHS
           variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2102,7 +3607,9 @@ export default function AgentBuilder({
         <RHS
           variant="controlBranch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter
           product={product}
           bodyProps={{
             initialValues: {
@@ -2111,10 +3618,17 @@ export default function AgentBuilder({
               mergeBranches: currentDetails.mergeBranches ?? true,
               branchNodeId: selectedNodeId,
               pathDetails,
+              initialExpandedPathId: focusBranchPathId,
+              expandNonce: focusBranchPathNonce,
             },
             onFieldChange: activeFieldChange,
             onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
+            onFocusBranchPath: (pathId) => {
+              setFocusBranchPathId(pathId);
+              if (pathId) setFocusBranchPathNonce((n) => n + 1);
+            },
+            onOpenGlossary: openGlossary,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2127,7 +3641,9 @@ export default function AgentBuilder({
         <RHS
           variant="subagent"
           title="Sub-agent"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2141,11 +3657,13 @@ export default function AgentBuilder({
         <RHS
           variant="delay"
           title="Delay"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
-          onSave={handleCloseDrawer}
+          onSave={handleSaveDelayDetails}
         />
       );
     }
@@ -2155,7 +3673,9 @@ export default function AgentBuilder({
         <RHS
           variant="parallel"
           title="Parallel tasks"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2169,7 +3689,9 @@ export default function AgentBuilder({
         <RHS
           variant="loop"
           title="Loop"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2190,7 +3712,9 @@ export default function AgentBuilder({
               key="proc-create-custom"
               variant="createCustomProcedure"
               title="Create custom procedure"
-              viewOnly={viewOnly}
+              viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+              inlineFooter={inlineRhsFooter}
               product={product}
               onBack={() => setActiveProcedureId(null)}
               bodyProps={{
@@ -2221,7 +3745,9 @@ export default function AgentBuilder({
             key={`proc-detail-${activeProcedureId}`}
             variant="procedureDetail"
             title={mergedProc.name}
-            viewOnly={viewOnly}
+            viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+            inlineFooter={inlineRhsFooter}
             product={product}
             onBack={() => setActiveProcedureId(null)}
             bodyProps={{
@@ -2234,6 +3760,7 @@ export default function AgentBuilder({
                 activeFieldChange('procedureOverrides', overridesNext);
               },
               onOpenToolDrawer: () => setToolPickerOpen(true),
+              onOpenTool: openToolByName,
             }}
             onClose={handleCloseDrawer}
             onSave={() => setActiveProcedureId(null)}
@@ -2244,13 +3771,24 @@ export default function AgentBuilder({
         <RHS
           key="proc-list"
           variant="procedureTask"
-          title="Procedures"
-          viewOnly={viewOnly}
+          title={data?.title || 'Follow procedures'}
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
+          titleLayoutMenu={llmTaskExplorationLayout ? {
+            value: procedureLayoutOption,
+            options: [
+              { value: 'option1', label: 'Option 1' },
+              { value: 'option2', label: 'Option 2' },
+            ],
+            onChange: setProcedureLayoutOption,
+          } : null}
           bodyProps={{
             initialValues: currentDetails,
             onFieldChange: activeFieldChange,
             onSelectProcedure: (id) => setActiveProcedureId(id),
+            layoutOption: llmTaskExplorationLayout ? procedureLayoutOption : 'option1',
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2258,14 +3796,69 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon || data.subtype === 'Custom') {
+    if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).some(isHandleResponseTool))) {
+      const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
+      const llmTaskOption3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option3';
+      // R1/R2/R3/R4 layouts are scoped to the Review response agent's exploration chrome
+      // only — Frontdesk exploration (and any other agent) never sees any of these options or their behavior.
+      const llmTaskR1 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r1' && isReviewResponseAgent;
+      const llmTaskR2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r2' && isReviewResponseAgent;
+      const llmTaskR3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r3' && isReviewResponseAgent;
+      const llmTaskR4 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r4' && isReviewResponseAgent;
+      // Sep 1 agents always get the segmented Action RHS (Basic/Prompts/Fields/Context).
+      // Use sep1Chrome props — activeNavId is often still the default 'search' here.
+      const llmTaskSep1Segmented = sep1Chrome && !llmTaskExplorationLayout;
+      const llmTaskSegmented = llmTaskR4 || llmTaskSep1Segmented;
       return (
         <RHS
           variant="llmTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
-          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
+          saveLabel="Save"
+          showPromptStrength={llmTaskExplorationLayout ? true : undefined}
+          titleLayoutMenu={llmTaskExplorationLayout ? {
+            value: llmTaskLayoutOption,
+            options: [
+              { value: 'option1', label: 'Option 1' },
+              { value: 'option2', label: 'Option 2' },
+              { value: 'option3', label: 'Option 3' },
+              ...(isReviewResponseAgent ? [
+                { value: 'r1', label: 'R1' },
+                { value: 'r2', label: 'R2' },
+                { value: 'r3', label: 'R3' },
+                { value: 'r4', label: 'R4' },
+              ] : []),
+            ],
+            onChange: (next) => {
+              setLlmTaskLayoutOption(next);
+              if (next === 'option2') setLlmTaskTab('setup');
+            },
+          } : null}
+          titleTabMenu={null}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+            onOpenToolDrawer: () => setToolPickerOpen(true),
+            onOpenTool: openToolByName,
+            collapseChipsToOneLine: llmTaskExplorationLayout,
+            collapseChipsToTwoLines: explorationChrome,
+            setupConfigureTabs: llmTaskOption2,
+            option3Stepper: llmTaskOption3,
+            hideDescriptionLabel: llmTaskOption3,
+            tightNameDescription: llmTaskOption3,
+            accordionLayout: llmTaskR1 || llmTaskR2 || llmTaskR3,
+            accordionBare: llmTaskR2 || llmTaskR3,
+            accordionLined: llmTaskR3,
+            segmentedLayout: llmTaskSegmented,
+            activeTab: llmTaskTab,
+            onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
+            onOpenGlossary: openGlossary,
+            onValidationChange: setLlmTaskSaveBlocked,
+            saveBlocked: llmTaskSaveBlocked,
+          }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
         />
@@ -2276,8 +3869,10 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="voiceCallTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2301,8 +3896,29 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="sendResponseTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
+          product={product}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+          }}
+          onClose={handleCloseDrawer}
+          onSave={handleCloseDrawer}
+        />
+      );
+    }
+
+    if (flowType === 'task' && (currentDetails.selectedTools || []).includes('update-state')) {
+      return (
+        <RHS
+          variant="updateStateTask"
+          title="Action"
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2317,17 +3933,43 @@ export default function AgentBuilder({
     return (
       <RHS
         variant="entityTask"
-        title="Task"
-        viewOnly={viewOnly}
+        title="Action"
+        viewOnly={rhsViewOnly}
+        {...rhsDraftProps}
+        inlineFooter={inlineRhsFooter}
+        titleLayoutMenu={llmTaskExplorationLayout ? {
+          value: entityTaskLayoutOption,
+          options: [
+            { value: 'option1', label: 'Option 1' },
+            { value: 'option2', label: 'Option 2' },
+            { value: 'option3', label: 'Option 3' },
+          ],
+          onChange: setEntityTaskLayoutOption,
+        } : null}
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
+          option2Stepper: llmTaskExplorationLayout && entityTaskLayoutOption === 'option2',
+          // Sep 1: always use Basic / Tool details tabs (same as exploration Option 3).
+          option3Tabs:
+            (sep1Chrome && !llmTaskExplorationLayout)
+            || (llmTaskExplorationLayout && entityTaskLayoutOption === 'option3'),
+          toolFieldValues: currentDetails.toolFieldValues || {},
+          onToolFieldValuesChange: (toolId, values) => {
+            activeFieldChange('toolFieldValues', {
+              ...(currentDetails.toolFieldValues || {}),
+              [toolId]: values,
+            });
+          },
+          // Only surface tool errors once this task has been saved in that state.
+          showToolErrors: taskErrorNodeIds.has(selectedNodeId) || issuesByNodeId.has(selectedNodeId),
           onOpenTool: (toolId) => {
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
             if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
             if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
+            if (isHandleResponseTool(toolId)) { setHandleResponseToolOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });
@@ -2335,47 +3977,324 @@ export default function AgentBuilder({
           onSwapTool: () => setToolPickerOpen(true),
         }}
         onClose={handleCloseDrawer}
-        onSave={handleCloseDrawer}
+        onSave={handleSaveTaskDetails}
       />
     );
   };
 
-  /* ─── Header actions: Publish + three-dots menu (or view-only badge) ─── */
-  const headerActions = viewOnly ? (
-    <div className="ab-view-badge">
-      <span className="material-symbols-outlined">visibility</span>
-      View only
-    </div>
-  ) : (
-    <div className="ab-header-actions">
-      {issueCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555', fontSize: 13 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: '#de1b0c' }}>error</span>
-          Resolve issues ({issueCount})
-        </div>
-      )}
-      {/* Cloud save icon — matches Figma 41-43635 */}
+  /* ─── Header actions: Publish + three-dots menu (or view-only chrome) ─── */
+  const handleRunTest = () => {
+    // Front desk: voice/chat preview instead of the step-log test run.
+    if (isFrontDeskAgentName) {
+      setTestRunOpen(false);
+      setDrawerOpen(false);
+      setSelectedNodeId(null);
+      setTestAppointment(null);
+      if (explorationChrome) setHelpCenterOpen(false);
+      setPreviewOpen(true);
+      return;
+    }
+    setPreviewOpen(false);
+    setTestRunOpen(true);
+  };
+
+  const viewChromeButtons = (
+    <div className="ab-header-actions ab-header-actions--view-mode">
+      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
+        <button
+          type="button"
+          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
+          aria-current="true"
+          aria-label="View-only"
+        >
+          <span className="material-symbols-outlined" aria-hidden>visibility</span>
+          <span>View-only</span>
+        </button>
+        <button
+          type="button"
+          className="rr-chrome-mode-btn"
+          onClick={onEdit}
+          aria-label="Edit"
+        >
+          <span className="material-symbols-outlined" aria-hidden>edit</span>
+          <span>Edit</span>
+        </button>
+      </div>
       <button
         type="button"
-        className="ab-header-cloud-btn"
-        onClick={handleShare}
-        title="Save to cloud"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#555', padding: 4, borderRadius: 4 }}
+        className="rr-chrome-run-test"
+        onClick={handleRunTest}
+        aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 20, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}>cloud_upload</span>
+        <span className="material-symbols-outlined rr-chrome-run-test__play" aria-hidden>play_arrow</span>
+        <span>{isFrontDeskAgentName ? 'Preview' : 'Run test'}</span>
       </button>
-<Button
-        theme="primary"
-        label={isTemplateMode ? 'Save template' : 'Publish'}
-        onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
-        disabled={!isTemplateMode && (publishDisabled || issueCount > 0)}
-      />
+    </div>
+  );
+
+  // Restore applies straight away (no confirm step), drops back to the live editor
+  // and confirms with a toast whose Undo reopens history on the same version.
+  const handleRestoreVersion = () => {
+    setRestoredVersionId(versionHistorySelectedId);
+    closeVersionHistory();
+  };
+
+  const handleUndoRestore = () => {
+    setVersionHistorySelectedId(restoredVersionId);
+    setRestoredVersionId(null);
+    setVersionHistoryOpen(true);
+  };
+
+  /**
+   * Issue-count affordance. Exploration chrome shows a red "N errors" chip after the
+   * run-test icon; legacy agents keep the original text trigger before the icons.
+   * Both open the same issues popover.
+   */
+  const resolveIssues = (
+    <div className="ab-resolve-issues" ref={resolveIssuesRef}>
+      <button
+        type="button"
+        className={explorationChrome ? 'ab-error-chip' : 'ab-resolve-issues__trigger'}
+        aria-expanded={resolveIssuesOpen}
+        aria-haspopup="dialog"
+        onClick={() => {
+          setPublishMenuOpen(false);
+          setHeaderMenuOpen(false);
+          setResolveIssuesOpen((open) => !open);
+        }}
+      >
+        <span className="material-symbols-outlined" aria-hidden>error</span>
+        {explorationChrome
+          ? `${issueCount} ${issueCount === 1 ? 'error' : 'errors'}`
+          : `Resolve issues (${issueCount})`}
+      </button>
+      {resolveIssuesOpen && (
+        <div
+          className={`ab-resolve-issues__popover${explorationChrome ? ' ab-resolve-issues__popover--anchor-right' : ''}`}
+          role="dialog"
+          aria-label="Resolve issues"
+        >
+          <div className="ab-resolve-issues__heading">
+            {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
+          </div>
+          <ul className="ab-resolve-issues__list">
+            {(resolveIssuesList.length > 0
+              ? resolveIssuesList
+              : Array.from({ length: issueCount }, (_, i) => ({
+                  id: `issue-${i + 1}`,
+                  title: `Issue ${i + 1}`,
+                  description: 'Review this item before publishing.',
+                }))
+            ).map((issue) => (
+              <li key={issue.id}>
+                <button
+                  type="button"
+                  className="ab-resolve-issues__item"
+                  onClick={() => {
+                    if (issue.nodeId) navigateToIssueNode(issue.nodeId);
+                    else setResolveIssuesOpen(false);
+                  }}
+                >
+                  <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
+                    error
+                  </span>
+                  <span className="ab-resolve-issues__item-body">
+                    <span className="ab-resolve-issues__item-title">{issue.title}</span>
+                    {issue.description ? (
+                      <span className="ab-resolve-issues__item-desc">{issue.description}</span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+
+  const headerActions = viewOnly ? (
+    viewChromeActions ? viewChromeButtons : (
+      <div className="ab-view-badge">
+        <span className="material-symbols-outlined">visibility</span>
+        View only
+      </div>
+    )
+  ) : versionHistoryMode ? (
+    // Nothing to cancel or restore on the draft (or on the live version outside the draft
+    // flow) — the whole pill is hidden rather than shown empty; Back exits history instead.
+    hideVersionActions ? null : (
+      <div className="ab-header-actions">
+        <button
+          type="button"
+          className="ab-header-cancel-btn"
+          aria-label="Cancel"
+          onClick={closeVersionHistory}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ab-header-restore-btn"
+          aria-label="Restore this version"
+          onClick={handleRestoreVersion}
+        >
+          Restore
+        </button>
+      </div>
+    )
+  ) : (
+    <div className="ab-header-actions">
+      {issueCount > 0 && !explorationChrome && resolveIssues}
+      {/* Labelled button — no Tooltip, it would just repeat the visible text. */}
+      <button
+        type="button"
+        className="ab-header-runtest-btn"
+        onClick={handleRunTest}
+        aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+        data-tour-id="test-run"
+        disabled={isScratchCreate}
+      >
+        <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-runtest-btn__icon" />
+        <span>{isFrontDeskAgentName ? 'Preview' : 'Run test'}</span>
+      </button>
+      {issueCount > 0 && explorationChrome && resolveIssues}
+      {isTemplateMode ? (
+        <Button
+          theme="primary"
+          label="Save template"
+          onClick={handleSaveTemplate}
+        />
+      ) : (
+        <>
+          <div className="ab-publish-split" ref={publishMenuRef}>
+            {/* Exploration: Save as draft until an Action (task/etc.) is on the canvas —
+                a Trigger alone keeps this CTA. Disabled until a trigger exists.
+                Other agents / draft-blocked keep the Activate split. */}
+            {explorationChrome && !blockActiveEditsForDraft && !hasCanvasActions ? (
+              <button
+                type="button"
+                className="ab-publish-split__main ab-publish-split__main--solo"
+                aria-label="Save as draft"
+                data-tour-id="publish"
+                disabled={publishDisabled || !hasCanvasTrigger}
+                onClick={handleSaveAsDraft}
+              >
+                Save as draft
+              </button>
+            ) : (
+              <>
+                {/* Live Active + unpublished draft: primary CTA switches to the draft.
+                    Inactive agents re-activate through the same CTA (handleActivateMain
+                    routes to resume vs publish), so there is no separate Resume button. */}
+                <button
+                  type="button"
+                  className="ab-publish-split__main"
+                  aria-label={blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
+                  data-tour-id="publish"
+                  disabled={publishDisabled}
+                  onClick={() => {
+                    if (blockActiveEditsForDraft) {
+                      setPublishMenuOpen(false);
+                      handleGoToDraftVersion();
+                      return;
+                    }
+                    handleActivateMain();
+                  }}
+                >
+                  {blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
+                </button>
+                <button
+                  type="button"
+                  className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
+                  aria-label={blockActiveEditsForDraft ? 'More draft options' : 'More activate options'}
+                  aria-haspopup="menu"
+                  aria-expanded={publishMenuOpen}
+                  disabled={publishDisabled}
+                  onClick={() => setPublishMenuOpen((open) => !open)}
+                >
+                  <span className="material-symbols-outlined">expand_more</span>
+                </button>
+                {publishMenuOpen && (
+                  <div className="ab-publish-split__menu" role="menu">
+                    {/* Active + draft view: only Deactivate — Save as draft would overwrite
+                        the working draft with the locked live canvas. */}
+                    {!blockActiveEditsForDraft && (
+                      <button
+                        type="button"
+                        className="ab-publish-split__menu-item"
+                        role="menuitem"
+                        onClick={handleSaveAsDraft}
+                      >
+                        Save as draft
+                      </button>
+                    )}
+                    {/* Only a live agent can be deactivated (including while browsing
+                        the Active canvas of an agent that also has a draft). */}
+                    {(agentStatus === 'Active' || blockActiveEditsForDraft) && (
+                      <button
+                        type="button"
+                        className="ab-publish-split__menu-item"
+                        role="menuitem"
+                        onClick={() => {
+                          setPublishMenuOpen(false);
+                          handlePause();
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {/* Version history + Delete live behind the three-dots menu. */}
+          <div className="ab-header-more" ref={headerMenuRef}>
+            <button
+              type="button"
+              className="ab-header-more-btn"
+              aria-label="More options"
+              aria-haspopup="menu"
+              aria-expanded={headerMenuOpen}
+              onClick={() => {
+                setPublishMenuOpen(false);
+                setHeaderMenuOpen((open) => !open);
+              }}
+            >
+              <span className="material-symbols-outlined" aria-hidden>more_vert</span>
+            </button>
+            {headerMenuOpen && (
+              <div className="ab-header-menu" role="menu">
+                {!isScratchCreate && (
+                  <button
+                    type="button"
+                    className="ab-header-menu-item"
+                    role="menuitem"
+                    onClick={handleOpenVersionHistory}
+                  >
+                    Version history
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="ab-header-menu-item ab-header-menu-item--danger"
+                  role="menuitem"
+                  onClick={handleDeleteAgent}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 
   const STATUS_BADGE_CLASS = {
-    Running: 'ab-header-status--running',
-    Paused: 'ab-header-status--paused',
+    Active: 'ab-header-status--active',
+    Inactive: 'ab-header-status--inactive',
     Draft: 'ab-header-status--draft',
   };
   const statusBadgeClass = STATUS_BADGE_CLASS[agentStatus] || 'ab-header-status--draft';
@@ -2399,131 +4318,441 @@ export default function AgentBuilder({
   }
 
   return (
-    <div className="faq-ab-embedded" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
-      {/* ─── Embedded builder header ─── */}
-      <div className="faq-ab-header" style={{
-        height: 52,
-        borderBottom: '1px solid #e9e9eb',
-        background: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        gap: 8,
-      }}>
-        <div className="ab-header-left">
-          {onClose && (
-            <button
-              type="button"
-              className="ab-header-back-btn"
-              onClick={onClose}
-              title="Back to agents"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-              </svg>
-            </button>
-          )}
-          <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
-          <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
-        </div>
-        <div className="ab-header-spacer" aria-hidden />
-        {headerActions}
-      </div>
-
+    <div className="faq-ab-embedded faq-ab-embedded--rr-chrome" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
       {/* ─── Builder body ─── */}
       <div
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        {viewOnly && (
-          <div className="ab-view-banner">
-            <span className="material-symbols-outlined">visibility</span>
-            <span>You&apos;re viewing a shared workflow. Editing is disabled.</span>
-            <a
-              className="ab-view-banner__link"
-              href={`mailto:?subject=Request edit access – ${agentName}`}
-            >
-              Request edit access
-            </a>
-          </div>
-        )}
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}`}>
+          {/* Floating canvas chrome (all agents) */}
+          <>
+              {!hideCanvasBackCluster && (onClose || explorationChrome) && (
+                <div className={`rr-chrome-back-cluster${explorationChrome ? ' rr-chrome-back-cluster--identity' : ''}`}>
+                  {onClose && (
+                    <button
+                      type="button"
+                      className="rr-chrome-back"
+                      // Browsing version history: Back returns to the canvas rather
+                      // than leaving the editor for the agent list.
+                      onClick={versionHistoryMode ? closeVersionHistory : onClose}
+                      aria-label="Back"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                        <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                      </svg>
+                      {!explorationChrome && <span>Back</span>}
+                    </button>
+                  )}
+                  {explorationChrome && versionHistoryMode && (
+                    <div className="rr-chrome-identity">
+                      <div className="rr-chrome-identity__row">
+                        <span className="rr-chrome-identity__name">Version history</span>
+                        <span className="rr-chrome-identity__version-sep" aria-hidden>·</span>
+                        <span className="rr-chrome-identity__version-stamp">
+                          {selectedVersion?.stamp || selectedVersion?.title}
+                        </span>
+                        {/* Keyed off the version's own status, not `hideVersionActions` —
+                            that also covers the draft, which must not read "Active". */}
+                        {selectedVersion?.status === 'Active' && (
+                          <span className="ab-header-status ab-header-status--active ab-header-status--dot">
+                            Active
+                          </span>
+                        )}
+                        {selectedVersion?.status === 'Draft' && (
+                          <span className="ab-header-status ab-header-status--draft">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {explorationChrome && !versionHistoryMode && (
+                    <div className="rr-chrome-identity">
+                      <div className="rr-chrome-identity__row">
+                        <div className="rr-chrome-identity__name-group">
+                          {identityLocationChrome ? (
+                            <RrChromeIdentityTitle
+                              fullName={identityFullName}
+                              locationSummary={locationSummary}
+                              onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="rr-chrome-identity__title"
+                              onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                              aria-label={`Open agent details for ${identityFullName}`}
+                            >
+                              <span className="rr-chrome-identity__name">
+                                {identityFullName}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                        {nodesInteractive && (showAddLocationCta ? (
+                          <>
+                            <span className="ab-header-status__divider" aria-hidden />
+                            <button
+                              type="button"
+                              className="rr-chrome-identity__add-location"
+                              onClick={handleAddLocationsFromCanvas}
+                            >
+                              Add location
+                            </button>
+                          </>
+                        ) : (
+                          <Tooltip content="Edit" variant="brief" side="bottom">
+                            <button
+                              type="button"
+                              className="ab-header-cloud-btn"
+                              onClick={handleOpenAgentDetails}
+                              aria-label="Edit"
+                            >
+                              <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>
+                                edit
+                              </span>
+                            </button>
+                          </Tooltip>
+                        ))}
+                        {isViewingActiveVersion && existingAgent ? (
+                          <>
+                            <span className="ab-header-status ab-header-status--active ab-header-status--dot">
+                              Active
+                            </span>
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={handleGoToDraftVersion}
+                            >
+                              View draft
+                            </button>
+                          </>
+                        ) : agentStatus === 'Draft' && existingAgent ? (
+                          <>
+                            <span className="ab-header-status ab-header-status--draft">
+                              Draft
+                            </span>
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={handleViewActiveVersion}
+                            >
+                              View active version
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`ab-header-status ${statusBadgeClass}${agentStatus === 'Draft' ? '' : ' ab-header-status--dot'}`}>
+                            {agentStatus}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        <div className="agent-builder">
-          {!hideLhs && (
-            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-              <LHSDrawer
-                defaultTab={lhsDefaultTab}
-                showTabs={!viewOnly}
-                defaultOpenSection={defaultOpenSection}
-                forceOpenSection={lhsForceOpenSection}
-                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
-                viewOnly={viewOnly}
-                product={product}
-                agentName={agentName}
-                procedures={procedures}
-                aiTranscript={aiTranscript}
-                existingAgent={existingAgent}
-                onOpenAiFullscreen={viewOnly ? undefined : onOpenAiFullscreen}
-                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-                onDropNode={viewOnly ? undefined : handleDropNode}
-                nodeContext={aiNodeContext}
-                onClearNodeContext={() => setAiNodeContext(null)}
-                onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                  setLhsPreviewProcedureId(procedureId);
-                  setSelectedNodeId(null);
-                  setActiveProcedureId(null);
-                  setDrawerOpen(true);
-                }}
+              {/* Exploration and combined-controls (Response agents Sep1) render this trigger in the bottom editor row instead (GraphControls). */}
+              {!viewOnly && !explorationChrome && !combineControlsLeft && (
+                <div className="rr-chrome-help-wrap">
+                  <Tooltip content="Help center" variant="brief" side="bottom">
+                    <button
+                      type="button"
+                      className={`rr-chrome-help${helpCenterOpen ? ' rr-chrome-help--active' : ''}`}
+                      aria-label="Help center"
+                      aria-pressed={helpCenterOpen}
+                      onClick={toggleHelpCenter}
+                    >
+                      <span className="material-symbols-outlined" aria-hidden>help</span>
+                    </button>
+                  </Tooltip>
+                </div>
+              )}
+
+              {/* Version history on the live version has no actions — skip the pill entirely
+                  so an empty white chip doesn't float over the canvas. Same for a shell that
+                  owns the CTAs itself (Ghostwriter): under exploration chrome this pill holds
+                  nothing but `headerActions`, so suppressing those leaves a bare 12px shell. */}
+              {!(versionHistoryMode && !headerActions) && !(explorationChrome && hideHeaderActions) && (
+              <div
+                className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
+                  explorationChrome ? ' rr-chrome-top--right' : ''
+                }${explorationChrome && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}${
+                  explorationChrome && rightPanelWide ? ' rr-chrome-top--rhs-wide' : ''
+                }`}
+              >
+                {!(viewOnly && viewChromeActions) && !explorationChrome && (
+                  <>
+                    <RrChromeAgentTitle
+                      text={agentName || 'Untitled agent'}
+                      onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                    />
+                    <span className={`ab-header-status ${statusBadgeClass}${agentStatus === 'Draft' ? '' : ' ab-header-status--dot'}`}>
+                      {agentStatus}
+                    </span>
+                    <div className="rr-chrome-top__spacer" aria-hidden />
+                  </>
+                )}
+                {!hideHeaderActions && headerActions}
+              </div>
+              )}
+
+              {!viewOnly && !versionHistoryMode && (
+                <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
+                  <Tooltip content="Create with AI" variant="brief" side="right">
+                    <button
+                      type="button"
+                      className={`rr-chrome-left-ai${rrAiPanelOpen ? ' rr-chrome-left-ai--active' : ''}`}
+                      aria-label="Create with AI"
+                      data-tour-id="create-with-ai"
+                      aria-pressed={rrAiPanelOpen}
+                      onClick={() => {
+                        setPaletteSection(null);
+                        setVersionHistoryOpen(false);
+                        setRrAiPanelOpen((open) => {
+                          const nextOpen = !open;
+                          if (nextOpen) {
+                            onAiBuilderPanelOpenChange?.(true);
+                          } else {
+                            onAiBuilderPanelOpenChange?.(false);
+                          }
+                          return nextOpen;
+                        });
+                      }}
+                    >
+                      <span
+                        className="ai-gradient-icon rr-chrome-left-floater__icon rr-chrome-left-floater__icon--ai"
+                        style={{
+                          WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                          maskImage: `url("${iconAgentsPurple}")`,
+                        }}
+                        aria-hidden
+                      />
+                      {sep1Chrome && <span className="rr-chrome-left-label">AI</span>}
+                    </button>
+                  </Tooltip>
+                  <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
+                    {[
+                      {
+                        id: 'Trigger',
+                        src: iconRrTrigger,
+                        icon: 'bolt',
+                        color: '#FE9A00',
+                        label: 'Trigger',
+                        tourId: 'trigger',
+                      },
+                      ...(showProceduresFloater
+                        ? [{
+                            id: 'Procedures',
+                            src: iconRrProcedures,
+                            icon: 'menu_book',
+                            color: '#7C3AED',
+                            label: 'Procedures',
+                            tourId: 'procedures',
+                          }]
+                        : []),
+                      {
+                        id: 'Tasks',
+                        src: iconRrTasks,
+                        icon: 'description',
+                        color: '#00C950',
+                        label: 'Action',
+                        underLabel: 'Actions',
+                        tourId: 'tasks',
+                      },
+                      {
+                        id: 'Controls',
+                        src: iconRrControls,
+                        icon: 'account_tree',
+                        color: '#62748E',
+                        label: 'Controls',
+                        tourId: 'controls',
+                      },
+                    ].map((item) => {
+                      const displayLabel = sep1Chrome ? (item.underLabel || item.label) : item.label;
+                      const btn = (
+                        <button
+                          type="button"
+                          className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
+                          aria-label={displayLabel}
+                          data-tour-id={item.tourId || undefined}
+                          aria-pressed={paletteSection === item.id}
+                          onClick={() => {
+                            setVersionHistoryOpen(false);
+                            const opening = paletteSection !== item.id;
+                            if (opening && rrAiPanelOpen) {
+                              setPaletteInstant(true);
+                              closeAiBuilderPanelInstant();
+                            } else if (opening) {
+                              closeAiBuilderPanel();
+                            }
+                            setPaletteSection((prev) => (prev === item.id ? null : item.id));
+                          }}
+                        >
+                          {/* Filled glyphs only on exploration chrome — Sep 1 keeps outlined SVGs. */}
+                          {explorationChrome && !sep1Chrome ? (
+                            <span className="rr-chrome-left-floater__icon" style={{ color: item.color }} aria-hidden>
+                              <Icon name={item.icon} size={20} fill />
+                            </span>
+                          ) : fullCanvasChrome && getBadgeForSection(item.id) ? (
+                            /* Full canvas: same asset, but masked so it takes the node badge's
+                               accent instead of the colour baked into the file. */
+                            <span
+                              className="rr-chrome-left-floater__icon rr-chrome-left-floater__icon--mask"
+                              style={{
+                                color: getBadgeForSection(item.id).color,
+                                WebkitMaskImage: `url("${item.src}")`,
+                                maskImage: `url("${item.src}")`,
+                              }}
+                              aria-hidden
+                            />
+                          ) : (
+                            <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          )}
+                          {sep1Chrome && <span className="rr-chrome-left-label">{displayLabel}</span>}
+                        </button>
+                      );
+                      // Sep 1 shows labels under icons — skip redundant tooltips (Create with AI keeps its tooltip).
+                      if (sep1Chrome) {
+                        return <React.Fragment key={item.id}>{btn}</React.Fragment>;
+                      }
+                      return (
+                        <Tooltip key={item.id} content={displayLabel} variant="brief" side="right">
+                          {btn}
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {paletteSection && !viewOnly && (
+                <div className={`rr-chrome-palette${paletteInstant ? ' rr-chrome-palette--instant' : ''}`}>
+                  <LHSDrawer
+                    key={paletteSection}
+                    defaultTab="Create manually"
+                    showTabs={false}
+                    sectionOnly
+                    defaultOpenSection={paletteSection}
+                    forceOpenSection={paletteSection}
+                    viewOnly={viewOnly}
+                    product={product}
+                    agentName={agentName}
+                    procedures={procedures}
+                    onCollapse={() => setPaletteSection(null)}
+                    onDropNode={blockActiveEditsForDraft ? undefined : handleDropNode}
+                    draftBlocked={blockActiveEditsForDraft}
+                    onEditDraft={handleGoToDraftVersion}
+                    onProcedureClick={(procedureId) => {
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
+                  />
+                </div>
+              )}
+
+              {versionHistoryOpen && !viewOnly && (
+                <VersionHistoryPanel
+                  variant={versionHistoryMode ? 'canvas' : 'default'}
+                  versions={versionHistoryList}
+                  selectedId={versionHistorySelectedId}
+                  onSelect={setVersionHistorySelectedId}
+                  onClose={closeVersionHistory}
+                />
+              )}
+
+              {/* Clears the app nav and the canvas header pill, which the default top-6 sits on top of. */}
+              <Toast
+                message="Version restored successfully"
+                visible={!!restoredVersionId}
+                actionLabel="Undo"
+                onAction={handleUndoRestore}
+                onClose={() => setRestoredVersionId(null)}
+                className="!top-[124px]"
               />
-            </div>
-          )}
 
-          {!hideLhs && lhsCollapsed && (
-            <button
-              type="button"
-              className="ab-lhs-expand-pill"
-              onClick={() => setLhsCollapsed(false)}
-              aria-label="Open editor"
-              title="Open editor"
-            >
-              <span className="material-symbols-outlined" aria-hidden>
-                left_panel_open
-              </span>
-              <span className="ab-lhs-expand-pill__label">Editor</span>
-            </button>
-          )}
+              {/* Exploration opens Help center in the node-config RHS slot instead (below). */}
+              {helpCenterOpen && !explorationChrome && (
+                <div className="rr-chrome-right-panel rr-chrome-right-panel--help">
+                  <HelpCenterPanel
+                    open={helpCenterOpen}
+                    onClose={() => setHelpCenterOpen(false)}
+                    onOpenGlossary={openGlossary}
+                    onOpenProductResearchSettings={onOpenProductResearchSettings}
+                    onStartTour={() => {
+                      setHelpCenterOpen(false);
+                      if (!viewOnly) setCoachTourOpen(true);
+                    }}
+                  />
+                </div>
+              )}
 
-          {hideLhs && (
-            <div
-              className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
-              aria-hidden
-            />
-          )}
+              {rrAiPanelRendered && !viewOnly && (
+                <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
+                  <AiBuilderPanel
+                    agentName={aiPanelAgentKey}
+                    draftAgentName={agentName}
+                    onClose={closeAiBuilderPanel}
+                    onExpand={
+                      onOpenAiFullscreen
+                        ? () => {
+                            closeAiBuilderPanel();
+                            onOpenAiFullscreen();
+                          }
+                        : undefined
+                    }
+                    className="rr-chrome-ai-panel"
+                    fillShell
+                    side="left"
+                    seedPrompt={ghostwriterChrome ? GHOSTWRITER_CANVAS_SEED_PROMPT : undefined}
+                    onOpenNode={ghostwriterChrome ? () => setSpamGateOpen(true) : undefined}
+                    openProcedureName={lhsPreviewProcedureId}
+                    onOpenProcedure={(procedureId) => {
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
+                  />
+                </div>
+              )}
+
+          </>
 
           <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
             <FlowCanvas
               nodes={nodes}
               edges={edges}
-              onNodeClick={handleNodeClick}
-              onDropNode={viewOnly ? undefined : handleDropNode}
-              onNodesReorder={viewOnly ? undefined : handleNodesReorder}
-              hasClipboard={!viewOnly && !!clipboard}
-              onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
+              onNodeClick={nodesInteractive ? handleNodeClick : undefined}
+              onDropNode={viewOnly || blockActiveEditsForDraft ? undefined : handleDropNode}
+              onNodesReorder={viewOnly || blockActiveEditsForDraft ? undefined : handleNodesReorder}
+              hasClipboard={!viewOnly && !blockActiveEditsForDraft && !!clipboard}
+              onPasteAtConnector={viewOnly || blockActiveEditsForDraft ? undefined : handlePasteBelow}
               selectedNodeId={selectedNodeId}
-              orientation="vertical"
+              orientation={canvasOrientation}
+              onOrientationChange={setCanvasOrientation}
               viewOnly={viewOnly}
+              draftBlocked={blockActiveEditsForDraft}
+              onEditDraft={handleGoToDraftVersion}
               product={product}
               agentName={agentName}
+              rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
+              focusNodeId={testRunOpen ? testRunActiveId : canvasFocusNodeId}
               onEdit={onEdit}
               onView={onView}
               onUndo={handleUndo}
               onRedo={handleRedo}
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
+              hideUndoRedo={versionHistoryOpen}
+              onHelpToggle={(explorationChrome || combineControlsLeft) ? toggleHelpCenter : null}
+              helpOpen={helpCenterOpen}
+              combineControlsLeft={combineControlsLeft}
+              singleAddStepSearch={sep1Chrome}
               onRun={() => {
                 if (isReviewResponseAgent) return;
                 if (isReminderAgent) {
@@ -2542,16 +4771,58 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {drawerOpen && (
-            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+          {testRunOpen && (
+            <>
+              <style>{testRunCss}</style>
+              <div className="agent-builder__rhs agent-builder__rhs--opening">
+                <TestRunPanel
+                  steps={testRunSteps}
+                  stepStatuses={testRun.stepStatuses}
+                  activeIndex={testRun.activeIndex}
+                  status={testRun.status}
+                  onExit={() => setTestRunOpen(false)}
+                />
+              </div>
+            </>
+          )}
+
+          {spamGateOpen && (
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
+              <SpamGatePanel onClose={() => setSpamGateOpen(false)} />
+            </div>
+          )}
+
+          {rhsRendered && !spamGateOpen && (
+            <div
+              key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}
+              className={`agent-builder__rhs${rhsClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
+            >
               <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
             </div>
           )}
 
+          {/* Exploration: Help center uses the same RHS slot + slide as the node cards. */}
+          {helpRendered && explorationChrome && (
+            <div
+              className={`agent-builder__rhs agent-builder__rhs--help${helpClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
+            >
+              <HelpCenterPanel
+                open={helpCenterOpen}
+                onClose={() => setHelpCenterOpen(false)}
+                onOpenGlossary={openGlossary}
+                onOpenProductResearchSettings={onOpenProductResearchSettings}
+                onStartTour={() => {
+                  setHelpCenterOpen(false);
+                  if (!viewOnly) setCoachTourOpen(true);
+                }}
+              />
+            </div>
+          )}
+
           {previewOpen && !isReviewResponseAgent && (
-            <div className="agent-builder__preview">
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
               <PreviewPanel
                 onClose={() => {
                   setPreviewOpen(false);
@@ -2564,6 +4835,123 @@ export default function AgentBuilder({
                 onEditAppointment={() => setBookTestModalOpen(true)}
               />
             </div>
+          )}
+
+          {/* ─── Publish blocked alert (viewport overlay — L1 + top nav + canvas) ─── */}
+          {publishBlockedModalOpen && createPortal(
+            <div
+              className={`ab-publish-blocked-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-publish-blocked-overlay--rhs-wide'
+                    : ' ab-publish-blocked-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPublishBlockedModalOpen(false);
+              }}
+            >
+              <div
+                className="ab-publish-blocked-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-publish-blocked-title"
+              >
+                <div className="ab-publish-blocked-dialog__header">
+                  <h2 id="ab-publish-blocked-title" className="ab-publish-blocked-dialog__title">
+                    {publishBlockedCopy(publishBlockedReason, issueCount).title}
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                    className="ab-publish-blocked-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-publish-blocked-dialog__body">
+                  {publishBlockedCopy(publishBlockedReason, issueCount).body}
+                </p>
+                <div className="ab-publish-blocked-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__cancel"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__primary"
+                    onClick={handleViewPublishErrors}
+                  >
+                    {publishBlockedCopy(publishBlockedReason, issueCount).primaryLabel}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+
+          {/* ─── Delete agent confirm (viewport overlay) ─── */}
+          {deleteConfirmOpen && createPortal(
+            <div
+              className={`ab-confirm-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-confirm-overlay--rhs-wide'
+                    : ' ab-confirm-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setDeleteConfirmOpen(false);
+              }}
+            >
+              <div
+                className="ab-confirm-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-delete-confirm-title"
+              >
+                <div className="ab-confirm-dialog__header">
+                  <h2 id="ab-delete-confirm-title" className="ab-confirm-dialog__title">
+                    Delete agent?
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    className="ab-confirm-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-confirm-dialog__body">
+                  Are you sure you want to delete this agent? This action cannot be undone.
+                </p>
+                <div className="ab-confirm-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__cancel"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__primary ab-confirm-dialog__primary--danger"
+                    onClick={handleConfirmDeleteAgent}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>
@@ -2611,6 +4999,16 @@ export default function AgentBuilder({
 
       {/* ─── Assign conversation status tool drawer ─── */}
       <AssignConversationStatusDrawer isOpen={assignConversationStatusToolOpen} onClose={() => setAssignConversationStatusToolOpen(false)} />
+
+      <HandleResponseDrawer
+        isOpen={handleResponseToolOpen}
+        value={currentDetails.handleResponse}
+        onClose={() => setHandleResponseToolOpen(false)}
+        onSave={(config) => {
+          activeFieldChange('handleResponse', config);
+          setHandleResponseToolOpen(false);
+        }}
+      />
 
       {/* ─── Tool configuration overlay ─── */}
       {viewingTool && (
@@ -2671,6 +5069,23 @@ export default function AgentBuilder({
         accept=".json"
         className="ab-hidden-input"
         onChange={handleImport}
+      />
+
+      {!viewOnly && (
+        <WorkflowCoachTour
+          open={coachTourOpen}
+          onClose={handleCoachTourClose}
+          steps={buildWorkflowCoachSteps({
+            includeProcedures: showProceduresFloater,
+            testRunTitle: isFrontDeskAgentName ? 'Preview' : 'Run test',
+          })}
+        />
+      )}
+
+      <GlossaryModal
+        open={glossaryOpen}
+        onClose={closeGlossary}
+        initialTermId={glossaryTermId}
       />
     </div>
   );

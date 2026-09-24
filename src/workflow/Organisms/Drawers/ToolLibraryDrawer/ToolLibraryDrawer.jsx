@@ -33,9 +33,6 @@ function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'flex-end',
       }}
     >
       {/* Backdrop */}
@@ -44,21 +41,21 @@ function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(0,0,0,0.35)',
+          background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)',
         }}
       />
       {/* Panel */}
       <div
         style={{
-          position: 'relative',
+          position: 'absolute', right: 8, top: 8,
           width,
-          maxWidth: '95vw',
-          height: '100%',
+          maxWidth: 'calc(92vw - 8px)',
+          height: 'calc(100% - 16px)', borderRadius: 16,
           background: '#fff',
           boxShadow: '-4px 0 24px rgba(0,0,0,0.14)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          overflowY: 'auto',
           fontFamily: font,
         }}
         onClick={(e) => e.stopPropagation()}

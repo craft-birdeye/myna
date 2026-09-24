@@ -1,7 +1,11 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
+import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
+// @ts-expect-error JS module — same canvas node-header glyphs as AgentBuilder
+import { BranchIcon, ProcedureIcon, TaskIcon, TriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
@@ -34,11 +38,45 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
-const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
+const DEFAULT_STEP_DURATION_MS: Record<RunLogStep['type'], number> = {
+  trigger: 345,
+  procedures: 760,
+  task: 520,
+  delay: 0,
+  branch: 210,
+}
+
+export function formatStepDuration(ms: number): string {
+  if (ms < 1000) return `${ms} ms`
+  const secs = Math.round((ms / 1000) * 10) / 10
+  return Number.isInteger(secs) ? `${secs} s` : `${secs.toFixed(1)} s`
+}
+
+export function resolveStepDurationMs(step: RunLogStep): number {
+  return step.durationMs ?? DEFAULT_STEP_DURATION_MS[step.type]
+}
+
+/** Node-type icon + colour. Trigger/task/branch/procedures use the canvas header SVGs. Shared with `TestRunPanel`. */
+export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
+  procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
+}
+
+const CANVAS_TYPE_ICON = {
+  trigger: TriggerIcon,
+  task: TaskIcon,
+  branch: BranchIcon,
+  procedures: ProcedureIcon,
+} as const
+
+export function StepTypeIcon({ type, size = 16 }: { type: RunLogStep['type']; size?: number }) {
+  const CanvasIcon = type in CANVAS_TYPE_ICON ? CANVAS_TYPE_ICON[type as keyof typeof CANVAS_TYPE_ICON] : null
+  if (CanvasIcon) return <CanvasIcon size={size} />
+  const meta = TYPE_META[type]
+  return <Icon name={meta.icon} size={size} className={`shrink-0 ${meta.colorClass}`} />
 }
 
 const DEFAULT_STEPS: RunLogStep[] = [
@@ -178,7 +216,8 @@ function NestedFieldBlock({ field }: { field: RunLogField }) {
   )
 }
 
-function FieldList({ fields }: { fields: RunLogField[] }) {
+/** `{}`-chip keyed field tree (nested objects collapse). Shared with `TestRunPanel`. */
+export function FieldList({ fields }: { fields: RunLogField[] }) {
   return (
     <div className="flex flex-col gap-xs">
       {fields.map((f) =>
@@ -188,21 +227,57 @@ function FieldList({ fields }: { fields: RunLogField[] }) {
   )
 }
 
-function RunLogStepRow({ step }: { step: RunLogStep }) {
+function RunLogStepRow({
+  step,
+  onStepFocus,
+}: {
+  step: RunLogStep
+  onStepFocus?: (step: RunLogStep) => void
+}) {
   const [outputOpen, setOutputOpen] = useState(true)
   const [inputsOpen, setInputsOpen] = useState(false)
   const [toolOpen, setToolOpen] = useState(false)
   const meta = TYPE_META[step.type]
-  const outputLabel = step.outputLabel ?? (step.type === 'branch' ? 'Branch output' : 'Task output')
+  const outputLabel =
+    step.outputLabel ??
+    (step.type === 'trigger'
+      ? 'Trigger output'
+      : step.type === 'procedures'
+        ? 'Procedure output'
+        : step.type === 'branch'
+          ? 'Branch output'
+          : 'Action output')
+
+  const focusable = Boolean(onStepFocus)
 
   return (
-    <div className="relative flex gap-md">
+    <div className={`relative flex gap-md ${focusable ? 'group/step' : ''}`}>
       <div className="absolute bottom-0 left-[9px] top-[24px] w-px bg-border" aria-hidden />
       <Icon name="check_circle" size={20} fill className="relative z-10 mt-[2px] shrink-0 text-accent-positive" />
       <div className="min-w-0 flex-1 pb-2xl">
-        <div className="flex items-center gap-xs text-small text-text-tertiary">
-          <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
-          {meta.label}
+        <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
+          <div className="flex min-w-0 items-center gap-xs">
+            <StepTypeIcon type={step.type} />
+            {meta.label}
+          </div>
+          <div className="relative flex h-5 shrink-0 items-center justify-end">
+            <span
+              className={`tabular-nums transition-opacity ${
+                focusable ? 'group-hover/step:opacity-0' : ''
+              }`}
+            >
+              {formatStepDuration(resolveStepDurationMs(step))}
+            </span>
+            {focusable && (
+              <button
+                type="button"
+                onClick={() => onStepFocus?.(step)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-body text-text-action opacity-0 outline-none transition-opacity group-hover/step:opacity-100 focus-visible:opacity-100"
+              >
+                View
+              </button>
+            )}
+          </div>
         </div>
         <p className="mt-xs text-body text-text-primary">
           {step.stepNumber}. {step.title}
@@ -273,11 +348,17 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
   )
 }
 
-function LogsTab({ steps }: { steps: RunLogStep[] }) {
+function LogsTab({
+  steps,
+  onStepFocus,
+}: {
+  steps: RunLogStep[]
+  onStepFocus?: (step: RunLogStep) => void
+}) {
   return (
     <div className="flex flex-col">
       {steps.map((step) => (
-        <RunLogStepRow key={step.id} step={step} />
+        <RunLogStepRow key={step.id} step={step} onStepFocus={onStepFocus} />
       ))}
       <div className="flex items-center gap-md">
         <Icon name="check_circle" size={20} fill className="shrink-0 text-accent-positive" />
@@ -291,7 +372,7 @@ function MetaField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="m-0 text-small text-text-tertiary">{label}</p>
-      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
+      <p className="m-0 mt-xs text-small text-text-primary">{value}</p>
     </div>
   )
 }
@@ -306,16 +387,77 @@ function CallDetailsTab({
   routedVia,
 }: NonNullable<RunDetailsPanelProps['callDetails']>) {
   return (
-    <div className="rounded-sm border border-border px-lg py-lg">
-      <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
-        <MetaField label="Caller number" value={callerNumber} />
-        <MetaField label="Language detected" value={languageDetected} />
-        <MetaField label="Duration" value={duration} />
-        <MetaField label="Call SID" value={sidNumber} />
-        <MetaField label="Start time" value={startTime} />
-        <MetaField label="Call end reason" value={callEndReason} />
-        <MetaField label="Routed via" value={routedVia} />
-      </div>
+    <div className="grid grid-cols-2 gap-x-lg gap-y-md">
+      <MetaField label="Caller number" value={callerNumber} />
+      <MetaField label="Language detected" value={languageDetected} />
+      <MetaField label="Duration" value={duration} />
+      <MetaField label="Call SID" value={sidNumber} />
+      <MetaField label="Start time" value={startTime} />
+      <MetaField label="Call end reason" value={callEndReason} />
+      <MetaField label="Routed via" value={routedVia} />
+    </div>
+  )
+}
+
+export function parseUserRatingValue(rating: string): string {
+  const ofMatch = rating.match(/^(\d+(?:\.\d+)?)\s+of\s+\d+/i)
+  if (ofMatch) return ofMatch[1]
+  return rating.trim()
+}
+
+/** Maps a log run status to a user-rating string for call details. */
+export function getUserRatingForLogStatus(status: string): string | undefined {
+  if (status === 'Complete' || status === 'Resolved') return '4 of 5'
+  if (status === 'Not resolved') return '2.5 of 5'
+  if (status === 'Failed') return '2 of 5'
+  return undefined
+}
+
+/** Compact rating — numeric value + filled star in a subtle rounded chip. */
+export function UserRatingDisplay({ rating }: { rating: string }) {
+  const value = parseUserRatingValue(rating)
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center gap-xs rounded-sm bg-surface-muted px-xs">
+      <span className="text-small text-text-secondary">{value}</span>
+      <Icon name="star" size={12} fill className="text-rating-star" />
+    </span>
+  )
+}
+
+/** First section on the Conversation tab — collapsed on first land; arrow toggles the fields. */
+export function CollapsibleCallDetails({
+  children,
+  userRating,
+  title = 'Details',
+  defaultOpen = false,
+}: {
+  children: ReactNode
+  userRating?: string
+  /** "Call details" for voice transcripts; "Details" for chat/SMS/email. */
+  title?: string
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div className="mb-lg shrink-0 overflow-hidden rounded-md border border-border bg-surface">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-sm px-lg py-md text-left transition-colors hover:bg-surface-hover"
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-sm">
+          <span className="text-body text-text-primary">{title}</span>
+          {userRating ? <UserRatingDisplay rating={userRating} /> : null}
+        </span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
+      </button>
+      {open && <div className="border-t border-border px-lg py-md">{children}</div>}
     </div>
   )
 }
@@ -425,6 +567,48 @@ function DiagnosticsMeta({ entry }: { entry: Extract<RunConversationEntry, { kin
   )
 }
 
+/** Collapsible "Call transcript" block — wraps translation control + bubbles on voice-call logs. */
+export function CallTranscriptSection({
+  children,
+  defaultOpen = true,
+}: {
+  children: ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-xs text-left"
+      >
+        <span className="min-w-0 flex-1 text-body text-text-primary">Call transcript</span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
+      </button>
+      {open && <div className="mt-sm flex flex-col gap-lg">{children}</div>}
+    </div>
+  )
+}
+
+function callTranscriptSplitIndex(entries: RunConversationEntry[], showCallRecording: boolean): number {
+  if (!showCallRecording) return -1
+  const recordingIdx = entries.findIndex(
+    (entry) => entry.kind === 'system' && entry.insertCallRecordingAfter,
+  )
+  if (recordingIdx >= 0) {
+    const messageIdx = entries.findIndex((entry, index) => index > recordingIdx && entry.kind === 'message')
+    return messageIdx
+  }
+  return entries.findIndex((entry) => entry.kind === 'message')
+}
+
 /** Renders a run conversation thread (system labels, email cards, voice bubbles). Reused by the Inbox deep-link view. */
 export function RunConversationThread({
   entries,
@@ -438,91 +622,101 @@ export function RunConversationThread({
   onCoachAgent,
   onTrackFeedback,
 }: RunConversationThreadProps) {
+  const transcriptStartIdx = callTranscriptSplitIndex(entries, showCallRecording)
+  const useCallTranscriptSection = transcriptStartIdx >= 0
+  const leadEntries = useCallTranscriptSection ? entries.slice(0, transcriptStartIdx) : entries
+  const transcriptEntries = useCallTranscriptSection ? entries.slice(transcriptStartIdx) : []
+
+  const renderEntry = (entry: RunConversationEntry, index: number, padTopWhenFirst: boolean) => {
+    if (entry.kind === 'system') {
+      return (
+        <Fragment key={entry.id}>
+          <div className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
+            <ChatSystemLabel text={entry.text} />
+          </div>
+          {showCallRecording && entry.insertCallRecordingAfter && (
+            <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
+              <div className="border border-transparent px-lg">
+                <CallRecordingPlayer
+                  audioUrl={audioUrl}
+                  durationSecs={durationSecs}
+                  padded={false}
+                />
+              </div>
+            </div>
+          )}
+        </Fragment>
+      )
+    }
+
+    if (entry.kind === 'card') {
+      return (
+        <div key={entry.id} className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
+          <ConversationCard entry={entry} />
+        </div>
+      )
+    }
+
+    const withFeedback = meta === 'time' && entry.sender === 'business'
+    const withCoachAgent = meta === 'diagnostics' && entry.sender === 'business' && Boolean(onCoachAgent)
+    const recId = withCoachAgent ? recIdByMessage?.[entry.id] : undefined
+
+    return (
+      <div key={entry.id} className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
+        <ChatBubble
+          sender={entry.sender}
+          text={entry.text}
+          gap="gap-sm"
+          bubbleClassName="max-w-[85%] px-lg py-md"
+          showFeedback={withFeedback}
+          feedback={withFeedback ? feedbackForMessage?.(entry.id) ?? null : undefined}
+          onFeedbackChange={withFeedback ? (value) => onFeedbackChange?.(entry.id, value) : undefined}
+        >
+          {meta === 'time' ? (
+            entry.time && <span className="text-small text-text-tertiary">{entry.time}</span>
+          ) : withCoachAgent ? (
+            <div className="flex w-full max-w-[85%] items-center gap-sm">
+              <div className="min-w-0 flex-1">
+                <DiagnosticsMeta entry={entry} />
+              </div>
+              <div className="flex shrink-0 items-center gap-xs">
+                {recId ? (
+                  <button
+                    type="button"
+                    onClick={() => onTrackFeedback?.(recId)}
+                    className="group flex items-center gap-xs text-small text-text-action"
+                  >
+                    <Icon name="track_changes" size={16} />
+                    <span className="group-hover:underline">Track your feedback</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onCoachAgent?.(entry.id)}
+                    className="group flex items-center gap-xs text-small text-text-action"
+                  >
+                    <AiCoachSparkleIcon />
+                    <span className="group-hover:underline">Coach agent</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <DiagnosticsMeta entry={entry} />
+          )}
+        </ChatBubble>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-lg">
-      {entries.map((entry, index) => {
-        if (entry.kind === 'system') {
-          // The sticky block must be a direct sibling within the thread's own flex container
-          // (not nested inside this entry's own short-lived wrapper) — a sticky element can never
-          // stay stuck past the bottom edge of its immediate parent's box, and this wrapper alone
-          // is far too short to keep it pinned once the transcript below has scrolled by.
-          return (
-            <Fragment key={entry.id}>
-              <div className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
-                <ChatSystemLabel text={entry.text} />
-              </div>
-              {showCallRecording && entry.insertCallRecordingAfter && (
-                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-sm pt-sm">
-                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
-                  <CallRecordingPlayer
-                    audioUrl={audioUrl}
-                    durationSecs={durationSecs}
-                    padded={false}
-                  />
-                </div>
-              )}
-            </Fragment>
-          )
-        }
-        if (entry.kind === 'card') {
-          return (
-            <div key={entry.id} className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
-              <ConversationCard entry={entry} />
-            </div>
-          )
-        }
-
-        const withFeedback = meta === 'time' && entry.sender === 'business'
-        const withCoachAgent = meta === 'diagnostics' && entry.sender === 'business' && Boolean(onCoachAgent)
-        const recId = withCoachAgent ? recIdByMessage?.[entry.id] : undefined
-
-        return (
-          <div key={entry.id} className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
-            <ChatBubble
-              sender={entry.sender}
-              text={entry.text}
-              gap="gap-sm"
-              bubbleClassName="max-w-[85%] px-lg py-md"
-              showFeedback={withFeedback}
-              feedback={withFeedback ? feedbackForMessage?.(entry.id) ?? null : undefined}
-              onFeedbackChange={withFeedback ? (value) => onFeedbackChange?.(entry.id, value) : undefined}
-            >
-              {meta === 'time' ? (
-                entry.time && <span className="text-small text-text-tertiary">{entry.time}</span>
-              ) : withCoachAgent ? (
-                <div className="flex w-full max-w-[85%] items-center gap-sm">
-                  <div className="min-w-0 flex-1">
-                    <DiagnosticsMeta entry={entry} />
-                  </div>
-                  <div className="flex shrink-0 items-center gap-xs">
-                    {recId ? (
-                      <button
-                        type="button"
-                        onClick={() => onTrackFeedback?.(recId)}
-                        className="group flex items-center gap-xs text-small text-text-action"
-                      >
-                        <Icon name="track_changes" size={16} />
-                        <span className="group-hover:underline">Track your feedback</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onCoachAgent?.(entry.id)}
-                        className="group flex items-center gap-xs text-small text-text-action"
-                      >
-                        <Icon name="auto_awesome" size={16} />
-                        <span className="group-hover:underline">Coach agent</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <DiagnosticsMeta entry={entry} />
-              )}
-            </ChatBubble>
-          </div>
-        )
-      })}
+      {leadEntries.map((entry, index) => renderEntry(entry, index, showCallRecording))}
+      {useCallTranscriptSection && (
+        <div className="flex flex-col gap-lg">
+          {transcriptEntries.map((entry, index) => renderEntry(entry, index, false))}
+        </div>
+      )}
     </div>
   )
 }
@@ -533,6 +727,8 @@ export function RunDetailsPanel({
   conversation = DEFAULT_CONVERSATION,
   conversationContent,
   showTabs = true,
+  conversationTabLabel = 'Conversation',
+  logsTabLabel = 'Call logs',
   title = 'Run details',
   showHeader = true,
   showCallRecording = false,
@@ -542,11 +738,28 @@ export function RunDetailsPanel({
   callDetailsContent,
   agentName,
   onTrackFeedback,
+  onStepFocus,
+  userRating,
+  conversationAiSummary,
+  initialTab,
+  onTabChange,
 }: RunDetailsPanelProps) {
-  const [tab, setTab] = useState<'logs' | 'conversation' | 'call-details'>('logs')
-  // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
-  // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
-  // conversation thread's first entry instead (see `RunConversationThread`).
+  type PanelTab = 'conversation' | 'call-details' | 'logs'
+  const [tab, setTab] = useState<PanelTab>(() =>
+    initialTab === 'logs' || initialTab === 'call-details' || initialTab === 'conversation'
+      ? initialTab
+      : 'conversation',
+  )
+
+  useEffect(() => {
+    if (initialTab === 'logs' || initialTab === 'call-details' || initialTab === 'conversation') {
+      setTab(initialTab)
+    }
+  }, [initialTab])
+  const hasCallDetails = Boolean(callDetails || callDetailsContent)
+  const showCallDetailsTab = hasCallDetails && showCallRecording
+  const resolvedCallDetailsContent =
+    callDetailsContent ?? (callDetails ? <CallDetailsTab {...callDetails} /> : null)
   const skipContainerTopPadding = showCallRecording && tab === 'conversation'
 
   // Same "Coach agent" → "Track your feedback" flow as `LogDetailsPanel`'s call transcript —
@@ -583,15 +796,15 @@ export function RunDetailsPanel({
   }
 
   return (
-    <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
+    <div className="log-details-panel flex h-full w-[460px] min-w-[360px] flex-col overflow-hidden rounded-xl border border-border bg-surface">
       {showHeader && (
-        <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
-          <h2 className="m-0 text-body text-text-primary">{title}</h2>
+        <div className="flex h-16 shrink-0 items-center justify-between px-2xl">
+          <h2 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h2>
           {onViewConversation && (
             <button
               type="button"
               onClick={onViewConversation}
-              className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
+              className="flex items-center gap-xs rounded-sm px-sm py-xs text-body text-text-action transition-colors hover:bg-surface-hover"
             >
               View conversation
               <Icon name="open_in_new" size={16} />
@@ -601,42 +814,75 @@ export function RunDetailsPanel({
       )}
 
       {showTabs && (
-        <div className={`shrink-0 border-b border-border px-[15px] ${showHeader ? '' : 'pt-sm'}`}>
+        <div className={`shrink-0 px-2xl ${showHeader ? '' : 'pt-lg'}`}>
           <Tabs
             tabs={[
-              { id: 'logs', label: 'Logs' },
-              { id: 'conversation', label: 'Conversation' },
-              ...(callDetails || callDetailsContent ? [{ id: 'call-details', label: 'Call details' }] : []),
+              { id: 'conversation', label: conversationTabLabel },
+              ...(showCallDetailsTab ? [{ id: 'call-details', label: 'Call details' }] : []),
+              { id: 'logs', label: logsTabLabel },
             ]}
             activeTab={tab}
-            onChange={(id) => setTab(id as 'logs' | 'conversation' | 'call-details')}
+            showBaseline={false}
+            onChange={(id) => {
+              const next = id as PanelTab
+              setTab(next)
+              onTabChange?.(next)
+            }}
           />
         </div>
       )}
 
-      <div
-        className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${
-          skipContainerTopPadding ? '' : showHeader ? 'pt-lg' : 'pt-2xl'
-        }`}
-      >
-        {(!showTabs || tab === 'logs') ? (
-          <LogsTab steps={steps} />
-        ) : tab === 'call-details' && (callDetails || callDetailsContent) ? (
-          callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)
-        ) : conversationContent ? (
-          conversationContent
-        ) : (
-          <RunConversationThread
-            entries={conversation}
-            showCallRecording={showCallRecording}
-            audioUrl={audioUrl}
-            durationSecs={durationSecs}
-            recIdByMessage={recIdByMessage}
-            onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
-            onTrackFeedback={onTrackFeedback}
-          />
-        )}
-      </div>
+      {(!showTabs || tab === 'logs') && (
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto px-2xl pb-2xl ${
+            skipContainerTopPadding ? '' : 'pt-lg'
+          }`}
+        >
+          <LogsTab steps={steps} onStepFocus={onStepFocus} />
+        </div>
+      )}
+
+      {showTabs && tab === 'call-details' && showCallDetailsTab && (
+        <div className="min-h-0 flex-1 overflow-y-auto px-2xl pb-2xl pt-lg">
+          {resolvedCallDetailsContent}
+        </div>
+      )}
+
+      {showTabs && tab === 'conversation' && (
+        <div
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden px-2xl pb-2xl ${
+            skipContainerTopPadding ? '' : 'pt-lg'
+          }`}
+        >
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {conversationContent ? (
+              conversationContent
+            ) : (
+              <div className="h-full overflow-y-auto">
+                {conversationAiSummary && conversationAiSummary.length > 0 && (
+                  <div className="pt-lg">
+                    <CallAiSummary bullets={conversationAiSummary} className="mt-0" />
+                  </div>
+                )}
+                {hasCallDetails && !showCallRecording && (
+                  <CollapsibleCallDetails title="Details" userRating={userRating}>
+                    {resolvedCallDetailsContent}
+                  </CollapsibleCallDetails>
+                )}
+                <RunConversationThread
+                  entries={conversation}
+                  showCallRecording={showCallRecording}
+                  audioUrl={audioUrl}
+                  durationSecs={durationSecs}
+                  recIdByMessage={recIdByMessage}
+                  onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
+                  onTrackFeedback={onTrackFeedback}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {agentName && (
         <>

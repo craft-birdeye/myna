@@ -1,4 +1,4 @@
-import { Icon } from '../Icon/Icon'
+import { Info } from 'lucide-react'
 import { MetricTilesProps } from './MetricTiles.types'
 
 /** 18420 → "18.4K". Percentages, times, currency, and already-compact values ("1.9K") pass through. */
@@ -39,7 +39,7 @@ export function MetricTiles({ metrics, renderTileAction }: MetricTilesProps) {
             <span className="text-body text-text-primary">{metric.label}</span>
             {metric.info && (
               <span className="relative group flex items-center">
-                <Icon name="info" size={16} className="text-text-tertiary cursor-default" />
+                <Info className="size-4 cursor-default text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
                 {metric.tooltip && (
                   <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-xs -translate-x-1/2 w-max max-w-[280px] rounded-sm bg-tooltip px-sm py-xs text-small text-white opacity-0 shadow-tooltip transition-opacity group-hover:opacity-100">
                     {metric.tooltip}

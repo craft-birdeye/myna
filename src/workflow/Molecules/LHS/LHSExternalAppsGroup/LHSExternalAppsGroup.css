@@ -50,7 +50,7 @@
   min-height: 36px;
   padding: 4px 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   cursor: grab;
   width: 100%;
@@ -64,22 +64,67 @@
 
 .lhs-external-apps__item-label {
   flex: 1;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
-  line-height: 20px;
-  letter-spacing: -0.28px;
+  line-height: 16px;
+  letter-spacing: -0.24px;
   color: #212121;
   text-align: left;
   min-width: 0;
 }
 
+.lhs-external-apps__item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lhs-external-apps__item-desc {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.24px;
+  color: #757575;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.lhs-external-apps__item--described {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  min-height: 0;
+}
+
+.lhs-external-apps__item--described .lhs-external-apps__icon {
+  margin-top: 0;
+}
+
+.lhs-external-apps__item--described .lhs-external-apps__item-drag {
+  align-self: center;
+}
+
 .lhs-external-apps__item-drag {
   flex-shrink: 0;
-  color: #212121;
+  color: #aaa;
   font-size: 20px !important;
   width: 20px;
   height: 20px;
   line-height: 1;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.lhs-external-apps__item:hover .lhs-external-apps__item-drag {
+  opacity: 1;
+  color: #212121;
+}
+
+.lhs-external-apps__item-drag--visible {
   opacity: 1;
 }
 
@@ -113,7 +158,7 @@
 }
 
 .lhs-external-apps__icon--quickbooks {
-  border-radius: 4px;
+  border-radius: 8px;
   background: #2ca01c;
 }
 
@@ -137,4 +182,64 @@
 .lhs-external-apps__icon--salesforce svg {
   width: 28px;
   height: 16px;
+}
+
+.lhs-external-apps__icon--zendesk {
+  border-radius: 9999px;
+  background: #03363d;
+}
+
+.lhs-external-apps__icon--zendesk .lhs-external-apps__icon-text {
+  font-size: 12px;
+  letter-spacing: -0.4px;
+}
+
+.lhs-external-apps--inline {
+  width: 100%;
+  max-width: 100%;
+  box-shadow: none;
+  padding: 0;
+  gap: 8px;
+  max-height: none;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 8px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon--freshdesk,
+.lhs-external-apps--inline .lhs-external-apps__icon--servicetitan,
+.lhs-external-apps--inline .lhs-external-apps__icon--zendesk {
+  border-radius: 8px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon .material-symbols-outlined {
+  font-size: 12px !important;
+  width: 12px;
+  height: 12px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon-text {
+  font-size: 8px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon--servicetitan svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon--salesforce svg {
+  width: 20px;
+  height: 12px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__icon--zendesk .lhs-external-apps__icon-text {
+  font-size: 9px;
+}
+
+.lhs-external-apps--inline .lhs-external-apps__item-label {
+  font-size: 12px;
+  line-height: 16px;
 }

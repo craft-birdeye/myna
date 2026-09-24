@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { FormInput, TextArea, Toggle } from '../../../elemental-stubs';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { FormInput, TextArea, Toggle, SingleSelect, MultiSelect } from '../../../elemental-stubs';
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   React.useEffect(() => {
     if (isOpen) { document.body.style.overflow = 'hidden'; }
@@ -8,9 +9,9 @@ function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   }, [isOpen]);
   if (!isOpen) return null;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
-      <div style={{ position: 'relative', width, maxWidth: '95vw', height: '100%', background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'absolute', right: 8, top: 8, width, maxWidth: 'calc(92vw - 8px)', height: 'calc(100% - 16px)', borderRadius: 16, background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -23,6 +24,30 @@ function Select({ value, onChange, children }) {
 }
 function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }
 import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
+import ToolbarButton from '../../../Molecules/Inputs/ToolbarButton.jsx';
+import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
+import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
+import { MediaLibraryModal } from '../../../../components/MediaLibraryModal/MediaLibraryModal';
+import localizeSampleImage from '../../../../assets/media-library/photo-1.jpg';
+import { REVIEW_RESPONSE_TEMPLATES } from '../../../../data/messageTemplateLibrary';
+import { Chip } from '../../../../components/Chip/Chip';
+import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
+import SentimentModal from '../../Modals/SentimentModal/SentimentModal.jsx';
+import DataType from '../../../Molecules/DataType/DataType';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
+import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
+import { UpdateStateToolDetails } from '../../Panels/RHS/UpdateStateTaskBody';
+import usStyles from '../../Panels/RHS/UpdateStateTaskBody.module.css';
+import {
+  getSentiments,
+  createSentiment,
+  updateSentiment as updateSentimentEntry,
+  deleteSentiment,
+  restoreDefaultSentiments,
+  getDefaultSentiment,
+  isSentimentListAtDefault,
+} from '../../../services/sentimentService';
 import styles from './CustomToolViewer.module.css';
 
 // ─── Template picker data ─────────────────────────────────────────────────────
@@ -233,20 +258,24 @@ function FieldLabel({ label, required, showInfoIcon, infoText }) {
       <span className={styles.fieldLabel}>
         {label}{required && <span className={styles.required}> *</span>}
       </span>
-      {showInfoIcon && (
-        <span className={`material-symbols-outlined ${styles.fieldInfoIcon}`} title={infoText || label}>
-          info
-        </span>
-      )}
+      {showInfoIcon && infoText ? (
+        <InfoTooltip text={infoText} variant="detail" />
+      ) : null}
     </span>
   );
 }
 
 function FieldHeader({ label, required, helpText, showInfoIcon, infoText }) {
+  const tip = showInfoIcon ? infoText : undefined;
   return (
     <>
-      <FieldLabel label={label} required={required} showInfoIcon={showInfoIcon} infoText={infoText || helpText} />
-      {helpText && <span className={styles.fieldHelp}>{helpText}</span>}
+      <FieldLabel
+        label={label}
+        required={required}
+        showInfoIcon={Boolean(tip)}
+        infoText={tip}
+      />
+      {helpText ? <span className={styles.fieldHelp}>{helpText}</span> : null}
     </>
   );
 }
@@ -277,6 +306,1247 @@ function SectionField({ field, onValueChange }) {
   );
 }
 
+/* ─── Create-ticket builder field ───────────────────────────────────────── */
+
+const TICKET_ASSIGNEE_TYPES = [
+  { value: 'Users', label: 'Users' },
+  { value: 'Roles', label: 'Roles' },
+];
+
+/** Condition field → its allowed values. Status is shared with the Set status action. */
+const TICKET_CONDITION_VALUES = {
+  Status: ['New', 'Assigned', 'In progress'],
+  'Time elapsed': ['1 day', '2 days', '3 days', '1 week', '2 weeks'],
+};
+
+const TICKET_CONDITION_FIELDS = Object.keys(TICKET_CONDITION_VALUES).map((v) => ({ value: v, label: v }));
+
+const TICKET_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  .map((d) => ({ value: d, label: d }));
+
+/** Only Time elapsed can skip days. */
+const TICKET_EXCLUDE_FIELD = 'Time elapsed';
+
+const TICKET_ACTION_TYPES = [
+  { id: 'assignee', menuLabel: 'Select assignee', rowLabel: 'Assign to' },
+  { id: 'status', menuLabel: 'Set status', rowLabel: 'Set status' },
+  { id: 'notify', menuLabel: 'Select whom to notify', rowLabel: 'Notify' },
+];
+
+/** Enough for the three action rows; used to decide whether to flip upward. */
+const TICKET_ACTION_MENU_H = 132;
+
+const TICKET_ROLES = ['Client Admin', 'Client Manager', 'Client User', 'Location Manager'];
+const TICKET_USERS = ['Jane Cooper', 'Devon Lane', 'Naveen K'];
+/** Cap behind the "Select upto 10 users" placeholder on the assignee action. */
+const TICKET_ASSIGNEE_MAX = 10;
+
+/** "Client Admin" for one, "2 roles" past that. */
+function ticketCountLabel(noun) {
+  return (selected) => (selected.length === 1 ? selected[0] : `${selected.length} ${noun}`);
+}
+
+/** ['Mon','Tue','Wed','Thu'] -> 'Mon, Tue, Wed, and Thu'. */
+function ticketOxfordList(selected) {
+  if (selected.length <= 1) return selected[0] || '';
+  if (selected.length === 2) return `${selected[0]} and ${selected[1]}`;
+  return `${selected.slice(0, -1).join(', ')}, and ${selected[selected.length - 1]}`;
+}
+
+/** A chosen value, styled as a filled field box; the cross clears it back to its picker. */
+function TicketChip({ label, onClear }) {
+  return (
+    <span className={styles.ticketChip}>
+      <span className={styles.ticketChipLabel}>{label}</span>
+      <button type="button" className={styles.ticketChipClear} aria-label={`Clear ${label}`} onClick={onClear}>
+        <span className="material-symbols-outlined">close</span>
+      </button>
+    </span>
+  );
+}
+
+const LOCALIZE_CORNERS = [
+  { id: 'top-left', label: 'top left' },
+  { id: 'top-right', label: 'top right' },
+  { id: 'bottom-left', label: 'bottom left' },
+  { id: 'bottom-right', label: 'bottom right' },
+];
+
+const LOCALIZE_IMAGE_SOURCES = [
+  { id: 'computer', label: 'Computer', icon: 'devices' },
+  { id: 'media-library', label: 'Media library', icon: 'cloud' },
+  { id: 'free-media', label: 'Free media', icon: 'camera' },
+];
+
+/**
+ * "Localize media" — a preview image with a field slot in each corner. Clicking a corner
+ * opens the same `FieldPickerModal` every other Fields trigger in the builder uses, and the
+ * chosen token is stamped into that corner. The centred button swaps the preview image.
+ */
+function LocalizeMediaField({ field, onValueChange }) {
+  const [image, setImage] = useState(field.defaultImage || localizeSampleImage);
+  // { [cornerId]: token } — the location detail stamped in that corner.
+  const [corners, setCorners] = useState(field.defaultValue || {});
+  const [pickerCorner, setPickerCorner] = useState(null);
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const cornerRefs = useRef({});
+  const sourceMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!sourceMenuOpen) return undefined;
+    const close = (e) => {
+      if (!sourceMenuRef.current?.contains(e.target)) setSourceMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [sourceMenuOpen]);
+
+  const commit = (next) => {
+    setCorners(next);
+    onValueChange?.(field.id, next);
+  };
+
+  const handleSource = (id) => {
+    setSourceMenuOpen(false);
+    if (id === 'media-library') setMediaOpen(true);
+    // 'computer' wants a real file input, and 'free-media' a stock-photo browser — neither
+    // exists yet, so both are inert rather than pointed at the wrong picker.
+  };
+
+  return (
+    <div className={styles.localizeField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+
+      <div className={styles.localizeCanvas} style={{ backgroundImage: `url(${image})` }}>
+        {LOCALIZE_CORNERS.map((corner) => {
+          const token = corners[corner.id];
+          return (
+            <div key={corner.id} className={`${styles.localizeCorner} ${styles[`localizeCorner--${corner.id}`]}`}>
+              {token ? (
+                /* Same variable chip the tool's other field boxes use — blue {x} cell,
+                   divider, name, clear cross. */
+                <span className={styles.localizeToken}>
+                  <DataType
+                    type="variable"
+                    label={token}
+                    onRemove={() => {
+                      const next = { ...corners };
+                      delete next[corner.id];
+                      commit(next);
+                    }}
+                  />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  ref={(el) => { cornerRefs.current[corner.id] = el; }}
+                  className={styles.localizeAddBtn}
+                  aria-label={`Add a field to the ${corner.label}`}
+                  onClick={() => setPickerCorner(corner.id)}
+                >
+                  <span className="material-symbols-outlined">add</span>
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        <div className={styles.localizeChangeWrap} ref={sourceMenuRef}>
+          <button
+            type="button"
+            className={styles.localizeChangeBtn}
+            onClick={() => setSourceMenuOpen((v) => !v)}
+          >
+            <span>Change preview image</span>
+            <span className="material-symbols-outlined">expand_more</span>
+          </button>
+          {sourceMenuOpen && (
+            <div className={styles.localizeSourceMenu}>
+              {LOCALIZE_IMAGE_SOURCES.map((src) => (
+                <button
+                  key={src.id}
+                  type="button"
+                  className={styles.localizeSourceItem}
+                  onClick={() => handleSource(src.id)}
+                >
+                  <span className="material-symbols-outlined">{src.icon}</span>
+                  <span>{src.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {pickerCorner && (
+        <FieldPickerModal
+          onClose={() => setPickerCorner(null)}
+          onSelectField={(value, name) => {
+            commit({ ...corners, [pickerCorner]: name || value });
+            setPickerCorner(null);
+          }}
+          anchorEl={cornerRefs.current[pickerCorner]}
+          showTriggerFields
+        />
+      )}
+
+      <MediaLibraryModal
+        open={mediaOpen}
+        onClose={() => setMediaOpen(false)}
+        onDone={(selected) => {
+          if (selected[0]?.thumbnail) setImage(selected[0].thumbnail);
+          setMediaOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * "Templates" picker for the Select template action — the shared Aero `MultiSelect` with its
+ * search box, Select all row, two-line rows and Apply footer, rather than a bespoke panel.
+ * Picks stage inside the menu and commit on Apply.
+ */
+function TemplateMultiSelectField({ field, onValueChange }) {
+  const templates = field.options?.length ? field.options : REVIEW_RESPONSE_TEMPLATES;
+  const [selected, setSelected] = useState(field.defaultValue || []);
+
+  const options = templates.map((t) => ({ value: t.id, label: t.title, description: t.body }));
+
+  /** One pick reads by name; the whole list reads "All selected"; anything else counts. */
+  const labelFor = (ids) => {
+    if (ids.length === 0) return '';
+    if (ids.length >= templates.length) return 'All selected';
+    if (ids.length === 1) return templates.find((t) => t.id === ids[0])?.title ?? '1 template';
+    return `${ids.length} templates`;
+  };
+
+  const commit = (ids) => {
+    setSelected(ids);
+    onValueChange?.(field.id, ids);
+  };
+
+  return (
+    <div className={styles.tmsField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+      <MultiSelect
+        name={field.id}
+        selected={selected}
+        options={options}
+        onChange={commit}
+        onClear={() => commit([])}
+        formatLabel={labelFor}
+        menuHeaderLabel={labelFor}
+        selectAllLabel="Select all"
+        applyLabel="Apply"
+        placeholder="Select"
+        searchable
+        portalMenu
+      />
+    </div>
+  );
+}
+
+/** Read-only chips in a tinted box — fields the keywords are pulled from, not editable. */
+function ReadOnlyChipsField({ field }) {
+  return (
+    <div className={styles.roChipsField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+      <div className={styles.roChipsBox}>
+        {/* Same shared Chip the library cards use, with their darker label override. */}
+        {(field.options || []).map((chip) => (
+          <Chip key={chip} label={chip} variant="neutral" className="!text-[#212121]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Chip input with an `n/max` counter — typing a comma (or Enter) turns what you've typed
+ * into a chip. Reuses the `tags` field's chip chrome so it matches the other tag inputs.
+ */
+function KeywordChipsField({ field, onValueChange }) {
+  const max = field.maxItems ?? 5;
+  const [chips, setChips] = useState(
+    Array.isArray(field.defaultValue) ? field.defaultValue : [],
+  );
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+  const full = chips.length >= max;
+
+  const commit = (next) => {
+    setChips(next);
+    onValueChange?.(field.id, next);
+  };
+
+  /** Adds every complete (comma-terminated) part, keeping the tail as the live draft. */
+  const handleChange = (value) => {
+    if (!value.includes(',')) {
+      setDraft(full ? '' : value);
+      return;
+    }
+    const parts = value.split(',');
+    const tail = parts.pop();
+    const additions = parts.map((p) => p.trim()).filter(Boolean);
+    const next = [...chips];
+    additions.forEach((word) => {
+      if (next.length < max && !next.includes(word)) next.push(word);
+    });
+    commit(next);
+    setDraft(next.length >= max ? '' : tail);
+  };
+
+  const commitDraft = () => {
+    const word = draft.trim();
+    if (!word || full || chips.includes(word)) { setDraft(''); return; }
+    commit([...chips, word]);
+    setDraft('');
+  };
+
+  return (
+    <div className={styles.countedField}>
+      <div className={styles.countedHeader}>
+        <FieldHeader
+          label={field.label}
+          required={field.required}
+          showInfoIcon={field.showInfoIcon}
+          infoText={field.infoText}
+        />
+        <span className={styles.countedCount}>{chips.length}/{max}</span>
+      </div>
+
+      <div
+        className={`${styles.tagsInput} ${styles.keywordChipsBox}`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {chips.map((chip) => (
+          <span key={chip} className={styles.tagChip}>
+            {chip}
+            <button
+              type="button"
+              className={styles.tagChipRemove}
+              aria-label={`Remove ${chip}`}
+              onClick={(e) => { e.stopPropagation(); commit(chips.filter((c) => c !== chip)); }}
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          className={styles.tagInputInner}
+          value={draft}
+          disabled={full && !draft}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitDraft(); }
+            // Backspace on an empty draft picks off the last chip.
+            if (e.key === 'Backspace' && !draft && chips.length) commit(chips.slice(0, -1));
+          }}
+          placeholder={chips.length === 0 ? field.placeholder : ''}
+        />
+      </div>
+    </div>
+  );
+}
+
+const TICKET_CUSTOMER_FIELDS = [
+  { id: 'firstName', label: 'First name' },
+  { id: 'lastName', label: 'Last name' },
+  { id: 'email', label: 'Email' },
+  { id: 'phone', label: 'Phone' },
+];
+
+/**
+ * "Create ticket in Birdeye" — Default fields + Apply escalation rules, each a
+ * collapsible section. Rendered for `type: 'ticketBuilder'` fields.
+ */
+function TicketBuilderField({ field, onValueChange }) {
+  const [openSections, setOpenSections] = useState({ defaults: true, escalation: false });
+  const [assign, setAssign] = useState({ type: 'Users', values: [] });
+  const [watchers, setWatchers] = useState({ type: 'Users', values: [] });
+  const [description, setDescription] = useState({ chips: [], text: '' });
+  const [customer, setCustomer] = useState(() =>
+    Object.fromEntries(TICKET_CUSTOMER_FIELDS.map((f) => [f.id, { chips: [], text: '' }])),
+  );
+  const [conditions, setConditions] = useState([]);
+  const [actions, setActions] = useState([]);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  // Action id whose target picker is being edited. The row collapses to a
+  // "2 roles" chip once done, so without this the first pick would collapse it
+  // and a second value could never be added.
+  const [targetEditing, setTargetEditing] = useState(null);
+  const [actionMenuRect, setActionMenuRect] = useState(null);
+  const targetRefs = useRef({});
+  const actionMenuPanelRef = useRef(null);
+  // { key } — which variable box the Fields picker is inserting into.
+  const [picker, setPicker] = useState(null);
+  const anchorRefs = useRef({});
+  const actionMenuRef = useRef(null);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    onValueChange?.(field.id, { assign, watchers, description, customer, conditions, actions });
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assign, watchers, description, customer, conditions, actions, field.id]);
+
+  useEffect(() => {
+    if (!actionMenuOpen) return undefined;
+    function onDown(e) {
+      // The menu is portaled to <body>, so check it as well as the trigger —
+      // otherwise the close fires before an item's own onClick.
+      if (actionMenuRef.current?.contains(e.target)) return;
+      if (actionMenuPanelRef.current?.contains(e.target)) return;
+      setActionMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [actionMenuOpen]);
+
+  // Anchor the portaled menu below the trigger. Being portaled at a high
+  // z-index it paints over the Save footer rather than behind it, so it only
+  // flips up if it would leave the viewport entirely.
+  useEffect(() => {
+    if (!actionMenuOpen) return undefined;
+    function measure() {
+      const el = actionMenuRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const openUp = r.bottom + 6 + TICKET_ACTION_MENU_H > window.innerHeight;
+      setActionMenuRect({
+        left: r.left,
+        top: openUp ? r.top - 6 - TICKET_ACTION_MENU_H : r.bottom + 6,
+        width: Math.max(r.width, 200),
+      });
+    }
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [actionMenuOpen]);
+
+  // Clicking away settles the target picker into its chip.
+  useEffect(() => {
+    if (!targetEditing) return undefined;
+    function onDown(e) {
+      const el = targetRefs.current[targetEditing];
+      if (el && !el.contains(e.target)) setTargetEditing(null);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [targetEditing]);
+
+
+  const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  /** Every condition row needs a field and a value before another can be added. */
+  // Each field / action type can only be used once, so the add actions also
+  // switch off once every one of them is on the board.
+  const usedActionTypes = actions.map((a) => a.type);
+  const remainingActionTypes = TICKET_ACTION_TYPES.filter((t) => !usedActionTypes.includes(t.id));
+  const canAddCondition = conditions.every((c) => c.field && c.value)
+    && conditions.length < TICKET_CONDITION_FIELDS.length;
+  const canAddAction = actions.every((a) => (a.type === 'status' ? a.status : a.values?.length))
+    && remainingActionTypes.length > 0;
+
+  function insertVariable(name) {
+    const key = picker?.key;
+    if (!key) return;
+    if (key === 'description') {
+      setDescription((prev) => (prev.chips.includes(name) ? prev : { ...prev, chips: [...prev.chips, name] }));
+    } else {
+      setCustomer((prev) => (prev[key].chips.includes(name)
+        ? prev
+        : { ...prev, [key]: { ...prev[key], chips: [...prev[key].chips, name] } }));
+    }
+    setPicker(null);
+  }
+
+  /** Bordered box holding inserted variable chips, free text, and the {x} trigger. */
+  const variableBox = (key, value, setValue, { multiline = false, placeholder = '' } = {}) => (
+    <div
+      ref={(el) => { anchorRefs.current[key] = el; }}
+      className={`${styles.ticketVarBox}${multiline ? ` ${styles.ticketVarBoxMultiline}` : ''}`}
+    >
+      <div className={styles.ticketVarChips}>
+        {value.chips.map((chip) => (
+          <DataType
+            key={chip}
+            type="variable"
+            label={chip}
+            onRemove={() => setValue({ ...value, chips: value.chips.filter((c) => c !== chip) })}
+          />
+        ))}
+        {multiline ? (
+          <textarea
+            className={styles.ticketVarTextarea}
+            value={value.text}
+            placeholder={placeholder}
+            onChange={(e) => setValue({ ...value, text: e.target.value })}
+          />
+        ) : (
+          <input
+            type="text"
+            className={styles.ticketVarInput}
+            value={value.text}
+            placeholder={value.chips.length === 0 ? placeholder : ''}
+            onChange={(e) => setValue({ ...value, text: e.target.value })}
+          />
+        )}
+      </div>
+      <button
+        type="button"
+        className={`${styles.ticketVarBtn}${multiline ? ` ${styles.ticketVarBtnBottom}` : ''}`}
+        aria-label="Insert field"
+        onClick={() => setPicker({ key })}
+      >
+        <VariableIcon />
+      </button>
+    </div>
+  );
+
+  /** "Assign ticket to  Users ▾" + the matching select below it. */
+  const assigneeRow = (label, state, setState) => (
+    <div className={styles.fieldWrap}>
+      <div className={styles.ticketInlineLabelRow}>
+        <span className={styles.fieldLabel}>{label}</span>
+        <select
+          className={styles.ticketInlineSelect}
+          value={state.type}
+          onChange={(e) => setState({ type: e.target.value, values: [] })}
+        >
+          {TICKET_ASSIGNEE_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+        <span className={`material-symbols-outlined ${styles.ticketInlineChevron}`}>arrow_drop_down</span>
+      </div>
+      <MultiSelect
+        name={`${field.id}-${label}`}
+        selected={state.values || []}
+        options={(state.type === 'Roles' ? TICKET_ROLES : TICKET_USERS)
+          .map((o) => ({ value: o, label: o }))}
+        placeholder={state.type === 'Roles' ? 'Select roles' : 'Select users'}
+        onChange={(vals) => setState({ ...state, values: vals })}
+      />
+    </div>
+  );
+
+  return (
+    <div className={styles.ticketWrap}>
+      {/* ── Default fields ── */}
+      <div className={styles.ticketSection}>
+        <button type="button" className={styles.ticketSectionHeader} onClick={() => toggleSection('defaults')}>
+          <span className={styles.ticketSectionTitle}>
+            Default fields
+          </span>
+          <span className="material-symbols-outlined">
+            {openSections.defaults ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+          </span>
+        </button>
+        {openSections.defaults && (
+          <div className={styles.ticketSectionBody}>
+            {assigneeRow('Assign ticket to', assign, setAssign)}
+            {assigneeRow('Assign watchers to', watchers, setWatchers)}
+
+            <div className={styles.fieldWrap}>
+              <span className={styles.fieldLabel}>
+                Ticket description<span className={styles.required}> *</span>
+              </span>
+              {variableBox('description', description, setDescription, { multiline: true })}
+            </div>
+
+            <div className={styles.ticketGroupLabelRow}>
+              <span className={styles.ticketGroupLabel}>Customer information</span>
+            </div>
+
+            {TICKET_CUSTOMER_FIELDS.map((cf) => (
+              <div key={cf.id} className={styles.fieldWrap}>
+                <span className={styles.fieldLabel}>{cf.label}</span>
+                {variableBox(
+                  cf.id,
+                  customer[cf.id],
+                  (next) => setCustomer((prev) => ({ ...prev, [cf.id]: next })),
+                  { placeholder: cf.label },
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Apply escalation rules ── */}
+      <div className={styles.ticketSection}>
+        <button type="button" className={styles.ticketSectionHeader} onClick={() => toggleSection('escalation')}>
+          <span className={styles.ticketSectionTitle}>
+            Apply escalation rules
+          </span>
+          <span className="material-symbols-outlined">
+            {openSections.escalation ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+          </span>
+        </button>
+        {openSections.escalation && (
+          <div className={styles.ticketSectionBody}>
+            {/* Conditions */}
+            <div className={styles.ticketRuleCard}>
+              <span className={styles.ticketRuleCardTitle}>Conditions</span>
+              {conditions.map((cond, i) => {
+                const values = TICKET_CONDITION_VALUES[cond.field] || [];
+                // A field already used by another row isn't offered again.
+                const takenFields = conditions.filter((c) => c.id !== cond.id).map((c) => c.field);
+                const fieldOptions = TICKET_CONDITION_FIELDS.filter((f) => !takenFields.includes(f.value));
+                const update = (patch) => setConditions((prev) =>
+                  prev.map((c) => (c.id === cond.id ? { ...c, ...patch } : c)));
+                return (
+                  <div key={cond.id} className={styles.ticketCondBlock}>
+                    {/* Chip once chosen, picker while empty — the cross clears
+                        a slot back to its picker. */}
+                    <div className={styles.ticketCondHead}>
+                      <span className={styles.ticketCondJoin}>{i === 0 ? 'IF' : 'AND'}</span>
+                      <button
+                        type="button"
+                        className={styles.ticketRowDelete}
+                        aria-label="Remove condition"
+                        onClick={() => setConditions((prev) => prev.filter((c) => c.id !== cond.id))}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                    {cond.field ? (
+                      <TicketChip
+                        label={cond.field}
+                        onClear={() => update({ field: '', value: '', exclude: [] })}
+                      />
+                    ) : (
+                      <div className={styles.ticketCondSelect}>
+                        <SingleSelect
+                          name={`${cond.id}-field`}
+                          selected=""
+                          options={fieldOptions}
+                          placeholder="Select"
+                          onChange={(opt) => update({ field: opt.value, value: '', exclude: [] })}
+                        />
+                      </div>
+                    )}
+                    {cond.field && <div className={styles.ticketCondStatic}>is</div>}
+                    {cond.field && (cond.value ? (
+                      <TicketChip label={cond.value} onClear={() => update({ value: '' })} />
+                    ) : (
+                      <div className={styles.ticketCondSelect}>
+                        <SingleSelect
+                          name={`${cond.id}-value`}
+                          selected=""
+                          options={values.map((v) => ({ value: v, label: v }))}
+                          placeholder="Select"
+                          onChange={(opt) => update({ value: opt.value })}
+                        />
+                      </div>
+                    ))}
+                    {/* Exclude stays a dropdown so several days stay tickable. */}
+                    {cond.field === TICKET_EXCLUDE_FIELD && (
+                      <div className={styles.ticketExcludeRow}>
+                        <span className={styles.ticketExcludeLabel}>Exclude</span>
+                        <div className={styles.ticketExcludeSelect}>
+                          <MultiSelect
+                            name={`${cond.id}-exclude`}
+                            selected={cond.exclude || []}
+                            options={TICKET_WEEKDAYS}
+                            placeholder="Select days"
+                            formatLabel={ticketOxfordList}
+                            onChange={(vals) => update({ exclude: vals })}
+                            onClear={() => update({ exclude: [] })}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                className={`${styles.ticketAddBtn}${canAddCondition ? '' : ` ${styles.ticketAddBtnDisabled}`}`}
+                disabled={!canAddCondition}
+                onClick={() => setConditions((prev) => [
+                  ...prev,
+                  { id: `cond-${nextId.current++}`, field: '', value: '', exclude: [] },
+                ])}
+              >
+                <span className="material-symbols-outlined">add_circle</span>
+                <span className={styles.ticketAddBtnLabel}>Add condition</span>
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className={styles.ticketRuleCard}>
+              <span className={styles.ticketRuleCardTitle}>Actions</span>
+              {actions.map((act) => {
+                const meta = TICKET_ACTION_TYPES.find((t) => t.id === act.type);
+                const update = (patch) => setActions((prev) =>
+                  prev.map((a) => (a.id === act.id ? { ...a, ...patch } : a)));
+                const people = (act.valueType === 'Roles' ? TICKET_ROLES : TICKET_USERS)
+                  .map((o) => ({ value: o, label: o }));
+                return (
+                  <div key={act.id} className={styles.ticketActionBlock}>
+                    <div className={styles.ticketCondHead}>
+                      <span className={styles.ticketActionLabel}>{meta.rowLabel}</span>
+                      <button
+                        type="button"
+                        className={styles.ticketRowDelete}
+                        aria-label={`Remove ${meta.rowLabel}`}
+                        onClick={() => setActions((prev) => prev.filter((a) => a.id !== act.id))}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                    {act.type === 'status' ? (
+                        act.status ? (
+                          <TicketChip label={act.status} onClear={() => update({ status: '' })} />
+                        ) : (
+                          <div className={styles.ticketCondSelect}>
+                            <SingleSelect
+                              name={`${act.id}-status`}
+                              selected=""
+                              options={TICKET_CONDITION_VALUES.Status.map((v) => ({ value: v, label: v }))}
+                              placeholder="Select"
+                              onChange={(opt) => update({ status: opt.value })}
+                            />
+                          </div>
+                        )
+                      ) : act.valueType ? (
+                        <TicketChip
+                          label={act.valueType}
+                          onClear={() => update({ valueType: '', values: [] })}
+                        />
+                      ) : (
+                        <div className={styles.ticketCondSelect}>
+                          <SingleSelect
+                            name={`${act.id}-type`}
+                            selected=""
+                            options={TICKET_ASSIGNEE_TYPES}
+                            placeholder="Select"
+                            onChange={(opt) => update({ valueType: opt.value, values: [] })}
+                          />
+                        </div>
+                      )}
+                    {/* Target sits on its own full-width row, cross but no trash. */}
+                    {act.type !== 'status' && act.valueType && (
+                      <div
+                        className={styles.ticketActionSub}
+                        ref={(el) => { targetRefs.current[act.id] = el; }}
+                        onMouseDown={() => setTargetEditing(act.id)}
+                      >
+                        {act.values?.length && targetEditing !== act.id ? (
+                          <TicketChip
+                            label={ticketCountLabel(act.valueType.toLowerCase())(act.values)}
+                            onClear={() => update({ values: [] })}
+                          />
+                        ) : (
+                          <MultiSelect
+                            name={`${act.id}-target`}
+                            selected={act.values || []}
+                            options={people}
+                            placeholder={act.type === 'assignee'
+                              ? (act.valueType === 'Roles' ? 'Select upto 10 roles' : 'Select upto 10 users')
+                              : (act.valueType === 'Roles' ? 'Select roles' : 'Select users')}
+                            // Same wording open or settled, so the label doesn't
+                            // change from "2 selected" to "2 users" on blur.
+                            formatLabel={ticketCountLabel(act.valueType.toLowerCase())}
+                            // "upto 10" in the placeholder is a real cap on the assignee action.
+                            onChange={(vals) => {
+                              if (act.type === 'assignee' && vals.length > TICKET_ASSIGNEE_MAX) return;
+                              update({ values: vals });
+                            }}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div className={styles.ticketAddWrap} ref={actionMenuRef}>
+                <button
+                  type="button"
+                  className={`${styles.ticketAddBtn}${canAddAction ? '' : ` ${styles.ticketAddBtnDisabled}`}`}
+                  disabled={!canAddAction}
+                  onClick={() => setActionMenuOpen((v) => !v)}
+                >
+                  <span className="material-symbols-outlined">add_circle</span>
+                  <span className={styles.ticketAddBtnLabel}>Add action</span>
+                </button>
+                {/* Portaled: the RHS panel body scrolls, which clipped this menu
+                    and pushed it behind the Save footer. */}
+                {actionMenuOpen && actionMenuRect && createPortal(
+                  <div
+                    ref={actionMenuPanelRef}
+                    className={styles.ticketActionMenu}
+                    style={{
+                      left: actionMenuRect.left,
+                      top: actionMenuRect.top,
+                      minWidth: actionMenuRect.width,
+                    }}
+                  >
+                    {remainingActionTypes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={styles.ticketActionMenuItem}
+                        onClick={() => {
+                          setActions((prev) => [...prev, {
+                            id: `act-${nextId.current++}`,
+                            type: t.id,
+                            valueType: t.id === 'notify' ? 'Roles' : 'Users',
+                            values: [],
+                            status: '',
+                          }]);
+                          setActionMenuOpen(false);
+                        }}
+                      >
+                        {t.menuLabel}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {picker && (
+        <FieldPickerModal
+          onClose={() => setPicker(null)}
+          onSelectField={(value, name) => insertVariable(name || value)}
+          anchorEl={anchorRefs.current[picker.key]}
+          // No `placement` → the default flush-docked full-height position every
+          // other Fields trigger in the builder uses.
+          showTriggerFields
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Competitor list field ─────────────────────────────────────────────── */
+
+/** Tinted avatar pairs; picked by name so a competitor keeps its color. */
+const COMPETITOR_TINTS = [
+  { bg: '#e8f5e9', fg: '#2e7d32' },
+  { bg: '#e3f2fd', fg: '#1565c0' },
+  { bg: '#fff3e0', fg: '#ef6c00' },
+  { bg: '#f3e5f5', fg: '#7b1fa2' },
+  { bg: '#fce4ec', fg: '#c2185b' },
+];
+
+function competitorTint(name) {
+  const sum = [...(name || '?')].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return COMPETITOR_TINTS[sum % COMPETITOR_TINTS.length];
+}
+
+const COMPETITOR_LIMIT_MSG = 'Only 5 competitors can be added. Please remove one to add another';
+
+/**
+ * "Track keywords from competitor domains" — a capped list of name + URL rows
+ * with hover edit/delete, plus an inline add/edit form. Rendered for
+ * `type: 'competitorList'` fields.
+ */
+function CompetitorListField({ field, onValueChange }) {
+  const maxItems = field.maxItems ?? 5;
+  const [competitors, setCompetitors] = useState(() =>
+    (Array.isArray(field.defaultValue) ? field.defaultValue : []).map((c) => ({ ...c })),
+  );
+  // null = no form; otherwise { mode: 'add' | 'edit', id?, name, url }
+  const [form, setForm] = useState(null);
+  // Competitor pending delete confirmation.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    setCompetitors((Array.isArray(field.defaultValue) ? field.defaultValue : []).map((c) => ({ ...c })));
+    setForm(null);
+  }, [field.id, field.defaultValue]);
+
+  useEffect(() => {
+    onValueChange?.(field.id, competitors);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitors, field.id]);
+
+  const atLimit = competitors.length >= maxItems;
+  const canSubmit = Boolean(form?.name.trim() && form?.url.trim());
+  const isEdit = form?.mode === 'edit';
+
+  function submitForm() {
+    if (!canSubmit) return;
+    const name = form.name.trim();
+    const url = form.url.trim();
+    if (isEdit) {
+      setCompetitors((prev) => prev.map((c) => (c.id === form.id ? { ...c, name, url } : c)));
+    } else {
+      setCompetitors((prev) => [...prev, { id: `comp-new-${nextId.current++}`, name, url }]);
+    }
+    setForm(null);
+  }
+
+  // Shared by both entry points: an edit form swaps in for its own row, while
+  // the add form sits below the list.
+  const formCard = form ? (
+    <div className={styles.compForm}>
+      <span className={styles.compFormTitle}>{isEdit ? 'Edit competitor' : 'Add competitor'}</span>
+      <input
+        type="text"
+        className={styles.compFormInput}
+        placeholder="Enter competitor name"
+        value={form.name}
+        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+        autoFocus
+      />
+      <input
+        type="text"
+        className={styles.compFormInput}
+        placeholder="Enter URL"
+        value={form.url}
+        onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitForm(); } }}
+      />
+      <div className={styles.compFormActions}>
+        <button type="button" className={styles.compFormCancel} onClick={() => setForm(null)}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={styles.compFormSubmit}
+          disabled={!canSubmit}
+          onClick={submitForm}
+        >
+          {isEdit ? 'Save' : 'Add'}
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className={styles.fieldWrap}>
+      <span className={styles.fieldLabel}>{field.label}</span>
+
+      <div className={styles.compList}>
+        {competitors.map((comp) => {
+          // Editing swaps this row's read view for the form, in place.
+          if (isEdit && form.id === comp.id) {
+            return <React.Fragment key={comp.id}>{formCard}</React.Fragment>;
+          }
+          const tint = competitorTint(comp.name);
+          return (
+            <div key={comp.id} className={styles.compRow}>
+              <span
+                className={styles.compAvatar}
+                style={{ background: tint.bg, color: tint.fg }}
+                aria-hidden
+              >
+                {(comp.name || '?').trim().charAt(0).toUpperCase()}
+              </span>
+              <div className={styles.compInfo}>
+                <Tooltip content={comp.name} variant="brief" side="top">
+                  <span className={styles.compName}>{comp.name}</span>
+                </Tooltip>
+                <span className={styles.compUrl}>{comp.url}</span>
+              </div>
+              <div className={styles.compActions}>
+                <Tooltip content="Edit" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.compActionBtn}
+                    aria-label={`Edit ${comp.name}`}
+                    onClick={() => setForm({ mode: 'edit', id: comp.id, name: comp.name, url: comp.url })}
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                </Tooltip>
+                <Tooltip content="Delete" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.compActionBtn}
+                    aria-label={`Delete ${comp.name}`}
+                    onClick={() => setPendingDelete(comp)}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {form?.mode === 'add' ? formCard : (
+        // Tooltip listens on its wrapper, so it still fires over a disabled button.
+        <Tooltip content={COMPETITOR_LIMIT_MSG} variant="detail" side="top" disabled={!atLimit}>
+          <button
+            type="button"
+            className={`${styles.compAddBtn}${atLimit ? ` ${styles.compAddBtnDisabled}` : ''}`}
+            disabled={atLimit}
+            onClick={() => setForm({ mode: 'add', name: '', url: '' })}
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.compAddBtnLabel}>Add competitor</span>
+          </button>
+        </Tooltip>
+      )}
+
+      {/* Reuses AgentBuilder's global `ab-confirm-dialog` chrome (same as
+          "Delete agent?") so destructive confirms look the same everywhere. */}
+      {pendingDelete && createPortal(
+        <div
+          className="ab-confirm-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingDelete(null); }}
+        >
+          <div
+            className="ab-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="comp-delete-confirm-title"
+          >
+            <div className="ab-confirm-dialog__header">
+              <h2 id="comp-delete-confirm-title" className="ab-confirm-dialog__title">
+                Delete competitor?
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPendingDelete(null)}
+                className="ab-confirm-dialog__close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <p className="ab-confirm-dialog__body">
+              Are you sure you want to delete <strong>{pendingDelete.name}</strong>?
+            </p>
+            <div className="ab-confirm-dialog__footer">
+              <button
+                type="button"
+                className="ab-confirm-dialog__cancel"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ab-confirm-dialog__primary ab-confirm-dialog__primary--danger"
+                onClick={() => {
+                  setCompetitors((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+                  setForm((f) => (f?.id === pendingDelete.id ? null : f));
+                  setPendingDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+function SentimentClassifierField({ field, onValueChange }) {
+  const [sentiments, setSentiments] = useState(() => getSentiments());
+  // null = closed; otherwise { mode: 'add' | 'edit', id?, name, description, isDefault? }
+  const [sentimentModal, setSentimentModal] = useState(null);
+  // Sentiment pending delete confirmation.
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  useEffect(() => {
+    onValueChange?.(field.id, sentiments);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sentiments, field.id]);
+
+  const openAddModal = () => setSentimentModal({ mode: 'add', name: '', description: '' });
+
+  const openEditModal = (sentiment) =>
+    setSentimentModal({
+      mode: 'edit',
+      id: sentiment.id,
+      name: sentiment.name,
+      description: sentiment.description,
+      isDefault: sentiment.isDefault,
+    });
+
+  const commitSentimentModal = ({ name, description }) => {
+    if (sentimentModal?.mode === 'edit') {
+      const updated = updateSentimentEntry(sentimentModal.id, { name, description });
+      if (updated) setSentiments((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      return;
+    }
+    const created = createSentiment({ name, description });
+    setSentiments((prev) => [...prev, created]);
+  };
+
+  const restoreDefaults = () => setSentiments(restoreDefaultSentiments());
+  const isAtDefault = isSentimentListAtDefault(sentiments);
+
+  const activeDefault = sentimentModal?.isDefault ? getDefaultSentiment(sentimentModal.id) : null;
+
+  return (
+    <div className={styles.fieldWrap}>
+      <div className={styles.tagLabelRow}>
+        <span className={styles.sentimentSectionTitle}>{field.label}</span>
+        <div className={styles.sentimentHeaderActions}>
+          <button
+            type="button"
+            className={styles.sentimentRestoreBtn}
+            onClick={restoreDefaults}
+            disabled={isAtDefault}
+          >
+            <span className="material-symbols-outlined">restart_alt</span>
+            <span className={styles.sentimentAddBtnLabel}>Restore default</span>
+          </button>
+          <button type="button" className={styles.sentimentAddBtn} onClick={openAddModal}>
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.sentimentAddBtnLabel}>Add</span>
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.sentimentList}>
+        {sentiments.map((sentiment) => (
+          <div key={sentiment.id} className={styles.sentimentRow}>
+            <div className={styles.sentimentRowHeader}>
+              <span className={styles.sentimentName}>{sentiment.name}</span>
+              <div className={styles.sentimentRowActions}>
+                <Tooltip content="Edit" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.sentimentActionBtn}
+                    aria-label={`Edit ${sentiment.name}`}
+                    onClick={() => openEditModal(sentiment)}
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                </Tooltip>
+                <Tooltip content="Delete" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.sentimentActionBtn}
+                    aria-label={`Delete ${sentiment.name}`}
+                    onClick={() => setPendingDelete(sentiment)}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+            <p className={styles.sentimentDesc}>{sentiment.description}</p>
+          </div>
+        ))}
+      </div>
+
+      {sentimentModal && (
+        <SentimentModal
+          mode={sentimentModal.mode}
+          initialName={sentimentModal.name}
+          initialDescription={sentimentModal.description}
+          isDefault={sentimentModal.isDefault}
+          defaultName={activeDefault?.name}
+          defaultDescription={activeDefault?.description}
+          onClose={() => setSentimentModal(null)}
+          onSave={commitSentimentModal}
+        />
+      )}
+
+      {/* Reuses AgentBuilder's global `ab-confirm-dialog` chrome (same as "Delete intent"). */}
+      {pendingDelete && createPortal(
+        <div
+          className="ab-confirm-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingDelete(null); }}
+        >
+          <div
+            className="ab-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sentiment-delete-confirm-title"
+          >
+            <div className="ab-confirm-dialog__header">
+              <h2 id="sentiment-delete-confirm-title" className="ab-confirm-dialog__title">
+                Delete sentiment
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPendingDelete(null)}
+                className="ab-confirm-dialog__close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <p className="ab-confirm-dialog__body">
+              Are you sure you want to delete this sentiment?
+            </p>
+            <div className="ab-confirm-dialog__footer">
+              <button
+                type="button"
+                className="ab-confirm-dialog__cancel"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ab-confirm-dialog__primary"
+                onClick={() => {
+                  deleteSentiment(pendingDelete.id);
+                  setSentiments((prev) => prev.filter((s) => s.id !== pendingDelete.id));
+                  setPendingDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+/** Contact-preference permission states — same set for every channel/category. */
+const PREF_NO_CHANGE = 'No change';
+const PREF_OPTIONS = [
+  { value: PREF_NO_CHANGE, label: 'No change' },
+  { value: 'Enable', label: 'Enable' },
+  { value: 'Disable', label: 'Disable' },
+];
+
 function InteractiveField({ field, onValueChange }) {
   const [textValue, setTextValue] = useState('');
   const [radioValue, setRadioValue] = useState('');
@@ -289,6 +1559,22 @@ function InteractiveField({ field, onValueChange }) {
   const [abChecked, setAbChecked] = useState(true);
   const [variantValues, setVariantValues] = useState({});
   const [dateSelectVal, setDateSelectVal] = useState('');
+  const [fieldModalOpen, setFieldModalOpen] = useState(false);
+  const [bodySegments, setBodySegments] = useState(() => (
+    Array.isArray(field.segments) ? field.segments.map((s) => ({ ...s })) : null
+  ));
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [tagQuery, setTagQuery] = useState('');
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  // null = closed; otherwise { mode: 'add' | 'edit', id?, name, description }
+  const [tagModal, setTagModal] = useState(null);
+  const [tagMenuRect, setTagMenuRect] = useState(null);
+  const [prefChannelOn, setPrefChannelOn] = useState(false);
+  const [prefValues, setPrefValues] = useState({});
+  const fieldsBtnRef = useRef(null);
+  const tagSelectRef = useRef(null);
+  const tagMenuRef = useRef(null);
+  const tagInputRef = useRef(null);
 
   useEffect(() => {
     if (['text', 'number', 'date', 'textarea', 'variable'].includes(field.type)) {
@@ -319,13 +1605,86 @@ function InteractiveField({ field, onValueChange }) {
     if (field.type === 'dateSelect') {
       setDateSelectVal(field.defaultValue || (field.options?.[0] ?? ''));
     }
-  }, [field.id, field.defaultValue, field.type, field.options, field.defaultChecked]);
+    if (field.type === 'tags') {
+      setTags(Array.isArray(field.defaultValue) ? [...field.defaultValue] : []);
+    }
+    if (field.type === 'tag-select') {
+      const defaults = Array.isArray(field.defaultValue) ? field.defaultValue : [];
+      setSelectedTags(defaults.map((t) => (typeof t === 'string' ? (findTagByName(t) || { id: t, name: t, description: '' }) : t)));
+    }
+    if (Array.isArray(field.segments)) {
+      setBodySegments(field.segments.map((s) => ({ ...s })));
+    }
+  }, [field.id, field.defaultValue, field.type, field.options, field.defaultChecked, field.segments]);
 
   useEffect(() => {
     if (field.type === 'checkbox') {
       onValueChange?.(field.id, checkValues);
     }
-  }, [checkValues, field.id, field.type, onValueChange]);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkValues, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type === 'tags') {
+      onValueChange?.(field.id, tags);
+    }
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type === 'tag-select') {
+      onValueChange?.(field.id, selectedTags.map((t) => t.name));
+    }
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTags, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type !== 'prefChannel') return;
+    if (!prefChannelOn) {
+      onValueChange?.(field.id, null);
+      return;
+    }
+    onValueChange?.(field.id, Object.fromEntries(
+      (field.prefKeys || []).map((p) => [p.label, prefValues[p.id] ?? PREF_NO_CHANGE]),
+    ));
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefChannelOn, prefValues, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type !== 'tag-select' || !tagDropdownOpen) return undefined;
+    function handlePointerDown(e) {
+      // The menu is portaled to <body>, so a click on an option is NOT inside
+      // tagSelectRef — check the menu too or the close fires first and swallows
+      // the option's own onClick.
+      if (tagSelectRef.current?.contains(e.target)) return;
+      if (tagMenuRef.current?.contains(e.target)) return;
+      setTagDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [field.type, tagDropdownOpen]);
+
+  // Anchor the portaled menu to the input; the RHS panel scrolls, so re-measure.
+  useEffect(() => {
+    if (field.type !== 'tag-select' || !tagDropdownOpen) return undefined;
+    function measure() {
+      const el = tagSelectRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setTagMenuRect({ left: r.left, top: r.bottom + 4, width: r.width });
+    }
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [field.type, tagDropdownOpen, selectedTags.length]);
 
   const label = field.label || 'Untitled field';
   const required = field.required;
@@ -376,6 +1735,62 @@ function InteractiveField({ field, onValueChange }) {
           </div>
         );
       }
+      if (field.helpText || field.showVariableToolbar) {
+        const handleFieldSelect = (fieldValue) => {
+          setTextValue((prev) => {
+            const base = prev || '';
+            const sep = !base || /\s$/.test(base) ? '' : ' ';
+            const next = `${base}${sep}{{${fieldValue}}}`;
+            onValueChange?.(field.id, next);
+            return next;
+          });
+        };
+        return (
+          <div className={styles.fieldWrap}>
+            <FieldHeader
+              label={label}
+              required={required}
+              helpText={field.helpText}
+              showInfoIcon={field.showInfoIcon}
+              infoText={field.infoText}
+            />
+            <div className={field.showVariableToolbar ? styles.promptBox : undefined}>
+              <div className={field.showVariableToolbar ? styles.variableTextRow : undefined}>
+                <input
+                  name={`view_${field.id}`}
+                  type={field.type === 'number' || field.type === 'date' ? field.type : 'text'}
+                  className={field.showVariableToolbar ? styles.variableTextInput : styles.selectInput}
+                  placeholder={field.placeholder || ''}
+                  value={textValue}
+                  onChange={(e) => {
+                    setTextValue(e.target.value);
+                    onValueChange?.(field.id, e.target.value);
+                  }}
+                />
+                {field.showVariableToolbar && (
+                  <div ref={fieldsBtnRef} className={styles.variableTextToolbar}>
+                    <ToolbarButton
+                      icon={<VariableIcon />}
+                      tooltip="Fields"
+                      active={fieldModalOpen}
+                      onClick={() => setFieldModalOpen(true)}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {field.showVariableToolbar && fieldModalOpen && (
+              <FieldPickerModal
+                onClose={() => setFieldModalOpen(false)}
+                onSelectField={handleFieldSelect}
+                anchorEl={fieldsBtnRef.current}
+                showTriggerFields
+                insertedText={textValue}
+              />
+            )}
+          </div>
+        );
+      }
       return (
         <div className={styles.fieldWrap}>
           <FormInput
@@ -392,26 +1807,85 @@ function InteractiveField({ field, onValueChange }) {
 
     case 'textarea':
       if (field.showVariableToolbar) {
+        const segments = bodySegments;
+        const insertedText = segments
+          ? segments.map((s) => (s.type === 'chip' ? `{{${s.value}}}` : s.value)).join('')
+          : textValue;
+        const handleFieldSelect = (fieldValue) => {
+          // Keep the picker open; close only via X or the Fields icon.
+          if (segments) {
+            setBodySegments((prev) => {
+              const next = [...(prev || [])];
+              const last = next[next.length - 1];
+              if (last?.type === 'chip') {
+                next.push({ type: 'text', value: ' ' });
+              } else if (last?.type === 'text' && last.value && !/\s$/.test(last.value)) {
+                next[next.length - 1] = { ...last, value: `${last.value} ` };
+              }
+              next.push({ type: 'chip', value: fieldValue });
+              return next;
+            });
+            return;
+          }
+          setTextValue((prev) => {
+            const base = prev || '';
+            const sep = !base || /\s$/.test(base) ? '' : ' ';
+            const next = `${base}${sep}{{${fieldValue}}}`;
+            onValueChange?.(field.id, next);
+            return next;
+          });
+        };
         return (
           <div className={styles.fieldWrap}>
             <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} />
             <div className={styles.promptBox}>
-              <textarea
-                name={`view_${field.id}`}
-                className={styles.promptTextarea}
-                placeholder={field.placeholder || ''}
-                value={textValue}
-                onChange={(e) => setTextValue(e.target.value)}
-                rows={field.rows || 5}
-              />
+              {segments ? (
+                <div className={styles.promptRichBody}>
+                  {segments.map((seg, i) => (
+                    seg.type === 'chip' ? (
+                      <VariableChip
+                        key={`${seg.value}-${i}`}
+                        value={seg.value}
+                        type="variable"
+                        readOnly
+                      />
+                    ) : (
+                      <span key={`t-${i}`} className={styles.promptRichText}>
+                        {seg.value}
+                      </span>
+                    )
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  name={`view_${field.id}`}
+                  className={styles.promptTextarea}
+                  placeholder={field.placeholder || ''}
+                  value={textValue}
+                  onChange={(e) => setTextValue(e.target.value)}
+                  rows={field.rows || 5}
+                />
+              )}
               <div className={styles.promptToolbar}>
-                <button type="button" className={styles.variableBtn} title="Insert variable">
-                  <span className={styles.variableBtnBrace}>{'{'}</span>
-                  <span className={styles.variableBtnX}>x</span>
-                  <span className={styles.variableBtnBrace}>{'}'}</span>
-                </button>
+                <div ref={fieldsBtnRef}>
+                  <ToolbarButton
+                    icon={<VariableIcon />}
+                    tooltip="Fields"
+                    active={fieldModalOpen}
+                    onClick={() => setFieldModalOpen(true)}
+                  />
+                </div>
               </div>
             </div>
+            {fieldModalOpen && (
+              <FieldPickerModal
+                onClose={() => setFieldModalOpen(false)}
+                onSelectField={handleFieldSelect}
+                anchorEl={fieldsBtnRef.current}
+                showTriggerFields
+                insertedText={insertedText}
+              />
+            )}
           </div>
         );
       }
@@ -433,17 +1907,35 @@ function InteractiveField({ field, onValueChange }) {
     case 'select':
       return (
         <div className={styles.fieldWrap}>
-          <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} />
+          {(field.helpText || field.showInfoIcon) ? (
+            <FieldHeader
+              label={label}
+              required={required}
+              helpText={field.helpText}
+              showInfoIcon={field.showInfoIcon}
+              infoText={field.infoText}
+            />
+          ) : (
+            <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} infoText={field.infoText} />
+          )}
           <div className={styles.selectWrap}>
             <select
               className={styles.selectInput}
               value={selectValue}
-              onChange={(e) => setSelectValue(e.target.value)}
+              onChange={(e) => {
+                setSelectValue(e.target.value);
+                onValueChange?.(field.id, e.target.value);
+              }}
             >
               <option value="">{field.placeholder || 'Select'}</option>
-              {(field.options || []).map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
+              {(field.options || []).map((rawOpt) => {
+                const optValue = typeof rawOpt === 'string' ? rawOpt : rawOpt?.value;
+                const optLabel = typeof rawOpt === 'string' ? rawOpt : (rawOpt?.label ?? rawOpt?.value);
+                if (optValue == null) return null;
+                return (
+                  <option key={String(optValue)} value={optValue}>{optLabel}</option>
+                );
+              })}
             </select>
             <span className={`material-symbols-outlined ${styles.selectChevron}`}>expand_more</span>
           </div>
@@ -494,9 +1986,14 @@ function InteractiveField({ field, onValueChange }) {
             onChange={(e, v) => setSelectValue(v)}
             placeHolder="Select..."
           >
-            {field.options.map((opt) => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
+            {(field.options || []).map((rawOpt) => {
+              const optValue = typeof rawOpt === 'string' ? rawOpt : rawOpt?.value;
+              const optLabel = typeof rawOpt === 'string' ? rawOpt : (rawOpt?.label ?? rawOpt?.value);
+              if (optValue == null) return null;
+              return (
+                <SelectItem key={String(optValue)} value={optValue}>{optLabel}</SelectItem>
+              );
+            })}
           </Select>
         </div>
       );
@@ -608,12 +2105,14 @@ function InteractiveField({ field, onValueChange }) {
                 <span className={`material-symbols-outlined ${styles.fieldInfoIcon}`} style={{ marginLeft: 4, verticalAlign: 'middle' }}>info</span>
               )}
             </span>
+            {/* Title carries the weight in #0d0d12; the line under it stays secondary grey. */}
             {field.helpText && <p style={{ fontSize: 12, color: '#6b7280', fontFamily: 'Roboto, sans-serif', margin: 0, lineHeight: '18px' }}>{field.helpText}</p>}
           </div>
           <Toggle
             name={`view_toggle_${field.id}`}
             checked={toggled}
             onChange={(instance, e) => setToggled(e.target.checked)}
+            roundedToggle
           />
         </div>
       );
@@ -682,11 +2181,222 @@ function InteractiveField({ field, onValueChange }) {
                   setTagInput('');
                 }
               }}
-              placeholder={tags.length === 0 ? (field.placeholder || 'Type and press Enter...') : ''}
+              placeholder={field.placeholder || (tags.length === 0 ? 'Type and press Enter...' : '')}
             />
           </div>
         </div>
       );
+
+    case 'tag-select': {
+      const allTags = getTags();
+      const query = tagQuery.trim().toLowerCase();
+      const availableTags = allTags.filter((t) => !selectedTags.some((s) => s.id === t.id));
+      const filteredTags = query
+        ? availableTags.filter((t) => t.name.toLowerCase().includes(query))
+        : availableTags;
+      const showCreateOption = query.length > 0 && !allTags.some((t) => t.name.toLowerCase() === query);
+
+      const selectTag = (tag) => {
+        setSelectedTags((prev) => [...prev, tag]);
+        setTagQuery('');
+        // Clicking an option moves focus to that button; hand it back so the next
+        // keystroke keeps filtering instead of going nowhere.
+        tagInputRef.current?.focus();
+      };
+
+      // The picker's "Create tag" row hands off to the modal (prefilled) rather
+      // than creating on the spot, so a description can be written with it.
+      const openCreateModal = (prefill = '') => {
+        setTagDropdownOpen(false);
+        setTagModal({ mode: 'add', name: prefill, description: '' });
+      };
+
+      const openEditModal = (tag) => {
+        setTagDropdownOpen(false);
+        setTagModal({ mode: 'edit', id: tag.id, name: tag.name, description: tag.description || '' });
+      };
+
+      const commitTagModal = ({ name, description }) => {
+        if (tagModal?.mode === 'edit') {
+          // Edits the library entry, so every chip pointing at this tag follows.
+          const updated = updateTag(tagModal.id, { name, description });
+          if (updated) {
+            setSelectedTags((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          }
+          return;
+        }
+        const created = createTag({ name, description });
+        setSelectedTags((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+        setTagQuery('');
+      };
+
+      return (
+        <div className={styles.fieldWrap}>
+          <div className={styles.tagLabelRow}>
+            <span className={styles.fieldLabel}>
+              {label}{required && <span className={styles.required}> *</span>}
+            </span>
+            <button type="button" className={styles.addTagBtn} onClick={() => openCreateModal()}>
+              <span className="material-symbols-outlined">add_circle</span>
+              <span className={styles.addTagBtnLabel}>Add tag</span>
+            </button>
+          </div>
+          <div className={styles.tagSelectWrap} ref={tagSelectRef}>
+            <div className={styles.tagsInput} onClick={() => setTagDropdownOpen(true)}>
+              {selectedTags.map((tag) => (
+                <Tooltip
+                  key={tag.id}
+                  variant="detail"
+                  side="top"
+                  content={
+                    <div className="flex flex-col gap-0.5">
+                      <span>{tag.name}</span>
+                      {tag.description && <span className="text-white/70">{tag.description}</span>}
+                    </div>
+                  }
+                >
+                  <span className={styles.tagChip}>
+                    {tag.name}
+                    <button
+                      type="button"
+                      className={styles.tagChipEdit}
+                      aria-label={`Edit ${tag.name}`}
+                      // stopPropagation: the chip sits inside the input box, whose
+                      // click opens the picker.
+                      onClick={(e) => { e.stopPropagation(); openEditModal(tag); }}
+                    >
+                      <span className="material-symbols-outlined">edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.tagChipRemove}
+                      aria-label={`Remove ${tag.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTags((prev) => prev.filter((t) => t.id !== tag.id));
+                      }}
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </span>
+                </Tooltip>
+              ))}
+              <input
+                ref={tagInputRef}
+                className={styles.tagInputInner}
+                value={tagQuery}
+                onFocus={() => setTagDropdownOpen(true)}
+                onChange={(e) => { setTagQuery(e.target.value); setTagDropdownOpen(true); }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' || !tagQuery.trim()) return;
+                  e.preventDefault();
+                  if (showCreateOption) openCreateModal(tagQuery.trim());
+                  else if (filteredTags[0]) selectTag(filteredTags[0]);
+                }}
+                placeholder={field.placeholder || (selectedTags.length === 0 ? 'Search or create tags...' : '')}
+              />
+            </div>
+          </div>
+          {/* Portaled to <body>: the RHS panel clips an absolutely-positioned
+              menu to its own scroll box, cutting the list off after one row. */}
+          {tagDropdownOpen && tagMenuRect && (filteredTags.length > 0 || showCreateOption) && createPortal(
+            <div
+              ref={tagMenuRef}
+              className={styles.tagDropdown}
+              style={{ left: tagMenuRect.left, top: tagMenuRect.top, width: tagMenuRect.width }}
+            >
+              {filteredTags.map((tag) => (
+                <button
+                  type="button"
+                  key={tag.id}
+                  className={styles.tagOption}
+                  onClick={() => selectTag(tag)}
+                >
+                  <span className={styles.tagOptionName}>{tag.name}</span>
+                  {tag.description && <span className={styles.tagOptionDesc}>{tag.description}</span>}
+                </button>
+              ))}
+              {showCreateOption && (
+                <button
+                  type="button"
+                  className={styles.tagCreateOption}
+                  onClick={() => openCreateModal(tagQuery.trim())}
+                >
+                  <span className="material-symbols-outlined">add</span>
+                  Create tag &quot;{tagQuery.trim()}&quot;
+                </button>
+              )}
+            </div>,
+            document.body,
+          )}
+          {tagModal && (
+            <CreateTagModal
+              mode={tagModal.mode}
+              initialName={tagModal.name}
+              initialDescription={tagModal.description}
+              onClose={() => setTagModal(null)}
+              onAdd={commitTagModal}
+            />
+          )}
+        </div>
+      );
+    }
+
+    case 'competitorList':
+      return <CompetitorListField field={field} onValueChange={onValueChange} />;
+
+    case 'sentimentClassifier':
+      return <SentimentClassifierField field={field} onValueChange={onValueChange} />;
+
+    case 'ticketBuilder':
+      return <TicketBuilderField field={field} onValueChange={onValueChange} />;
+
+    case 'localizeMedia':
+      return <LocalizeMediaField field={field} onValueChange={onValueChange} />;
+
+    case 'templateMultiSelect':
+      return <TemplateMultiSelectField field={field} onValueChange={onValueChange} />;
+
+    case 'readOnlyChips':
+      return <ReadOnlyChipsField field={field} />;
+
+    case 'keywordChips':
+      return <KeywordChipsField field={field} onValueChange={onValueChange} />;
+
+    case 'prefChannel': {
+      const setPref = (keyId, value) => {
+        setPrefValues((prev) => ({ ...prev, [keyId]: value }));
+      };
+
+      return (
+        <div className={styles.prefCard}>
+          <label className={styles.prefCardHeader}>
+            <input
+              type="checkbox"
+              checked={prefChannelOn}
+              onChange={(e) => setPrefChannelOn(e.target.checked)}
+              className={styles.optionInput}
+            />
+            <span className={styles.abCheckboxLabel}>{label}</span>
+          </label>
+          {prefChannelOn && (
+            <div className={styles.prefCardContent}>
+              {(field.prefKeys || []).map((pref) => (
+                <div key={pref.id} className={styles.fieldWrap}>
+                  <span className={styles.fieldLabel}>{pref.label}</span>
+                  <SingleSelect
+                    name={pref.id}
+                    selected={prefValues[pref.id] ?? PREF_NO_CHANGE}
+                    options={PREF_OPTIONS}
+                    onChange={(opt) => setPref(pref.id, opt.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
 
     case 'abSection':
       return (
@@ -1014,36 +2724,123 @@ function ParamListField({ field }) {
 
 // ─── Shared content (used both in standalone drawer and embedded mode) ────────
 
-export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearDefaults = false }) {
-  const [fieldSnapshot, setFieldSnapshot] = useState(() =>
-    initialValues && Object.keys(initialValues).length > 0
+export function ToolViewerContent({
+  tool,
+  onClose,
+  onSave,
+  initialValues,
+  clearDefaults = false,
+  /** When true, render fields only (no header/back/save) for inline RHS embedding. */
+  embedded = false,
+  /** Live field-value updates (used with embedded mode). */
+  onFieldValuesChange,
+}) {
+  const isUpdateStateTool = tool?.id === 'update-state' || tool?.name === 'Update state';
+
+  const buildUpdateStateSnapshot = useCallback((vals) => {
+    const base = vals && typeof vals === 'object' ? vals : {};
+    return {
+      toolName: base.toolName ?? base.taskName ?? tool?.name ?? 'Update state',
+      description:
+        base.description
+        ?? tool?.description
+        ?? 'Updates one or more dynamic variables when this step runs — literal values, references, or LLM-evaluated instructions.',
+      stateUpdates: Array.isArray(base.stateUpdates) ? base.stateUpdates : [],
+      fieldsGlobal: Boolean(base.fieldsGlobal),
+    };
+  }, [tool?.name, tool?.description]);
+
+  const [fieldSnapshot, setFieldSnapshot] = useState(() => {
+    if (isUpdateStateTool) return buildUpdateStateSnapshot(initialValues);
+    return initialValues && Object.keys(initialValues).length > 0
       ? { ...initialValues }
-      : buildInitialSnapshot(tool?.fields)
-  );
+      : buildInitialSnapshot(tool?.fields);
+  });
 
   useEffect(() => {
+    if (isUpdateStateTool) {
+      setFieldSnapshot(buildUpdateStateSnapshot(initialValues));
+      return;
+    }
     setFieldSnapshot(
       initialValues && Object.keys(initialValues).length > 0
         ? { ...initialValues }
         : buildInitialSnapshot(tool?.fields)
     );
-  }, [tool?.id]);
+  }, [tool?.id, isUpdateStateTool, buildUpdateStateSnapshot]);
 
   const effectiveSnapshot = useMemo(() => {
+    if (isUpdateStateTool) return buildUpdateStateSnapshot(fieldSnapshot);
     if (Object.keys(fieldSnapshot).length > 0) return fieldSnapshot;
     return buildInitialSnapshot(tool?.fields);
-  }, [fieldSnapshot, tool?.fields]);
+  }, [fieldSnapshot, tool?.fields, isUpdateStateTool, buildUpdateStateSnapshot]);
+
+  // Mirror of the latest snapshot so the next value can be derived without a
+  // state updater. React may run an updater during the render phase, and
+  // notifying the parent from in there makes it setState mid-render
+  // ("Cannot update a component while rendering a different component").
+  const snapshotRef = useRef(fieldSnapshot);
+  snapshotRef.current = fieldSnapshot;
 
   const handleValueChange = useCallback((id, val) => {
-    setFieldSnapshot((prev) => ({ ...prev, [id]: val }));
-  }, []);
+    const next = { ...snapshotRef.current, [id]: val };
+    snapshotRef.current = next;
+    setFieldSnapshot(next);
+    onFieldValuesChange?.(next);
+  }, [onFieldValuesChange]);
 
   if (!tool) return null;
 
   const handleSave = () => {
-    if (onSave) onSave(tool, fieldSnapshot);
+    if (onSave) onSave(tool, isUpdateStateTool ? effectiveSnapshot : fieldSnapshot);
     else onClose?.();
   };
+
+  const hasFields = Array.isArray(tool.fields) && tool.fields.length > 0;
+
+  const updateStateBody = (
+    <div className={`${embedded ? styles.embeddedBody : styles.body} ${usStyles.tabContent}`}>
+      <TextArea
+        name="description"
+        label="Description"
+        placeholder="Enter"
+        value={effectiveSnapshot.description ?? ''}
+        onChange={(e) => handleValueChange('description', e.target.value)}
+        required
+        noFloatingLabel
+      />
+      <UpdateStateToolDetails
+        showToolCard={false}
+        stateUpdates={effectiveSnapshot.stateUpdates ?? []}
+        onStateUpdatesChange={(next) => handleValueChange('stateUpdates', next)}
+        fieldsGlobal={Boolean(effectiveSnapshot.fieldsGlobal)}
+        onFieldsGlobalChange={(next) => handleValueChange('fieldsGlobal', next)}
+        toolName={effectiveSnapshot.toolName}
+      />
+    </div>
+  );
+
+  const fieldsBody = isUpdateStateTool ? updateStateBody : (
+    <div className={embedded ? styles.embeddedBody : styles.body}>
+      {hasFields ? (
+        tool.fields
+          .filter((f) => isFieldVisible(f, effectiveSnapshot))
+          .map((f) => (
+            <InteractiveField
+              key={f.id}
+              field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
+              onValueChange={handleValueChange}
+            />
+          ))
+      ) : (
+        <p className={styles.noConfigPlainText}>No additional configurations required</p>
+      )}
+    </div>
+  );
+
+  if (embedded) {
+    return <div className={styles.embeddedOuter}>{fieldsBody}</div>;
+  }
 
   return (
     <div className={styles.outer}>
@@ -1061,17 +2858,7 @@ export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearD
         </button>
       </div>
 
-      <div className={styles.body}>
-        {tool.fields
-          ?.filter((f) => isFieldVisible(f, effectiveSnapshot))
-          .map((f) => (
-            <InteractiveField
-              key={f.id}
-              field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
-              onValueChange={handleValueChange}
-            />
-          ))}
-      </div>
+      {fieldsBody}
     </div>
   );
 }

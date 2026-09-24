@@ -1,9 +1,16 @@
-import { Icon } from '../Icon/Icon'
+import { Check, HelpCircle, CheckCircle2, AlertCircle, MinusCircle, type LucideIcon } from 'lucide-react'
 import {
   ALL_STATUS_IDS,
   STATUS_FILTER_OPTIONS,
   StatusFilterDropdownProps,
 } from './StatusFilterDropdown.types'
+
+const STATUS_ICON_MAP: Record<string, LucideIcon> = {
+  help: HelpCircle,
+  check_circle: CheckCircle2,
+  error: AlertCircle,
+  do_not_disturb_on: MinusCircle,
+}
 
 function StatusCheckbox({ checked }: { checked: boolean }) {
   return (
@@ -12,7 +19,7 @@ function StatusCheckbox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }
@@ -41,6 +48,7 @@ export function StatusFilterDropdown({ value, onChange, onApply }: StatusFilterD
       <div className="flex flex-col gap-xs px-lg pb-xs">
         {STATUS_FILTER_OPTIONS.map((item) => {
           const checked = selected.has(item.id)
+          const StatusIcon = item.icon ? STATUS_ICON_MAP[item.icon] : undefined
           return (
             <button
               key={item.id}
@@ -49,8 +57,12 @@ export function StatusFilterDropdown({ value, onChange, onApply }: StatusFilterD
               className="flex w-full items-center gap-sm rounded-sm py-sm pr-sm text-left hover:bg-surface-hover"
             >
               <StatusCheckbox checked={checked} />
-              {item.icon && (
-                <Icon name={item.icon} size={20} className={`shrink-0 ${item.iconClassName ?? ''}`} />
+              {StatusIcon && (
+                <StatusIcon
+                  className={`size-5 shrink-0 ${item.iconClassName ?? ''}`}
+                  strokeWidth={1.6}
+                  absoluteStrokeWidth
+                />
               )}
               <span className="min-w-0 flex-1 truncate text-body text-text-primary">{item.label}</span>
             </button>
@@ -64,7 +76,7 @@ export function StatusFilterDropdown({ value, onChange, onApply }: StatusFilterD
         <button
           type="button"
           onClick={onApply}
-          className="rounded-sm bg-primary px-lg py-[7px] text-body text-white transition-colors hover:bg-primary-hover"
+          className="rounded-md bg-primary px-lg py-[7px] text-body text-white transition-colors hover:bg-primary-hover"
         >
           Apply
         </button>
