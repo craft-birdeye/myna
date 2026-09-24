@@ -1,7 +1,7 @@
 /**
  * "N nodes updated · Accept / Undo" — the review card the build pass leaves docked above the
  * composer. Collapsed, it's one row (chevron, count, the two actions); expanded, it lists
- * every node the pass touched with a `+` (added) or `±` (rewired) marker and the node's glyph.
+ * every node the pass touched with the node's glyph; added nodes sit on a light tint.
  *
  * Chrome matches the docked question cards (`rounded-sm border-border bg-surface`), regular
  * weight only, sentence case.
@@ -64,14 +64,6 @@ export function NodesUpdatedCard({ nodes, onAccept, onUndo, onOpenNode, classNam
             } ${clickable ? 'transition-colors hover:bg-surface-selected' : ''}`
             const content = (
               <>
-                <span
-                  className={`w-3 shrink-0 text-center text-small ${
-                    node.kind === 'added' ? 'text-accent-positive' : 'text-text-tertiary'
-                  }`}
-                  aria-label={node.kind === 'added' ? 'Added' : 'Changed'}
-                >
-                  {node.kind === 'added' ? '+' : '±'}
-                </span>
                 <Icon name={node.icon} size={16} className="shrink-0 text-[#7c3aed]" />
                 <span className="min-w-0 flex-1 text-body text-text-primary">{node.label}</span>
                 {clickable && <Icon name="chevron_right" size={16} className="shrink-0 text-text-icon" />}
