@@ -184,7 +184,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'auto-appointment-type',  label: 'Appointment type'},
       { id: 'auto-availability',      label: 'Availability'    },
@@ -232,7 +232,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'providers',         label: 'Providers'          },
       { id: 'appointment-type',  label: 'Appointment type'   },
@@ -286,7 +286,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'providers',         label: 'Providers'        },
       { id: 'appointment-type',  label: 'Appointment type' },
@@ -343,7 +343,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'resources',
-    label: 'Resources',
+    label: 'Settings',
     items: [
       { id: 'monitoring-sites',   label: 'Monitoring sites' },
       { id: 'generation-sites',   label: 'Generation sites' },

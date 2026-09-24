@@ -31,6 +31,8 @@ export interface StackedBarChartProps {
   wrapXLabels?: boolean
   /** Show value labels above each bar and hide the Y-axis + horizontal grid lines. */
   showBarLabels?: boolean
+  /** When true with showBarLabels, labels the stacked total instead of the top segment only. */
+  showStackTotalLabels?: boolean
   /** Hide the bottom legend. */
   hideLegend?: boolean
 }
@@ -101,7 +103,26 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend }: StackedBarChartProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function StackTotalLabel({ x, y, width, index, data, series }: any) {
+  if (x == null || y == null || width == null || index == null) return null
+  const row = data[index]
+  const total = series.reduce((sum: number, s: BarSeries) => sum + Number(row?.[s.key] ?? 0), 0)
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      textAnchor="middle"
+      fill="#0d0d12"
+      fontSize={12}
+      fontFamily="Inter, sans-serif"
+    >
+      {kFormat(total)}
+    </text>
+  )
+}
+
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, showStackTotalLabels, hideLegend }: StackedBarChartProps) {
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -154,12 +175,16 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             isAnimationActive={false}
           >
             {showBarLabels && i === series.length - 1 && (
-              <LabelList
-                dataKey={s.key}
-                position="top"
-                formatter={kFormat}
-                style={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
-              />
+              showStackTotalLabels
+                ? <LabelList content={(props) => <StackTotalLabel {...props} data={data} series={series} />} />
+                : (
+                  <LabelList
+                    dataKey={s.key}
+                    position="top"
+                    formatter={kFormat}
+                    style={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
+                  />
+                )
             )}
           </Bar>
         ))}

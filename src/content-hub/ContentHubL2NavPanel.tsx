@@ -176,7 +176,7 @@ export function ContentHubL2NavPanel({
           ],
         },
         {
-          label: 'Resources',
+          label: 'Settings',
           children: [
             { label: 'Brand identity', key: 'resources-brand-identity', nonNav: true, external: true },
             { label: 'Approvals',      key: 'resources-approvals',      nonNav: true, external: true },

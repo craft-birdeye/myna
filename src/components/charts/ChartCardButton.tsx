@@ -12,7 +12,7 @@ export function ChartCardButton({ icon: IconComponent, label, onClick }: ChartCa
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border-chart-btn bg-surface text-text-icon transition-colors hover:bg-surface-hover"
+      className="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon transition-colors hover:bg-surface-l2"
     >
       <IconComponent className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
     </button>
