@@ -12,6 +12,14 @@ interface RecommendationsTabProps {
   isDraft?: boolean
   /** Force the empty state (e.g. review agents that don't surface recommendations yet). */
   empty?: boolean
+  /** Include the static Myna-generated rows (the front desk set). Off for agents whose list is
+   *  coaching-only, e.g. the review response agent. Default true. */
+  includeGenerated?: boolean
+  /** Extra rows to list alongside the store's feedback items — e.g. seeded coaching examples. */
+  extraItems?: Recommendation[]
+  /** Empty-state copy override. */
+  emptyTitle?: string
+  emptyDescription?: string
 }
 
 /** Row shape rendered by the table — adds a sortable numeric age alongside the raw `timeAgo`
@@ -22,7 +30,7 @@ type RecommendationRow = Recommendation & { ageMinutes: number }
 const COLUMNS: Column<RecommendationRow>[] = [
   {
     key: 'title',
-    label: 'Recommendation',
+    label: 'Coaching',
     width: 440,
     minWidth: 280,
     render: (_, rec) => (
@@ -76,11 +84,24 @@ const COLUMNS: Column<RecommendationRow>[] = [
   },
 ]
 
-export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty = false }: RecommendationsTabProps) {
+export function RecommendationsTab({
+  agentName,
+  onSelect,
+  isDraft = false,
+  empty = false,
+  includeGenerated = true,
+  extraItems = [],
+  emptyTitle,
+  emptyDescription,
+}: RecommendationsTabProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides } = useRecommendationOverridesStore()
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
-  const combined = [...RECOMMENDATIONS, ...feedbackForAgent]
+  /* Store items win over seeds with the same id (a seed that's been acted on lives in the store). */
+  const seeds = extraItems.filter((seed) => !feedbackForAgent.some((rec) => rec.id === seed.id))
+  /* The store appends, so reverse it: what the user just submitted sits at the top, above the
+     seeded items (ties on "conversations affected" keep this insertion order). */
+  const combined = [...(includeGenerated ? RECOMMENDATIONS : []), ...[...feedbackForAgent].reverse(), ...seeds]
   const maxConversationCount = Math.max(0, ...combined.map((rec) => rec.conversationCount))
   const data: RecommendationRow[] = combined
     .map((rec) => ({
@@ -93,15 +114,16 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
     // that column so the header chevron stays visible.
     .sort((a, b) => b.conversationCount - a.conversationCount)
 
-  if (isDraft || empty) {
+  if (isDraft || empty || combined.length === 0) {
     return (
       <div className="flex h-full items-center justify-center px-lg py-lg">
         <EmptyState
-          title="No recommendations yet"
+          title={emptyTitle ?? 'No coaching yet'}
           description={
-            isDraft
-              ? "This agent is still in draft and hasn't handled any conversations yet, so there's nothing to base a recommendation on."
-              : 'Recommendations will appear here as this agent runs and finds opportunities to improve.'
+            emptyDescription ??
+            (isDraft
+              ? "This agent is still in draft and hasn't handled any conversations yet, so there's nothing to coach it on."
+              : 'Coaching will appear here as this agent runs, and whenever someone on your team gives it feedback.')
           }
         />
       </div>

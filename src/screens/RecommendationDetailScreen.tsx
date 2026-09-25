@@ -48,6 +48,9 @@ interface RecommendationDetailScreenProps {
    *  prompt (pre-filled) instead of requiring a separate "Track your feedback" click first. */
   autoOpenFeedbackPrefill?: string | null
   onAutoOpenFeedbackConsumed?: () => void
+  /** `docked` renders the same conversation inside the workflow canvas's copilot panel: no
+   *  64px header (the panel has its own), no 720px column, tighter gutters. */
+  layout?: 'fullpage' | 'docked'
 }
 
 // ── Confirm accept modal ──────────────────────────────────────────────────────
@@ -342,7 +345,7 @@ function ConversationThread({ conv, sim, onBack }: { conv: ConversationItem; sim
           <p className="min-w-0 flex-1 text-[12px] leading-[18px] text-text-secondary">
             {simActive
               ? 'Simulating how this conversation would go with the new procedure'
-              : 'The agent could not fully resolve this request. This conversation contributed to the recommendation.'}
+              : 'The agent could not fully resolve this request. This conversation contributed to this coaching.'}
           </p>
           <button
             type="button"
@@ -646,7 +649,9 @@ function CopilotFooter({
   isThinking,
   onSubmit,
   prefill,
+  docked = false,
 }: {
+  docked?: boolean
   isThinking: boolean
   onSubmit: (text: string, attachmentName?: string) => void
   /** Fills the composer with this text the first time it's focused (while still empty) — see
@@ -679,8 +684,8 @@ function CopilotFooter({
   }
 
   return (
-    <div className="shrink-0 bg-surface px-2xl py-md">
-      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-sm">
+    <div className={`shrink-0 bg-surface py-md ${docked ? 'px-lg' : 'px-2xl'}`}>
+      <div className={`mx-auto flex w-full flex-col gap-sm ${docked ? '' : 'max-w-[720px]'}`}>
         <div
           className={`flex flex-col gap-md rounded-xl border bg-surface px-lg py-md shadow-card transition-colors focus-within:border-ai-brand ${
             prefill ? 'border-ai-brand' : 'border-border'
@@ -1872,7 +1877,7 @@ function ResponseBlock({
         <div className="chat-reveal-in flex items-center justify-between gap-md">
           {recStatus === 'open' ? (
             <>
-              <p className="text-body text-text-primary">Do you accept this recommendation?</p>
+              <p className="text-body text-text-primary">Do you accept this change?</p>
               <div className="flex shrink-0 items-center gap-sm">
                 <button
                   type="button"
@@ -1894,7 +1899,7 @@ function ResponseBlock({
             <div className="flex items-center gap-sm">
               <Chip label={recStatus === 'accepted' ? 'Accepted' : 'Rejected'} variant={recStatus === 'accepted' ? 'success' : 'danger'} />
               <span className="text-body text-text-secondary">
-                {recStatus === 'accepted' ? 'You accepted this recommendation.' : 'You kept the original — this recommendation was not applied.'}
+                {recStatus === 'accepted' ? 'You accepted this change.' : 'You kept the original — this change was not applied.'}
               </span>
             </div>
           )}
@@ -1958,7 +1963,9 @@ function RecommendationChatView({
   onRejectScripted,
   onViewProcedure,
   onViewTranscript,
+  docked = false,
 }: {
+  docked?: boolean
   rec: Recommendation
   recStatus: RecStatus
   onReject: (id: string) => void
@@ -1994,7 +2001,7 @@ function RecommendationChatView({
     new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter((t): t is GapType => Boolean(t)))
 
   return (
-    <div className="recommendation-chat-body mx-auto flex w-full max-w-[720px] flex-col gap-xl py-xl">
+    <div className={`recommendation-chat-body mx-auto flex w-full flex-col gap-xl py-xl ${docked ? '' : 'max-w-[720px]'}`}>
       <style>{`
         @keyframes chat-reveal-in {
           from { opacity: 0; transform: translateY(6px); }
@@ -2082,10 +2089,10 @@ function RecommendationChatView({
             ) : (
               <ResponseBlock
                 key={`${turn.id}-response`}
-                thoughts={`You asked me to: "${turn.text}". Let me update the recommendation.`}
+                thoughts={`You asked me to: "${turn.text}". Let me update the proposal.`}
                 toolCount={rec.tools.length}
                 conversationCount={rec.conversationCount}
-                bodyText="I've updated the recommendation to reflect your request — here's the current state of every section."
+                bodyText="I've updated the proposal to reflect your request — here's the current state of every section."
                 changes={effectiveChanges}
                 pendingChangeTypes={pendingChangeTypesAt(resolvedAfterThisTurn)}
                 procedureTitle={rec.procedureTitle}
@@ -2115,7 +2122,9 @@ export function RecommendationDetailScreen({
   onBack,
   autoOpenFeedbackPrefill,
   onAutoOpenFeedbackConsumed,
+  layout = 'fullpage',
 }: RecommendationDetailScreenProps) {
+  const docked = layout === 'docked'
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides, submitRefinement, setRecommendationStatus } = useRecommendationOverridesStore()
   const rec =
@@ -2205,7 +2214,7 @@ export function RecommendationDetailScreen({
   const handleReject = (id: string) => {
     setRecStatus('rejected')
     setRecommendationStatus(id, 'rejected')
-    showToast({ message: 'Recommendation rejected', variant: 'danger' })
+    showToast({ message: 'Change rejected', variant: 'danger' })
   }
 
   const handleApproveScripted = () => {
@@ -2237,12 +2246,14 @@ export function RecommendationDetailScreen({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header — full-bleed, left-aligned like CreateAiGhostwriterShellHeader. */}
+      {/* Header — full-bleed, left-aligned like CreateAiGhostwriterShellHeader. Docked: the
+          copilot panel supplies its own header. */}
+      {!docked && (
       <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
         <div className="flex min-w-0 w-full items-center gap-xs">
           <button
             type="button"
-            aria-label="Back to recommendations"
+            aria-label="Back to coaching"
             onClick={onBack}
             className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
           >
@@ -2255,6 +2266,7 @@ export function RecommendationDetailScreen({
           />
         </div>
       </div>
+      )}
 
       {/* Body */}
       {autoOpenFeedbackPrefill != null && pendingTranscriptLines ? (
@@ -2266,8 +2278,9 @@ export function RecommendationDetailScreen({
       ) : (
         <>
           <div className="relative flex min-h-0 flex-1 justify-center overflow-hidden">
-            <div ref={chatScrollRef} className="scrollbar-none min-w-0 flex-1 max-w-[720px] overflow-y-auto px-2xl">
+            <div ref={chatScrollRef} className={`scrollbar-none min-w-0 flex-1 overflow-y-auto ${docked ? 'px-lg' : 'max-w-[720px] px-2xl'}`}>
               <RecommendationChatView
+                docked={docked}
                 rec={rec}
                 recStatus={recStatus}
                 onReject={handleReject}
@@ -2301,6 +2314,7 @@ export function RecommendationDetailScreen({
           )}
 
           <CopilotFooter
+            docked={docked}
             isThinking={isThinking}
             onSubmit={handleSubmitRefinement}
             prefill={chatTurns.length === 0 ? rec.composerPrefill : undefined}

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { buildCoachingFeedbackRecommendation } from './coachingFeedbackRecommendations'
+import { buildReviewCoachingRecommendation } from './reviewCoaching'
+import type { Review } from './reviewsData'
 import {
   buildGenericFeedbackIntroBlocks,
   classifyFeedbackType,
@@ -28,6 +30,11 @@ interface SubmitFeedbackInput {
   reportedExcerpt?: { speaker: string; text: string }[]
   /** Full transcript backing `reportedExcerpt`, shown via the "View Transcript" side panel. */
   reportedTranscript?: { speaker: string; text: string }[]
+  /** Reviews: the agent-replied review the feedback is about — builds a review coaching item
+   *  (`data/reviewCoaching.ts`) instead of the front-desk heuristic record. */
+  review?: Review
+  /** Who gave the feedback — shown in the Coaching list's "From" column. */
+  reportedBy?: string
 }
 
 interface FeedbackRecommendationsStore {
@@ -75,7 +82,29 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
     messageId,
     reportedExcerpt,
     reportedTranscript,
+    review,
+    reportedBy,
   }: SubmitFeedbackInput): string => {
+    // Review response: feedback on an agent-written reply becomes a review coaching item.
+    if (review) {
+      const reviewRecommendation = buildReviewCoachingRecommendation({ review, text, reportedBy: reportedBy ?? 'You' })
+      setFeedbackRecommendations((prev) => {
+        const existingIndex = prev.findIndex(
+          (rec) => rec.source === 'feedback' && rec.agentName === agentName && rec.feedbackKey === reviewRecommendation.feedbackKey,
+        )
+        if (existingIndex >= 0) {
+          const next = [...prev]
+          next[existingIndex] = { ...reviewRecommendation, id: prev[existingIndex].id }
+          return next
+        }
+        return [...prev, reviewRecommendation]
+      })
+      const existing = feedbackRecommendations.find(
+        (rec) => rec.source === 'feedback' && rec.agentName === agentName && rec.feedbackKey === reviewRecommendation.feedbackKey,
+      )
+      return existing?.id ?? reviewRecommendation.id
+    }
+
     // The four coaching-example transcripts (Inbox voice calls C1–C4) get a fully hand-scripted
     // chat — same pattern as the AI-detected recommendations — instead of the generic
     // heuristic-classified one below.

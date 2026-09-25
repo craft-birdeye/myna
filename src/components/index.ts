@@ -287,3 +287,5 @@ export type { JayRobinCreateFlowProps } from './JayRobinCreateFlow/JayRobinCreat
 export { SparkleLoader } from './SparkleLoader/SparkleLoader'
 export { NodesUpdatedCard } from './JayRobinCreateFlow/NodesUpdatedCard'
 export type { NodesUpdatedCardProps } from './JayRobinCreateFlow/NodesUpdatedCard'
+export { ReviewCoachingFlow } from './ReviewCoachingFlow/ReviewCoachingFlow'
+export type { ReviewCoachingFlowProps } from './ReviewCoachingFlow/ReviewCoachingFlow.types'

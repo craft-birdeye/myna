@@ -195,6 +195,10 @@ interface WorkflowEditorScreenProps {
   /** Open a node's config panel from outside the canvas (Jay & Robin's "N nodes updated"
    *  rows). `nonce` bumps per request. */
   externalOpenNode?: { id: string; nonce: number } | null
+  /** Coaching sessions: dock the AI panel flush-left at full height (rail hidden) and title
+   *  it — see `AgentBuilder`'s matching props. */
+  flushAiPanel?: boolean
+  aiPanelTitle?: string
 }
 
 export function WorkflowEditorScreen({
@@ -242,6 +246,8 @@ export function WorkflowEditorScreen({
   externalTestRun = null,
   buildRevealStage = null,
   externalOpenNode = null,
+  flushAiPanel = false,
+  aiPanelTitle,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -433,6 +439,8 @@ export function WorkflowEditorScreen({
             collapseLeftFloaterOnPanel={collapseLeftFloaterOnPanel}
             externalTestRun={externalTestRun}
             externalOpenNode={externalOpenNode}
+            flushAiPanel={flushAiPanel}
+            aiPanelTitle={aiPanelTitle}
             procedures={filteredProcedures}
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}

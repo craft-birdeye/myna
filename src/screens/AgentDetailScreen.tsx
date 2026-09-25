@@ -47,6 +47,8 @@ import { useTypewriter } from '../hooks/useTypewriter'
 import { SparkleLoader } from '../components/SparkleLoader/SparkleLoader'
 import { JayRobinCreateFlow } from '../components/JayRobinCreateFlow/JayRobinCreateFlow'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
+import { RecommendationsTab } from './RecommendationsTab'
+import { REVIEW_COACHING_AGENT, REVIEW_COACHING_SEEDS } from '../data/reviewCoaching'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
@@ -206,6 +208,9 @@ interface AgentDetailScreenProps {
   /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
    *  recommendation inside a specific agent instance. */
   initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
+  /** Coaching rows open on the workflow canvas with the copilot docked — the host owns that
+   *  canvas (`App.openCoachingCanvas`). `returnTo` is where Back should land afterwards. */
+  onOpenCoaching?: (recommendationId: string, instanceName: string, returnTo?: { instanceName: string; tab: string }) => void
   onInitialRecommendationFocusConsumed?: () => void
   /** Set by the host app (e.g. the Agent directory "Create agent" CTA) to land directly in
    *  the create-agent flow instead of the agent's default Agents-tab table. */
@@ -473,6 +478,9 @@ const TABS: Tab[] = [
   { id: 'agents', label: 'Agents' },
   { id: 'library', label: 'Library' },
 ]
+/** Jay & Robin / 23 Sep: coaching from the team's feedback on agent replies lists here, at the
+ *  agent level, not on an instance. */
+const TABS_WITH_COACHING: Tab[] = [...TABS, { id: 'coaching', label: 'Coaching' }]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Active: 'success',
@@ -9481,7 +9489,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, onOpenCoaching, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange }: AgentDetailScreenProps) {
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
@@ -11454,6 +11462,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             initialRecommendationFocus?.instanceName === selectedInstance ? initialRecommendationFocus.feedbackPrefill ?? null : null
           }
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
+          onOpenCoaching={
+            onOpenCoaching
+              ? (id) => onOpenCoaching(id, selectedInstance, { instanceName: selectedInstance, tab: 'recommendation' })
+              : undefined
+          }
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
@@ -11551,7 +11564,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={TABS}
+                  tabs={isJayRobinNav(navId) && isReviewResponse ? TABS_WITH_COACHING : TABS}
                   activeTab={activeTab}
                   showBaseline={false}
                   onChange={(tabId) => {
@@ -11565,6 +11578,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 <>
                   {isReviewResponse ? <ReviewResponseOutcomesCharts /> : null}
                 </>
+              ) : activeTab === 'coaching' ? (
+                <RecommendationsTab
+                  agentName={REVIEW_COACHING_AGENT}
+                  includeGenerated={false}
+                  extraItems={REVIEW_COACHING_SEEDS}
+                  onSelect={(id) => onOpenCoaching?.(id, REVIEW_COACHING_AGENT)}
+                  emptyDescription="Coaching appears here whenever someone on your team thumbs-down an agent reply in Reviews and says what was wrong."
+                />
               ) : activeTab === 'agents' ? (
                 <>
                   {useAgentCardGrid ? (

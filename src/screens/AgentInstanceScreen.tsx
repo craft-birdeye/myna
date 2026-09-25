@@ -71,6 +71,9 @@ interface AgentInstanceScreenProps {
   workflowButtonOpensEditor?: boolean
   /** Sep 1 review response flow hides Recommendation. */
   hideRecommendationTab?: boolean
+  /** When given, clicking a coaching row opens it on the workflow canvas with the copilot
+   *  docked (the host owns that canvas) instead of this screen's full-page detail view. */
+  onOpenCoaching?: (recommendationId: string) => void
   /** Full canvas: log view puts the Outcome/Log panel on the left and lets cards open a
    *  read-only config panel on the right. */
   fullCanvasChrome?: boolean
@@ -115,7 +118,7 @@ interface LocationRow {
 const TABS: Tab[] = [
   { id: 'outcomes', label: 'Outcomes' },
   { id: 'workflow', label: 'Workflow' },
-  { id: 'recommendation', label: 'Recommendation' },
+  { id: 'recommendation', label: 'Coaching' },
   { id: 'logs', label: 'Logs' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -440,6 +443,7 @@ export function AgentInstanceScreen({
   initialFeedbackPrefill,
   workflowButtonOpensEditor = false,
   hideRecommendationTab = false,
+  onOpenCoaching,
   fullCanvasChrome = false,
   initialLogSlug,
   initialPanel,
@@ -921,6 +925,10 @@ export function AgentInstanceScreen({
               <RecommendationsTab
                 agentName={instanceName}
                 onSelect={(id) => {
+                  if (onOpenCoaching) {
+                    onOpenCoaching(id)
+                    return
+                  }
                   setSelectedRecommendationId(id)
                   onDeepRouteChange?.({ tab: 'recommendation', recId: id })
                 }}

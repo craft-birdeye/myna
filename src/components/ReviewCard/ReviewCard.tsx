@@ -36,7 +36,7 @@ export function StarRating({ rating, size = 18 }: StarRatingProps) {
 /** The reviewer/rating header, review text, and posted-reply block of a review — the shared
  *  visual core of the reviews list card, reused wherever a single review needs to be shown
  *  read-only (e.g. a log run's "Review details" tab). */
-export function ReviewCardBody({ review, className = '', stacked = false }: ReviewCardBodyProps) {
+export function ReviewCardBody({ review, className = '', stacked = false, replyFooter }: ReviewCardBodyProps) {
   const avatar = (
     <Tooltip variant="brief" content="Birdeye">
       <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-l2">
@@ -107,6 +107,7 @@ export function ReviewCardBody({ review, className = '', stacked = false }: Revi
         <span>{review.reply.postedAt}</span>
       </div>
       <p className="mt-md text-body leading-6 text-text-primary">{review.reply.text}</p>
+      {replyFooter}
     </div>
   ) : null
 

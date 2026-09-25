@@ -15,6 +15,7 @@ import {
   isResponseAgentsExplorationNav,
   isFullCanvasStyleNav,
   isFrontdeskMynaNav,
+  isJayRobinNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -65,6 +66,9 @@ import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { UserExperienceImprovementScreen } from './screens/UserExperienceImprovementScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
+import { CoachingCanvasPane } from './screens/CoachingCanvasPane'
+import type { CoachingSession } from './screens/CoachingCanvasPane'
+import { REVIEW_COACHING_AGENT } from './data/reviewCoaching'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { OverviewV2Screen } from './screens/OverviewV2Screen'
@@ -672,6 +676,11 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
+  /** A coaching item open on the workflow canvas — the copilot panel shows its conversation
+   *  (`CoachingCanvasPane`) instead of the default Create/Edit with AI body. */
+  const [coachingSession, setCoachingSession] = useState<CoachingSession | null>(null)
+  /** "N nodes updated" row clicks from the coaching conversation → open that node's panel. */
+  const [coachingOpenNode, setCoachingOpenNode] = useState<{ id: string; nonce: number } | null>(null)
 
   // Restore rail + L2 from the address bar (path or leftover hash) on back/forward.
   useEffect(() => {
@@ -775,6 +784,27 @@ export function App() {
       setAgentToastMessage(`${draft.agentName} created successfully`)
       setAgentToastVisible(true)
     }
+  }
+
+  /** Opens the agent's workflow canvas full-screen with the copilot docked left, working on
+   *  one coaching item. Review response coaching lives under the Reviews rail on the Jay &
+   *  Robin family of navs (the ones with the Ghostwriter create flow); anything else stays on
+   *  whatever nav it was opened from. */
+  function openCoachingCanvas(
+    recommendationId: string,
+    instanceName: string,
+    returnTo?: { instanceName: string; tab: string },
+  ) {
+    if (instanceName === REVIEW_COACHING_AGENT) {
+      setRailActive('reviews')
+      if (!isJayRobinNav(navActive)) setNavActive('response-agents-23-sep')
+      setDeepRoute({})
+    }
+    setCoachingSession({ recommendationId, instanceName })
+    setCoachingOpenNode(null)
+    handleEditAgent(instanceName, undefined, returnTo)
+    // handleEditAgent lands with the panel closed; the coaching conversation needs it open.
+    setWorkflowAiBuilderPanelOpen(true)
   }
 
   const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(
@@ -1201,6 +1231,7 @@ export function App() {
                             setWorkflowAiCreateFullscreen(false)
                             setWorkflowAiBuilderPanelOpen(false)
                             setWorkflowLhsPreferAiTab(false)
+                            setCoachingSession(null)
                           }}
                           onSaveAgent={(published, payload) => {
                             if (!published) return
@@ -1220,6 +1251,7 @@ export function App() {
                             setWorkflowAiCreateFullscreen(false)
                             setWorkflowAiBuilderPanelOpen(false)
                             setWorkflowLhsPreferAiTab(false)
+                            setCoachingSession(null)
                           }}
                           // Deleted: same teardown as onClose, but the stored return view is
                           // dropped rather than replayed — that view is the deleted agent's
@@ -1234,6 +1266,7 @@ export function App() {
                             setWorkflowAiCreateFullscreen(false)
                             setWorkflowAiBuilderPanelOpen(false)
                             setWorkflowLhsPreferAiTab(false)
+                            setCoachingSession(null)
                           }}
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
@@ -1259,8 +1292,23 @@ export function App() {
                           llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
                           identityLocationChrome={isResponseAgentsExplorationNav(navActive)}
                           inlineRhsFooter={isResponseAgentsSep1StyleNav(navActive)}
-                          autoOpenCoachTour={isAgentCoachCueNav(navActive)}
+                          autoOpenCoachTour={isAgentCoachCueNav(navActive) && !coachingSession}
                           onOpenProductResearchSettings={openUxImprovementSettings}
+                          aiBuilderPanelContent={
+                            coachingSession ? (
+                              <CoachingCanvasPane
+                                session={coachingSession}
+                                onOpenNode={(id) => setCoachingOpenNode({ id, nonce: Date.now() })}
+                                onClose={() => {
+                                  setCoachingSession(null)
+                                  setWorkflowAiBuilderPanelOpen(false)
+                                }}
+                              />
+                            ) : undefined
+                          }
+                          flushAiPanel={!!coachingSession}
+                          aiPanelTitle={coachingSession ? 'Coaching' : undefined}
+                          externalOpenNode={coachingSession ? coachingOpenNode : null}
                         />
                       </div>
                       {workflowAiAssistOpen && (
@@ -1270,11 +1318,11 @@ export function App() {
                   )
                 ) : railActive === 'reviews' ? (
                   navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
-                    <AllReviewsScreen />
+                    <AllReviewsScreen onTrackFeedback={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)} />
                   ) : navActive === 'respond-to-reviews' ? (
-                    <AllReviewsScreen unansweredOnly />
+                    <AllReviewsScreen unansweredOnly onTrackFeedback={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)} />
                   ) : navActive === 'monitor-agent-replies' ? (
-                    <AllReviewsScreen agentRepliesOnly />
+                    <AllReviewsScreen agentRepliesOnly onTrackFeedback={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)} />
                   ) : AGENT_NAMES[navActive] ? (
                     <AgentDetailScreen
                       key={navActive}
@@ -1283,6 +1331,7 @@ export function App() {
                       routeDeep={deepRoute}
                       onDeepRouteChange={setDeepRoute}
                       onEditAgent={handleEditAgent}
+                      onOpenCoaching={openCoachingCanvas}
                       onAgentSetupActiveChange={setIsAgentSetupActive}
                       onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
                       pendingInstanceView={pendingAgentInstanceView}
@@ -1412,6 +1461,7 @@ export function App() {
                     routeDeep={deepRoute}
                     onDeepRouteChange={setDeepRoute}
                     onEditAgent={handleEditAgent}
+                    onOpenCoaching={openCoachingCanvas}
                     onOpenIntegrationSettings={openIntegrationSettings}
                     onAgentSetupActiveChange={setIsAgentSetupActive}
                     onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}

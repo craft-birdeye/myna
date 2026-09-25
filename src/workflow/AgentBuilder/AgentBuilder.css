@@ -2241,14 +2241,26 @@
  * Controls stack hides while the panel is up, and the panel docks at the stack's own 16px
  * inset instead of sitting to its right — the bottom controls follow through the variable.
  */
-.agent-builder--gw.agent-builder--lhs-ai-open {
+.agent-builder--gw.agent-builder--lhs-ai-open,
+.agent-builder--lhs-ai-flush.agent-builder--lhs-ai-open {
   --rr-chrome-lhs-panel-left: 16px;
   /* The rail's 88px (56px labelled rail + 12px gap + the 20px the panel used to clear it by)
      goes to the panel instead: 360px → 448px, so the right edge stays where it was. */
   --rr-chrome-lhs-panel-width: 448px;
 }
-.agent-builder--gw.agent-builder--lhs-ai-open .rr-chrome-left-stack {
+.agent-builder--gw.agent-builder--lhs-ai-open .rr-chrome-left-stack,
+.agent-builder--lhs-ai-flush.agent-builder--lhs-ai-open .rr-chrome-left-stack {
   display: none;
+}
+/* Same full-height treatment the Ghostwriter canvas gives the panel — a coaching session
+   docked on an ordinary canvas shouldn't reserve space for chrome the panel covers anyway. */
+.agent-builder--lhs-ai-flush .agent-builder__lhs-ai,
+.agent-builder--lhs-ai-flush.agent-builder--lhs-ai-open .agent-builder__lhs-ai {
+  top: 8px;
+  bottom: 8px;
+  max-height: calc(100% - 16px);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
 }
 
 /*

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FilterPanel, HeaderSearchField, Icon, ReviewCardBody, StarRating, Tooltip, TopNav } from '../components'
+import { FilterPanel, HeaderSearchField, Icon, ReviewCardBody, ShareFeedbackModal, StarRating, Toast, Tooltip, TopNav } from '../components'
 import type { FilterField } from '../components'
 import iconAgentsPurple from '../assets/icon-agents-purple.svg'
 import { ALL_REVIEWS, type Review } from '../data/reviewsData'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
+import { REVIEW_COACHING_AGENT, REVIEW_COACHING_COPY } from '../data/reviewCoaching'
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
 
@@ -211,10 +213,69 @@ function ReviewsMoreMenu() {
   )
 }
 
-function ReviewCard({ review }: { review: Review }) {
+type ReplyFeedback = 'up' | 'down' | null
+
+/** Thumbs on an agent-written reply — same widget as the Inbox's `ChatBubble` feedback, plus
+ *  the "Coach agent" / "Track your feedback" link that the Inbox shows on agent bubbles. */
+function ReplyFeedbackRow({
+  value,
+  tracked,
+  onChange,
+  onTrack,
+}: {
+  value: ReplyFeedback
+  tracked: boolean
+  onChange: (next: 'up' | 'down') => void
+  onTrack: () => void
+}) {
+  const btn = (active: boolean, tone: string) =>
+    `flex size-6 items-center justify-center rounded-sm transition-colors hover:bg-surface-hover ${active ? tone : 'text-text-tertiary'}`
+  return (
+    <div className="mt-md flex items-center justify-between gap-md border-t border-border pt-md">
+      <div className="flex items-center gap-xs">
+        <Tooltip content="Good reply" variant="brief">
+          <button type="button" aria-label="Good reply" aria-pressed={value === 'up'} onClick={() => onChange('up')} className={btn(value === 'up', 'text-accent-positive')}>
+            <Icon name="thumb_up" size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content={tracked ? 'Feedback submitted' : 'Coach the agent on this reply'} variant="brief">
+          <button type="button" aria-label={tracked ? 'Feedback submitted' : 'Bad reply'} aria-pressed={value === 'down'} onClick={() => onChange('down')} className={btn(value === 'down', 'text-chip-danger-text')}>
+            <Icon name="thumb_down" size={16} />
+          </button>
+        </Tooltip>
+      </div>
+      <button
+        type="button"
+        onClick={tracked ? onTrack : () => onChange('down')}
+        className="flex items-center gap-xs rounded-sm px-sm py-xs text-small text-text-action hover:bg-surface-hover"
+      >
+        <Icon name={tracked ? 'track_changes' : 'school'} size={16} />
+        {tracked ? REVIEW_COACHING_COPY.trackLink : REVIEW_COACHING_COPY.coachLink}
+      </button>
+    </div>
+  )
+}
+
+function ReviewCard({
+  review,
+  feedback,
+  tracked,
+  onFeedback,
+  onTrack,
+}: {
+  review: Review
+  feedback: ReplyFeedback
+  tracked: boolean
+  onFeedback: (next: 'up' | 'down') => void
+  onTrack: () => void
+}) {
+  const isAgentReply = Boolean(review.reply && /agent/i.test(review.reply.agentName))
   return (
     <article className="relative px-2xl py-2xl after:absolute after:inset-x-2xl after:bottom-0 after:border-b after:border-border">
-      <ReviewCardBody review={review} />
+      <ReviewCardBody
+        review={review}
+        replyFooter={isAgentReply ? <ReplyFeedbackRow value={feedback} tracked={tracked} onChange={onFeedback} onTrack={onTrack} /> : undefined}
+      />
 
       {review.reply ? (
         <>
@@ -265,10 +326,57 @@ function ReviewCard({ review }: { review: Review }) {
 export function AllReviewsScreen({
   unansweredOnly = false,
   agentRepliesOnly = false,
+  onTrackFeedback,
 }: {
   unansweredOnly?: boolean
   agentRepliesOnly?: boolean
+  /** "Track feedback" on a coached reply — the host opens the review response agent's canvas
+   *  with the copilot working on that coaching item. */
+  onTrackFeedback?: (recommendationId: string, review: Review) => void
 }) {
+  const { submitFeedback } = useFeedbackRecommendationsStore()
+  const [feedbackByReview, setFeedbackByReview] = useState<Record<string, ReplyFeedback>>({})
+  const [recIdByReview, setRecIdByReview] = useState<Record<string, string>>({})
+  const [shareFeedbackReviewId, setShareFeedbackReviewId] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastRecId, setToastRecId] = useState<string | null>(null)
+  const showToast = (message: string, recId: string | null = null) => {
+    setToastMessage(message)
+    setToastRecId(recId)
+    setToastVisible(true)
+  }
+  const handleFeedback = (review: Review, next: 'up' | 'down') => {
+    if (next === 'down') {
+      // Ask what was wrong before committing the thumbs-down — that text is the coaching.
+      setShareFeedbackReviewId(review.id)
+      return
+    }
+    setFeedbackByReview((prev) => ({ ...prev, [review.id]: prev[review.id] === 'up' ? null : 'up' }))
+    showToast(REVIEW_COACHING_COPY.thanksToast)
+  }
+  const handleShareFeedbackSubmit = (details: string) => {
+    const review = ALL_REVIEWS.find((r) => r.id === shareFeedbackReviewId)
+    setShareFeedbackReviewId(null)
+    if (!review) return
+    const recId = submitFeedback({
+      text: details,
+      agentName: REVIEW_COACHING_AGENT,
+      conversation: { name: review.reviewerName, message: details, channel: 'Text', date: review.date, location: review.location },
+      conversationId: review.id,
+      messageId: review.id,
+      reportedExcerpt: [{ speaker: review.reply?.agentName ?? 'Agent', text: review.reply?.text ?? '' }],
+      review,
+      reportedBy: 'You',
+    })
+    setFeedbackByReview((prev) => ({ ...prev, [review.id]: 'down' }))
+    setRecIdByReview((prev) => ({ ...prev, [review.id]: recId }))
+    showToast(REVIEW_COACHING_COPY.feedbackToast, recId)
+  }
+  const track = (review: Review) => {
+    const recId = recIdByReview[review.id]
+    if (recId) onTrackFeedback?.(recId, review)
+  }
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<ReviewSortId>('recent')
@@ -346,12 +454,39 @@ export function AllReviewsScreen({
           </div>
           <div className="flex-1 overflow-y-auto">
             {filtered.map((review) => (
-              <ReviewCard key={review.id} review={review} />
+              <ReviewCard
+                key={review.id}
+                review={review}
+                feedback={feedbackByReview[review.id] ?? null}
+                tracked={Boolean(recIdByReview[review.id])}
+                onFeedback={(next) => handleFeedback(review, next)}
+                onTrack={() => track(review)}
+              />
             ))}
           </div>
         </div>
         <FilterPanel open={filterOpen} fields={FILTER_FIELDS} onClose={() => setFilterOpen(false)} />
       </div>
+      <ShareFeedbackModal
+        open={shareFeedbackReviewId !== null}
+        onClose={() => setShareFeedbackReviewId(null)}
+        onSubmit={handleShareFeedbackSubmit}
+      />
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+        actionLabel={toastRecId ? REVIEW_COACHING_COPY.feedbackToastAction : undefined}
+        onAction={
+          toastRecId
+            ? () => {
+                const review = ALL_REVIEWS.find((r) => recIdByReview[r.id] === toastRecId)
+                setToastVisible(false)
+                if (review) onTrackFeedback?.(toastRecId, review)
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }

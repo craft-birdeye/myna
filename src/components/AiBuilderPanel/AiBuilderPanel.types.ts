@@ -29,6 +29,9 @@ export interface AiBuilderPanelProps {
   fillShell?: boolean
   /** Which edge the panel docks to (affects border + corner radius). */
   side?: 'left' | 'right'
+  /** Header title. Defaults to "Edit with AI" when `seedPrompt` is set, else "Create with AI";
+   *  a coaching session passes "Coaching". */
+  title?: string
   /** Filled into the composer the first time it's focused while empty. */
   seedPrompt?: string
   /** Inline node link in a scripted reply — selects that node on the canvas. */

@@ -376,6 +376,7 @@ function TrailMessages({
 }
 
 export function AiBuilderPanel({
+  title,
   onClose,
   onExpand,
   agentName = 'agent',
@@ -479,7 +480,7 @@ export function AiBuilderPanel({
         </span>
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[13px] leading-5 text-white">
-            {seedPrompt ? 'Edit with AI' : 'Create with AI'}
+            {title ?? (seedPrompt ? 'Edit with AI' : 'Create with AI')}
           </p>
         </div>
         {sessions && sessions.length > 0 && (

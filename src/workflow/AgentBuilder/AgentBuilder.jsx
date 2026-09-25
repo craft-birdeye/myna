@@ -1299,6 +1299,11 @@ export default function AgentBuilder({
    *  panel sit a few px apart rather than actually overlapping, so covering the rail is a
    *  visibility toggle, not a z-index/position change. Reappears once the panel closes. */
   collapseLeftFloaterOnPanel = false,
+  /** Docks the AI panel flush to the left edge at full height, hiding the add-node rail while
+   *  it's open (the Ghostwriter canvas treatment) — for a coaching session on any canvas. */
+  flushAiPanel = false,
+  /** Header title for the docked AI panel — "Coaching" for a coaching session. */
+  aiPanelTitle = undefined,
   /** Drives the same canvas node highlighting/checkmarks a self-triggered "Run test" does
    *  (see `testRunOpen` below), but from outside — Jay & Robin's Test tab runs its own
    *  `useTestRun` for its right-panel stepper and feeds the same `{ activeNodeId,
@@ -4392,7 +4397,7 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}${collapseLeftFloaterOnPanel ? ' agent-builder--collapse-left-floater' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}${collapseLeftFloaterOnPanel ? ' agent-builder--collapse-left-floater' : ''}${flushAiPanel ? ' agent-builder--lhs-ai-flush' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
               {!hideTopBar && !hideCanvasBackCluster && (onClose || explorationChrome) && (
@@ -4778,6 +4783,7 @@ export default function AgentBuilder({
                     fillShell
                     side="left"
                     content={aiBuilderPanelContent ?? undefined}
+                    title={aiPanelTitle}
                     seedPrompt={ghostwriterChrome ? GHOSTWRITER_CANVAS_SEED_PROMPT : undefined}
                     // Create agent CTA (agent list → Create agent) flow only — a generic
                     // summary + timestamp per session, no real chat history behind it yet.
