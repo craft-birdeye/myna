@@ -67,6 +67,7 @@ import { UserExperienceImprovementScreen } from './screens/UserExperienceImprove
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { CoachingCanvasPane } from './screens/CoachingCanvasPane'
+import { AgentUnifiedNavScreen, UNIFIED_NAV_AGENT } from './screens/AgentUnifiedNavScreen'
 import type { CoachingSession } from './screens/CoachingCanvasPane'
 import { REVIEW_COACHING_AGENT } from './data/reviewCoaching'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
@@ -341,6 +342,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
       { id: 'response-agents-ghostwriter',  label: 'Response agents (Ghostwriter)' },
       { id: 'response-agents-jay-robin',    label: 'Response agent (Jay & Robin)' },
       { id: 'response-agents-23-sep',       label: 'Response agent (23 Sep)' },
+      { id: 'response-agents-unified-nav',  label: 'Response agent (unified nav)' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
@@ -381,6 +383,7 @@ const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents-ghostwriter',
   'response-agents-jay-robin',
   'response-agents-23-sep',
+  'response-agents-unified-nav',
   'generation-agents',
   'review-response-agents',
 ])
@@ -1323,6 +1326,14 @@ export function App() {
                     <AllReviewsScreen unansweredOnly onTrackFeedback={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)} />
                   ) : navActive === 'monitor-agent-replies' ? (
                     <AllReviewsScreen agentRepliesOnly onTrackFeedback={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)} />
+                  ) : navActive === 'response-agents-unified-nav' ? (
+                    /* Prototype: one consistent Build / Test / Deploy / Observe / Optimize nav
+                       for every agent, shown on the North Region review response agent. */
+                    <AgentUnifiedNavScreen
+                      onBack={() => setNavActive('response-agents-23-sep')}
+                      onEditWorkflow={() => handleEditAgent(UNIFIED_NAV_AGENT)}
+                      onOpenCoaching={(recId) => openCoachingCanvas(recId, REVIEW_COACHING_AGENT)}
+                    />
                   ) : AGENT_NAMES[navActive] ? (
                     <AgentDetailScreen
                       key={navActive}
