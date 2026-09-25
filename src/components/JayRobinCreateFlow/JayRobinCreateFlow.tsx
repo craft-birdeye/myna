@@ -15,31 +15,46 @@
  *
  * Rewind on any user turn truncates the thread back to that point (the question is asked
  * again). Rewind is retired once the agent exists — there's nothing to un-build.
+ *
+ * Two more stories ride on the same beats (scripts in `data/jayRobinCreateFlow.ts`):
+ *   - a requirements doc attached with the prompt switches the analysis, questions and step 4
+ *     to the **file variant** (the build creates the two templates the doc names);
+ *   - once the agent exists, anything typed into the composer is a **follow-up**: user turn →
+ *     Working → one line → a simple proposal card (Apply / Not now) → Working → a reply whose
+ *     node names are chips that open the node (and its tool) on the canvas.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTypewriter } from '../../hooks/useTypewriter'
 import {
-  JR_ACCEPTED_LINE,
   JR_ANALYSIS_PHASES,
   JR_BUILD_SUMMARY,
+  JR_FILE_ANALYSIS_PHASES,
+  JR_FILE_INTRO_LINE,
+  JR_FILE_PLAN_META,
+  JR_FILE_QUESTIONS,
+  JR_FILE_QUESTIONS_LEAD_IN,
   JR_INTRO_LINE,
   JR_PLAN_CARD,
   JR_PLAN_LEAD_IN,
   JR_QUESTIONS,
   JR_QUESTIONS_LEAD_IN,
   JR_UNDONE_LINE,
+  buildJrAcceptedLine,
   buildJrBuildPhases,
   buildJrNodeUpdates,
   buildJrPlan,
+  jrTemplatesAccepted,
+  matchJrFollowUp,
 } from '../../data/jayRobinCreateFlow'
-import type { JrPlanStep } from '../../data/jayRobinCreateFlow'
+import type { JrFlowVariant, JrFollowUpScript, JrPlanStep, JrRichSegment } from '../../data/jayRobinCreateFlow'
 import { AgentWorkSequence } from '../AgentActivityHeader/AgentWorkSequence'
 import { GhostwriterQuestionCard } from '../GhostwriterQuestionCard/GhostwriterQuestionCard'
 import { Icon } from '../Icon/Icon'
+import { RefChip } from '../RefChip/RefChip'
 import { SparkleLoader } from '../SparkleLoader/SparkleLoader'
 import { Tooltip } from '../Tooltip/Tooltip'
 import { NodesUpdatedCard } from './NodesUpdatedCard'
-import type { JayRobinCreateFlowProps } from './JayRobinCreateFlow.types'
+import type { JayRobinCreateFlowProps, JayRobinFlowAttachment } from './JayRobinCreateFlow.types'
 
 /** Question cards dock flush above the composer, the same way the other create flows do. */
 const DOCKED_CARD_CLASS = 'sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card'
@@ -122,6 +137,61 @@ function AgentLine({
 }
 
 /**
+ * A typed copilot line with node names in it. The whole sentence types out as one string;
+ * segments the typing has passed render as chips — `Create ticket` — that open the node's
+ * panel (and its tool) on the canvas. The name of the thing built is the way to reach it.
+ */
+function AgentRichLine({
+  segments,
+  onOpenNode,
+  onDone,
+  tight = false,
+  actions = false,
+}: {
+  segments: JrRichSegment[]
+  onOpenNode?: (nodeId: string, tool?: string) => void
+  onDone?: () => void
+  tight?: boolean
+  actions?: boolean
+}) {
+  const full = segments.map((seg) => (typeof seg === 'string' ? seg : seg.label)).join('')
+  const { typed, done } = useTypewriter(full, { charsPerTick: 10, intervalMs: 10, onDone })
+  let cursor = 0
+  const rendered = segments.map((seg, i) => {
+    const label = typeof seg === 'string' ? seg : seg.label
+    const start = cursor
+    cursor += label.length
+    const visible = typed.slice(start, Math.min(cursor, typed.length))
+    if (!visible) return null
+    if (typeof seg === 'string') return <span key={i}>{visible}</span>
+    const complete = typed.length >= cursor
+    if (!complete || !onOpenNode) return <span key={i}>{visible}</span>
+    return (
+      <button
+        key={i}
+        type="button"
+        onClick={() => onOpenNode(seg.nodeId, seg.tool)}
+        className="mx-px inline-flex h-6 items-center gap-2xs rounded-sm border border-border bg-surface px-xs align-baseline text-body text-text-action transition-colors hover:bg-surface-hover"
+      >
+        {seg.label}
+        <Icon name="chevron_right" size={14} className="text-text-icon" />
+      </button>
+    )
+  })
+  return (
+    <div className={`group agent-build-fade flex flex-col ${tight ? 'mt-lg' : 'mt-3xl'}`}>
+      <div className="flex gap-sm">
+        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+          <SparkleLoader size={14} spinning={!done} />
+        </span>
+        <p className="m-0 min-w-0 flex-1 text-body leading-6 text-text-primary">{rendered}</p>
+      </div>
+      {actions && done && <ReplyActions text={full} />}
+    </div>
+  )
+}
+
+/**
  * A user turn — the bubble, plus an action row that appears on hover: when it was sent, copy,
  * and rewind. Rewind is the one that matters for a demo: it takes the thread back to this
  * message so the question can be answered differently.
@@ -129,6 +199,7 @@ function AgentLine({
 function UserTurn({
   text,
   question,
+  attachments = [],
   at,
   onRewind,
   first = false,
@@ -137,6 +208,9 @@ function UserTurn({
   /** Kept above the answer once a card's options disappear, so the history still shows what
    *  was asked. */
   question?: string
+  /** Files attached with the message — chips above the text, so the doc the build reads from
+   *  stays visible in the thread. */
+  attachments?: JayRobinFlowAttachment[]
   at: Date
   onRewind?: () => void
   first?: boolean
@@ -152,6 +226,13 @@ function UserTurn({
     <div className={`group flex flex-col items-end ${first ? 'pt-md' : 'mt-[36px]'}`}>
       <div className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm leading-[1.5] text-text-primary">
         {question && <p className="m-0 text-small text-text-tertiary">{question}</p>}
+        {attachments.length > 0 && (
+          <span className="mb-sm flex flex-wrap justify-end gap-sm">
+            {attachments.map((item) => (
+              <RefChip key={item.id} kind={item.kind} label={item.label} />
+            ))}
+          </span>
+        )}
         <p className={`m-0 text-body text-text-primary ${question ? 'mt-2xs' : ''}`}>{text}</p>
       </div>
       <div className="mt-xs flex h-6 items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -239,12 +320,14 @@ function AnswersSummaryCard({
  */
 function PlanCard({
   steps,
+  meta = JR_PLAN_CARD.meta,
   onOpenDetails,
   detailsOpen = false,
   onCreateAgent,
   agentCreated = false,
 }: {
   steps: JrPlanStep[]
+  meta?: string
   onOpenDetails?: () => void
   detailsOpen?: boolean
   onCreateAgent?: () => void
@@ -262,7 +345,7 @@ function PlanCard({
         >
           <span className="flex min-w-0 flex-col gap-2xs">
             <span className="text-h3 text-text-primary">{JR_PLAN_CARD.title}</span>
-            <span className="text-small text-text-tertiary">{JR_PLAN_CARD.meta}</span>
+            <span className="text-small text-text-tertiary">{meta}</span>
           </span>
           <Icon
             name="expand_more"
@@ -307,11 +390,114 @@ function PlanCard({
   )
 }
 
+/**
+ * The follow-up proposal — deliberately smaller than the plan card: a title, two or three
+ * lines of what changes, Apply / Not now. Nothing on the canvas moves until Apply.
+ */
+function ProposalCard({
+  script,
+  onApply,
+  onDecline,
+}: {
+  script: JrFollowUpScript
+  onApply: () => void
+  onDecline: () => void
+}) {
+  const { proposal } = script
+  return (
+    <div className="gw-flow__in ml-3xl mt-sm flex max-w-full flex-col rounded-sm border border-border bg-surface">
+      <div className="flex flex-col gap-sm px-lg py-md">
+        <span className="text-h3 text-text-primary">{proposal.title}</span>
+        <ul className="m-0 flex list-none flex-col gap-xs">
+          {proposal.lines.map((line) => (
+            <li key={line} className="flex items-start gap-sm text-body text-text-secondary">
+              <span aria-hidden className="mt-[10px] size-1 shrink-0 rounded-full bg-text-tertiary" />
+              <span className="min-w-0 flex-1">{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex items-center justify-end gap-sm border-t border-border px-lg py-md">
+        <button
+          type="button"
+          onClick={onDecline}
+          className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+        >
+          {proposal.declineLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onApply}
+          className="flex h-9 w-fit items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        >
+          {proposal.applyLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface Answer {
   id: string
   question: string
   text: string
   at: Date
+}
+
+type FollowUpStage = 'analysing' | 'lead-in' | 'proposed' | 'applying' | 'applied' | 'declined'
+
+interface FollowUp {
+  id: number
+  text: string
+  at: Date
+  script: JrFollowUpScript
+  stage: FollowUpStage
+}
+
+/** One follow-up request, start to finish. Owns its own stage so several can stack. */
+function FollowUpThread({
+  item,
+  onStage,
+  onOpenNode,
+}: {
+  item: FollowUp
+  onStage: (stage: FollowUpStage) => void
+  onOpenNode?: (nodeId: string, tool?: string) => void
+}) {
+  const { script, stage } = item
+  const past = (s: FollowUpStage) => {
+    const order: FollowUpStage[] = ['analysing', 'lead-in', 'proposed', 'applying', 'applied']
+    return stage === 'declined' ? order.indexOf(s) <= order.indexOf('proposed') : order.indexOf(stage) >= order.indexOf(s)
+  }
+  return (
+    <>
+      <UserTurn text={item.text} at={item.at} />
+      <AgentWorkSequence phases={script.analysisPhases} onComplete={() => stage === 'analysing' && onStage('lead-in')} />
+      {past('lead-in') && (
+        <AgentLine tight text={script.leadIn} onDone={() => stage === 'lead-in' && onStage('proposed')} />
+      )}
+      {stage === 'proposed' && (
+        <ProposalCard script={script} onApply={() => onStage('applying')} onDecline={() => onStage('declined')} />
+      )}
+      {stage === 'declined' && (
+        <>
+          <UserTurn text={script.declineEcho} at={item.at} />
+          <AgentLine actions text={script.declineLine} />
+        </>
+      )}
+      {past('applying') && (
+        <>
+          <UserTurn text={script.acceptEcho} at={item.at} />
+          <AgentWorkSequence
+            phases={script.applyPhases}
+            summary={script.applySummary}
+            onComplete={() => stage === 'applying' && onStage('applied')}
+          />
+        </>
+      )}
+      {stage === 'applied' && <AgentRichLine tight actions segments={script.result} onOpenNode={onOpenNode} />}
+    </>
+  )
 }
 
 export function JayRobinCreateFlow({
@@ -328,8 +514,16 @@ export function JayRobinCreateFlow({
   onPendingAnswerConsumed,
   onOpenNode,
   onRewindToStart,
+  attachments = [],
+  onWorkflowExtra,
 }: JayRobinCreateFlowProps) {
   const [promptAt] = useState(() => new Date())
+  /** A file attached with the prompt makes this the requirements-doc story. */
+  const variant: JrFlowVariant = attachments.some((a) => a.kind === 'file') ? 'file' : 'prompt'
+  const introLine = variant === 'file' ? JR_FILE_INTRO_LINE : JR_INTRO_LINE
+  const analysisPhases = variant === 'file' ? JR_FILE_ANALYSIS_PHASES : JR_ANALYSIS_PHASES
+  const questions = variant === 'file' ? JR_FILE_QUESTIONS : JR_QUESTIONS
+  const questionsLeadIn = variant === 'file' ? JR_FILE_QUESTIONS_LEAD_IN : JR_QUESTIONS_LEAD_IN
   const [introDone, setIntroDone] = useState(false)
   const [analysisDone, setAnalysisDone] = useState(false)
   const [questionsLeadInDone, setQuestionsLeadInDone] = useState(false)
@@ -343,9 +537,12 @@ export function JayRobinCreateFlow({
   /** The "N nodes updated" review: pending until Accept or Undo is pressed. */
   const [nodesDecision, setNodesDecision] = useState<'pending' | 'accepted' | 'undone'>('pending')
 
-  const current = JR_QUESTIONS[answers.length]
+  /** Requests typed after the agent exists — each its own mini story. */
+  const [followUps, setFollowUps] = useState<FollowUp[]>([])
+
+  const current = questions[answers.length]
   const questionOpen = analysisDone && questionsLeadInDone && !!current
-  const allAnswered = analysisDone && answers.length >= JR_QUESTIONS.length
+  const allAnswered = analysisDone && answers.length >= questions.length
   /* The build runs off this thread's own click; `agentCreated` only flips at the end. */
   const building = createPressed
   const nodesCardOpen = building && buildDone && nodesDecision === 'pending'
@@ -354,9 +551,25 @@ export function JayRobinCreateFlow({
     () => Object.fromEntries(answers.map((a) => [a.id, a.text])) as Record<string, string>,
     [answers],
   )
-  const plan = useMemo(() => buildJrPlan(answerMap), [answerMap])
+  const plan = useMemo(() => buildJrPlan(answerMap, variant), [answerMap, variant])
   const buildPhases = useMemo(() => buildJrBuildPhases(plan), [plan])
   const nodeUpdates = useMemo(() => buildJrNodeUpdates(plan), [plan])
+  const templatesCreated = variant === 'file' && jrTemplatesAccepted(answerMap)
+  const acceptedLine = useMemo(() => buildJrAcceptedLine(variant, templatesCreated), [variant, templatesCreated])
+
+  /* The agent exists once the build pass has run; from then on the composer talks to it. */
+  const agentReady = building && buildDone
+  const followUpBusy = followUps.some((f) => f.stage === 'analysing' || f.stage === 'lead-in' || f.stage === 'applying')
+
+  const startFollowUp = (text: string) =>
+    setFollowUps((prev) => [...prev, { id: Date.now(), text, at: new Date(), script: matchJrFollowUp(text), stage: 'analysing' }])
+  const setFollowUpStage = (id: number, stage: FollowUpStage) => {
+    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, stage } : f)))
+    if (stage === 'applying') {
+      const extra = followUps.find((f) => f.id === id)?.script.extra
+      if (extra) onWorkflowExtra?.(extra)
+    }
+  }
 
   const answer = (text: string) => {
     if (!current) return
@@ -368,13 +581,21 @@ export function JayRobinCreateFlow({
     setPlanLeadInDone(false)
   }
 
-  /* Anything typed into the composer while a question is open answers it. */
+  /* Anything typed into the composer while a question is open answers it; once the agent
+     exists it's a follow-up request instead. */
   useEffect(() => {
     if (!pendingAnswer?.trim()) return
     if (questionOpen) answer(pendingAnswer.trim())
+    else if (agentReady && !followUpBusy) startFollowUp(pendingAnswer.trim())
     onPendingAnswerConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAnswer])
+
+  /* The build created templates — the canvas gets its Select template node with the Accept. */
+  useEffect(() => {
+    if (nodesDecision === 'accepted' && templatesCreated) onWorkflowExtra?.('templates')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesDecision])
 
   /* Both the question cards and the nodes-updated card dock flush above the composer. */
   useEffect(() => {
@@ -389,6 +610,7 @@ export function JayRobinCreateFlow({
     || (analysisDone && !questionsLeadInDone)
     || (allAnswered && !planLeadInDone)
     || (building && !buildDone)
+    || followUpBusy
   useEffect(() => {
     onBusyChange?.(busy)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -399,18 +621,19 @@ export function JayRobinCreateFlow({
       <UserTurn
         first
         text={prompt.trim()}
+        attachments={attachments}
         at={promptAt}
         onRewind={!createPressed && onRewindToStart ? () => onRewindToStart(prompt) : undefined}
       />
 
-      <AgentLine text={JR_INTRO_LINE} onDone={() => setIntroDone(true)} />
+      <AgentLine text={introLine} onDone={() => setIntroDone(true)} />
 
       {introDone && (
-        <AgentWorkSequence phases={JR_ANALYSIS_PHASES} onComplete={() => setAnalysisDone(true)} />
+        <AgentWorkSequence phases={analysisPhases} onComplete={() => setAnalysisDone(true)} />
       )}
 
       {analysisDone && (
-        <AgentLine tight text={JR_QUESTIONS_LEAD_IN} onDone={() => setQuestionsLeadInDone(true)} />
+        <AgentLine tight text={questionsLeadIn} onDone={() => setQuestionsLeadInDone(true)} />
       )}
 
       {answers.length > 0 && (
@@ -445,6 +668,7 @@ export function JayRobinCreateFlow({
       {allAnswered && planLeadInDone && (
         <PlanCard
           steps={plan}
+          meta={variant === 'file' ? JR_FILE_PLAN_META : undefined}
           onOpenDetails={onOpenPlan}
           detailsOpen={planOpen}
           onCreateAgent={() => {
@@ -483,8 +707,19 @@ export function JayRobinCreateFlow({
         </>
       )}
 
-      {nodesDecision === 'accepted' && <AgentLine tight actions text={JR_ACCEPTED_LINE} />}
+      {nodesDecision === 'accepted' && (
+        <AgentRichLine tight actions segments={acceptedLine} onOpenNode={onOpenNode} />
+      )}
       {nodesDecision === 'undone' && <AgentLine tight actions text={JR_UNDONE_LINE} />}
+
+      {followUps.map((item) => (
+        <FollowUpThread
+          key={item.id}
+          item={item}
+          onStage={(stage) => setFollowUpStage(item.id, stage)}
+          onOpenNode={onOpenNode}
+        />
+      ))}
     </>
   )
 }

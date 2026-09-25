@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
-import { subscribeToCustomTools, resolveToolForViewer } from '../../../services/agentService';
+import { subscribeToCustomTools, resolveToolForViewer, applyToolFieldOverrides } from '../../../services/agentService';
 import {
   HandleResponseForm,
   isHandleResponseTool,
@@ -97,13 +97,14 @@ export default function EntityTaskBody({
     );
   }, [allTools, selectedTools, externalToolConfig]);
 
+  const toolFieldOverrides = initialValues.toolFieldOverrides;
   const viewerTools = useMemo(
     () =>
       selectedTools
         .filter((id) => id !== externalToolId)
-        .map((id) => resolveToolForViewer(id))
+        .map((id) => applyToolFieldOverrides(resolveToolForViewer(id), toolFieldOverrides?.[id]))
         .filter(Boolean),
-    [selectedTools, externalToolId],
+    [selectedTools, externalToolId, toolFieldOverrides],
   );
 
   const handleInlineToolValues = useCallback((toolId, values) => {

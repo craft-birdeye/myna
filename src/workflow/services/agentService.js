@@ -1089,6 +1089,19 @@ function _toolToViewerFields(tool) {
 }
 
 /** Resolve a seed or custom tool into CustomToolViewer field format. */
+/**
+ * Per-node overrides layered on a viewer tool's fields — `{ [fieldId]: { options, defaultValue, … } }`.
+ * Lets one agent's Select template step offer templates that exist only for that agent, with
+ * its own preselection, without touching the seed tool everyone else sees.
+ */
+export function applyToolFieldOverrides(tool, overrides) {
+  if (!tool || !overrides) return tool;
+  return {
+    ...tool,
+    fields: (tool.fields || []).map((f) => (overrides[f.id] ? { ...f, ...overrides[f.id] } : f)),
+  };
+}
+
 export function resolveToolForViewer(id) {
   if (!id) return null;
   const custom = _customTools.get(id);

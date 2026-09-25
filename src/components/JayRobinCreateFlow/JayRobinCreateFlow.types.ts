@@ -1,3 +1,13 @@
+import type { RefKind } from '../../data/procedureData'
+import type { ReviewResponseExtra } from '../../data/reviewResponseBuildReveal'
+
+/** A file (or anything else) attached with the opening message — rendered as a `RefChip`. */
+export interface JayRobinFlowAttachment {
+  id: string
+  kind: RefKind
+  label: string
+}
+
 export interface JayRobinCreateFlowProps {
   /** The message that opened the thread — rendered here (not by the parent) so it can carry
    *  the same hover actions (time · copy · rewind) as every other user turn. */
@@ -26,8 +36,15 @@ export interface JayRobinCreateFlowProps {
    *  answer. */
   pendingAnswer?: string
   onPendingAnswerConsumed?: () => void
-  /** A row in the "N nodes updated" card was clicked — open that node's panel on the canvas. */
-  onOpenNode?: (nodeId: string) => void
+  /** A row in the "N nodes updated" card, or a node chip in a reply, was clicked — open that
+   *  node's panel on the canvas; `tool` also opens that tool's viewer inside it. */
+  onOpenNode?: (nodeId: string, tool?: string) => void
+  /** Attached with the opening message. A `file` switches the flow to the requirements-doc
+   *  story (`JrFlowVariant` `'file'`). */
+  attachments?: JayRobinFlowAttachment[]
+  /** The flow added a node beyond the stock workflow (Select template on Accept in the file
+   *  variant, Create ticket when a follow-up is applied) — the parent extends the canvas. */
+  onWorkflowExtra?: (extra: ReviewResponseExtra) => void
   /** Rewind on the opening message: the parent clears the thread and puts the text back in
    *  the composer. */
   onRewindToStart?: (prompt: string) => void

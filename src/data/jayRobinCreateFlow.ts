@@ -9,11 +9,29 @@
  *      then offers the canvas changes as "N nodes updated · Accept / Undo";
  *   5. a closing line pointing at the canvas and the Test tab.
  *
+ * Two more stories share the same beats and live at the bottom of this file:
+ *
+ *   - the **file variant** — the user attaches a requirements doc and says "these are my
+ *     requirements". The analysis reads the doc, one question offers to create the two
+ *     templates it names that the account doesn't have, and the build creates them;
+ *   - **follow-ups** — after the agent exists, a request typed into the composer ("also
+ *     create a ticket for highly negative reviews") gets a short Working pass, a simple
+ *     proposal to accept, an apply pass, and a reply whose node names open the node.
+ *
  * Every string the flow says lives here so the story can be rewritten without touching the
  * component.
  */
 import type { WorkPhase, WorkTool } from '../components/AgentActivityHeader/AgentWorkSequence'
 import type { QuestionCardOption } from '../components/GhostwriterQuestionCard/GhostwriterQuestionCard.types'
+import { JR_CREATED_TEMPLATES, REVIEW_RESPONSE_TEMPLATE_NODE_ID, REVIEW_RESPONSE_TICKET_NODE_ID } from './reviewResponseBuildReveal'
+import type { ReviewResponseExtra } from './reviewResponseBuildReveal'
+
+/** How the thread was opened: a typed prompt, or a requirements doc attached with one. */
+export type JrFlowVariant = 'prompt' | 'file'
+
+/** A copilot line with node names in it — each `{ nodeId }` segment renders as a chip that
+ *  opens that node's panel (and its tool) on the canvas. */
+export type JrRichSegment = string | { nodeId: string; label: string; tool?: string }
 
 /* ─── Beat 1: intro + the analysis pass ──────────────────────────────────────── */
 
@@ -190,13 +208,18 @@ export interface JrPlanStep {
   /** The canvas node this step adds — listed in the "N nodes updated" review card; `id` is
    *  the workflow node it opens on the canvas. */
   node: { id: string; icon: string; label: string }
+  /** A second node the step adds (the file variant's Select template). */
+  extraNode?: { id: string; icon: string; label: string }
 }
 
-/** The plan reads back what was answered, so the five pointers are built from the answers. */
-export function buildJrPlan(answers: Record<string, string>): JrPlanStep[] {
+/** The plan reads back what was answered, so the five pointers are built from the answers.
+ *  In the file variant, a "yes" to the templates question turns step 4 into creating the two
+ *  templates the doc named (and a Select template node) before the writing rules. */
+export function buildJrPlan(answers: Record<string, string>, variant: JrFlowVariant = 'prompt'): JrPlanStep[] {
   const publish = answers.publish ?? ''
   const scope = answers.scope ?? ''
   const digest = answers.digest ?? ''
+  const createTemplates = variant === 'file' && jrTemplatesAccepted(answers)
 
   const pilot = /pilot|one/i.test(scope) && !/all/i.test(scope)
   const holdAll = /hold everything|everything for approval/i.test(publish)
@@ -253,18 +276,38 @@ export function buildJrPlan(answers: Record<string, string>): JrPlanStep[] {
       ],
       node: { id: 'rr-3', icon: 'alt_route', label: 'Route by rating' },
     },
-    {
-      title: 'Write to your six rules',
-      status: 'Loading your writing rules',
-      narration: 'Then the writing itself, held to the six rules I found in your team’s hand-written replies.',
-      text: 'Hold every reply to the six rules learned from the 31 your team wrote by hand.',
-      actions: [
-        { icon: 'rule', label: 'Loaded the six guidelines as writing constraints' },
-        { icon: 'straighten', label: 'Set the 60–90 word bound' },
-        { icon: 'badge', label: 'Set first-name sign-off, never the brand' },
-      ],
-      node: { id: 'rr-5', icon: 'edit_note', label: 'Draft reply' },
-    },
+    createTemplates
+      ? {
+          title: 'Create the two templates and write to your rules',
+          status: 'Creating templates',
+          narration:
+            'Then the templates. Two your document names don’t exist yet, so I’ll create them first, then hold the writing to your rules.',
+          text: 'Create "Missed appointment apology" and "Billing follow-up", select all six templates, and hold every reply to the six rules in your document.',
+          actions: [
+            { icon: 'description', label: 'Created template "Missed appointment apology"', detail: JR_CREATED_TEMPLATES[0].body },
+            { icon: 'description', label: 'Created template "Billing follow-up"', detail: JR_CREATED_TEMPLATES[1].body },
+            { icon: 'checklist', label: 'Selected all 6 templates in Select template' },
+            { icon: 'rule', label: 'Loaded the six guidelines as writing constraints' },
+          ],
+          node: { id: 'rr-5', icon: 'edit_note', label: 'Draft reply' },
+          extraNode: { id: REVIEW_RESPONSE_TEMPLATE_NODE_ID, icon: 'description', label: 'Select template' },
+        }
+      : {
+          title: 'Write to your six rules',
+          status: 'Loading your writing rules',
+          narration: variant === 'file'
+            ? 'Then the writing itself, held to the six rules in your document.'
+            : 'Then the writing itself, held to the six rules I found in your team’s hand-written replies.',
+          text: variant === 'file'
+            ? 'Hold every reply to the six rules in your document.'
+            : 'Hold every reply to the six rules learned from the 31 your team wrote by hand.',
+          actions: [
+            { icon: 'rule', label: 'Loaded the six guidelines as writing constraints' },
+            { icon: 'straighten', label: 'Set the 60–90 word bound' },
+            { icon: 'badge', label: 'Set first-name sign-off, never the brand' },
+          ],
+          node: { id: 'rr-5', icon: 'edit_note', label: 'Draft reply' },
+        },
     {
       title: 'Publish and protect',
       status: 'Locking down publishing',
@@ -308,7 +351,10 @@ export interface JrNodeUpdate {
 export function buildJrNodeUpdates(plan: JrPlanStep[]): JrNodeUpdate[] {
   return [
     { kind: 'changed', id: '__start__', icon: 'play_circle', label: 'Start' },
-    ...plan.map((step) => ({ kind: 'added' as const, id: step.node.id, icon: step.node.icon, label: step.node.label })),
+    ...plan.flatMap((step) => [
+      ...(step.extraNode ? [{ kind: 'added' as const, id: step.extraNode.id, icon: step.extraNode.icon, label: step.extraNode.label }] : []),
+      { kind: 'added' as const, id: step.node.id, icon: step.node.icon, label: step.node.label },
+    ]),
     { kind: 'changed', icon: 'flag', label: 'End' },
   ]
 }
@@ -325,3 +371,260 @@ export const JR_ACCEPTED_LINE =
 
 export const JR_UNDONE_LINE =
   'Reverted those changes. Tell me what to adjust and I’ll rebuild the plan around it.'
+
+/* ─── File variant: "these are my requirements" ──────────────────────────────── */
+
+/** What "+ → Files" attaches on the Jay & Robin landing. */
+export const JR_REQUIREMENTS_ATTACHMENT = {
+  id: 'jr-requirements',
+  kind: 'file' as const,
+  label: 'Review response requirements.pdf',
+}
+
+export const JR_REQUIREMENTS_PROMPT = 'These are my requirements — create an agent for me.'
+
+export const JR_FILE_INTRO_LINE =
+  'Got it — I’ll read your requirements first, then check them against the account before I ask you anything.'
+
+export const JR_FILE_ANALYSIS_PHASES: WorkPhase[] = [
+  {
+    thought: 'Starting with the document itself — what it asks for, and what it assumes already exists.',
+    toolsLabel: 'Reading your requirements',
+    status: 'Reading Review response requirements.pdf',
+    tools: [
+      { icon: 'description', label: 'Read Review response requirements.pdf — 4 pages, 11 requirements' },
+      { icon: 'rule', label: 'Extracted rating rules, six writing rules and three escalation cases' },
+      {
+        icon: 'format_list_bulleted',
+        label: 'Listed the templates it refers to: 6',
+        detail: '5 star thank you · 4 star thank you · 3 star follow-up · 1-2 star apology · Missed appointment apology · Billing follow-up',
+      },
+    ],
+    findings: [
+      'Eleven requirements, all buildable. It auto-posts 4–5★ from templates, drafts 3★ and below '
+      + 'for approval, and escalates safety, legal and billing. It names six templates.',
+    ],
+  },
+  {
+    thought: 'Now the account — which of those six templates exist, and where the reviews come from.',
+    toolsLabel: 'Matching against your account',
+    status: 'Matching templates',
+    tools: [
+      { icon: 'reviews', label: 'Pulled 1,035 reviews across 4 locations, last 12 months' },
+      {
+        icon: 'description',
+        label: 'Matched 4 of the 6 templates to saved templates',
+        detail: 'Missing: Missed appointment apology · Billing follow-up',
+      },
+      { icon: 'lock_open', label: 'Checked reply permissions: Google ✓ · Facebook ✓ · Google Play and ShopperApproved read only' },
+    ],
+    findings: [
+      'Four of the six templates are already saved. Two the document relies on — "Missed appointment '
+      + 'apology" and "Billing follow-up" — don’t exist in the account yet, so the rules that use them '
+      + 'can’t run until they do.',
+    ],
+  },
+  {
+    thought: 'Anything that gets answered publicly needs a spam gate in front of it.',
+    toolsLabel: 'Screening for spam',
+    status: 'Screening for spam',
+    tools: [
+      { icon: 'shield', label: 'Ran all 1,035 reviews through the spam model' },
+      { icon: 'flag', label: 'Flagged 14 scoring above the 0.8 threshold' },
+    ],
+    findings: [
+      '14 look like non-customers. Your document doesn’t mention spam, so I’ll add the gate the same '
+      + 'way: hold anything above 0.8 and never reply to it publicly.',
+    ],
+  },
+]
+
+export const JR_FILE_QUESTIONS_LEAD_IN =
+  'Your document answers most of what I’d ask. Three things to confirm, then the plan.'
+
+export const JR_FILE_QUESTIONS: JrQuestion[] = [
+  {
+    id: 'templates',
+    question: 'Two templates in your requirements aren’t in the system yet — should I create them?',
+    hint: '"Missed appointment apology" and "Billing follow-up". I’ll draft them from the rules in your document.',
+    options: [
+      {
+        id: 'create',
+        label: 'Yes, create both',
+        description: 'Drafted from your document — you can edit the wording afterwards.',
+        recommended: true,
+      },
+      {
+        id: 'skip',
+        label: 'Not now — skip the rules that need them',
+        description: 'Those reviews fall back to the 1-2 star apology until you add the templates.',
+      },
+    ],
+    freeText: { placeholder: 'Other…', submitLabel: 'Submit' },
+    skipAnswer: 'Skipped — create both',
+  },
+  {
+    ...JR_QUESTIONS[0],
+    hint: 'Your document says auto-post 4–5★ and hold the rest — confirming.',
+    skipAnswer: 'Skipped — as the document says, auto-post 4–5★ and hold 3★ and below',
+  },
+  JR_QUESTIONS[2],
+]
+
+/** Did the file variant's templates question come back as "create them"? */
+export function jrTemplatesAccepted(answers: Record<string, string>) {
+  const a = answers.templates ?? ''
+  if (!a) return false
+  return !/not now|skip the rules|later|don’t|don't|no\b/i.test(a) || /skipped — create/i.test(a)
+}
+
+export const JR_FILE_PLAN_META = 'Built from your requirements · 1,035 reviews · your 3 answers'
+
+/** Closing line per variant. The file variant names the Select template node so the two new
+ *  templates are one click away. */
+export function buildJrAcceptedLine(variant: JrFlowVariant, templatesCreated: boolean): JrRichSegment[] {
+  if (variant === 'file' && templatesCreated) {
+    return [
+      'Accepted. The two new templates are created and selected in ',
+      { nodeId: REVIEW_RESPONSE_TEMPLATE_NODE_ID, label: 'Select template', tool: 'select-template' },
+      ' alongside your existing four — open it to edit the wording. Run the agent against real reviews from the Test tab, or activate it from the top bar when you’re happy.',
+    ]
+  }
+  return [JR_ACCEPTED_LINE]
+}
+
+/* ─── Follow-ups: change requests after the agent exists ─────────────────────── */
+
+export interface JrProposal {
+  title: string
+  /** What the change does, one line each — read top to bottom as the proposal. */
+  lines: string[]
+  applyLabel: string
+  declineLabel: string
+}
+
+export interface JrFollowUpScript {
+  /** The short Working pass before the proposal. */
+  analysisPhases: WorkPhase[]
+  /** One line said before the proposal card. */
+  leadIn: string
+  proposal: JrProposal
+  /** Echoed as the user turn when the proposal is accepted / declined. */
+  acceptEcho: string
+  declineEcho: string
+  /** The apply pass once accepted. */
+  applyPhases: WorkPhase[]
+  applySummary: string
+  /** The reply once applied — node names are chips that open the node. */
+  result: JrRichSegment[]
+  declineLine: string
+  /** The canvas node(s) the change adds. */
+  extra?: ReviewResponseExtra
+}
+
+/** Pre-filled into the composer on first click once the agent exists — the demo's next line. */
+export const JR_TICKET_FOLLOW_UP_PROMPT =
+  'Also create a ticket for highly negative reviews that talk about us.'
+
+const JR_TICKET_FOLLOW_UP: JrFollowUpScript = {
+  analysisPhases: [
+    {
+      thought: 'Checking what the Respond path does today for a 1–2★ review, and what a ticket would need from it.',
+      toolsLabel: 'Reading the request',
+      status: 'Checking the Respond path',
+      tools: [
+        { icon: 'account_tree', label: 'Read the Respond path — Extract → Generate → Publish, no ticketing step' },
+        { icon: 'confirmation_number', label: 'Found the Birdeye ticketing tool: Create ticket in Birdeye' },
+        {
+          icon: 'bar_chart',
+          label: 'Counted 1–2★ reviews about the business, last 30 days: 23',
+          detail: 'Severity high on 19 · billing 7 · wait time 6 · staff 4 · other 6',
+        },
+      ],
+      findings: [
+        'Nothing opens a ticket today — a 1–2★ review gets a drafted reply and stops there. '
+        + 'Extract review details already scores severity, so I can key the ticket off that.',
+      ],
+    },
+  ],
+  leadIn: 'Here’s what I’d change — one step, added after the reply is published.',
+  proposal: {
+    title: 'Create a ticket for highly negative reviews',
+    lines: [
+      'Add Create ticket after Publish response on the Respond path.',
+      'Only for 1–2★ reviews where Review.severity is high and the review talks about the business.',
+      'The ticket carries the review, the location and the drafted reply, assigned to the location owner.',
+    ],
+    applyLabel: 'Apply',
+    declineLabel: 'Not now',
+  },
+  acceptEcho: 'Apply',
+  declineEcho: 'Not now',
+  applyPhases: [
+    {
+      kind: 'step',
+      thought: 'Adding the step.',
+      toolsLabel: 'Create ticket',
+      status: 'Adding Create ticket',
+      tools: [
+        { icon: 'add_box', label: 'Added Create ticket after Publish response' },
+        { icon: 'build', label: 'Attached the Create ticket in Birdeye tool' },
+        { icon: 'filter_alt', label: 'Set the condition: rating ≤ 2 and Review.severity = high' },
+        { icon: 'person', label: 'Assigned to the location owner, with review and reply attached' },
+      ],
+    },
+  ],
+  applySummary: 'Change applied.',
+  result: [
+    'Sure — I’ve added ',
+    { nodeId: REVIEW_RESPONSE_TICKET_NODE_ID, label: 'Create ticket', tool: 'create-ticket-birdeye' },
+    ' after Publish response. Every 1–2★ review that talks about the business now opens a Birdeye ticket for the location owner, with the review and the drafted reply attached. Open it to change the assignee or the rating cut-off.',
+  ],
+  declineLine: 'Left as is. Tell me when you want the ticketing step and I’ll add it.',
+  extra: 'ticket',
+}
+
+/** A request the script has no story for — asks for the one thing it needs, changes nothing. */
+const JR_GENERIC_FOLLOW_UP: JrFollowUpScript = {
+  analysisPhases: [
+    {
+      thought: 'Reading the request against the workflow.',
+      toolsLabel: 'Reading the request',
+      status: 'Reading the workflow',
+      tools: [
+        { icon: 'account_tree', label: 'Read the current workflow — 7 steps across two paths' },
+        { icon: 'search', label: 'Looked for the step this would change' },
+      ],
+    },
+  ],
+  leadIn: 'I can do that. Here’s how I’d approach it.',
+  proposal: {
+    title: 'Adjust the workflow',
+    lines: [
+      'Add the step on the Respond path, after the reply is drafted.',
+      'Keep everything else — sources, spam gate and routing — as it is.',
+    ],
+    applyLabel: 'Apply',
+    declineLabel: 'Not now',
+  },
+  acceptEcho: 'Apply',
+  declineEcho: 'Not now',
+  applyPhases: [
+    {
+      kind: 'step',
+      thought: 'Applying the change.',
+      toolsLabel: 'Adjust the workflow',
+      status: 'Applying the change',
+      tools: [{ icon: 'edit', label: 'Updated the Respond path' }],
+    },
+  ],
+  applySummary: 'Change applied.',
+  result: ['Done — the Respond path is updated. Open any step on the canvas to fine-tune it.'],
+  declineLine: 'Left as is.',
+}
+
+/** Which follow-up story a typed request gets. */
+export function matchJrFollowUp(text: string): JrFollowUpScript {
+  if (/ticket/i.test(text)) return JR_TICKET_FOLLOW_UP
+  return JR_GENERIC_FOLLOW_UP
+}

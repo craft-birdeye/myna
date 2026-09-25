@@ -1,5 +1,7 @@
 import React, { Suspense, type ReactNode } from 'react'
-import { revealReviewResponseWorkflow } from '../data/reviewResponseBuildReveal'
+import { extendReviewResponseWorkflow, revealReviewResponseWorkflow } from '../data/reviewResponseBuildReveal'
+import type { ReviewResponseExtra } from '../data/reviewResponseBuildReveal'
+import { REVIEW_RESPONSE_TEMPLATES } from '../data/messageTemplateLibrary'
 import {
   AUTOMOTIVE_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -194,7 +196,13 @@ interface WorkflowEditorScreenProps {
   buildRevealStage?: number | null
   /** Open a node's config panel from outside the canvas (Jay & Robin's "N nodes updated"
    *  rows). `nonce` bumps per request. */
-  externalOpenNode?: { id: string; nonce: number } | null
+  /** `tool` names the tool the chip pointed at; the node's panel already shows it inline, so
+   *  it's carried for context rather than acted on. */
+  externalOpenNode?: { id: string; nonce: number; tool?: string } | null
+  /** Jay & Robin: nodes the copilot added beyond the stock Review response workflow (Select
+   *  template from a requirements doc, Create ticket from a follow-up) — see
+   *  `extendReviewResponseWorkflow`. */
+  workflowExtras?: readonly ReviewResponseExtra[]
   /** Coaching sessions: dock the AI panel flush-left at full height (rail hidden) and title
    *  it — see `AgentBuilder`'s matching props. */
   flushAiPanel?: boolean
@@ -245,6 +253,7 @@ export function WorkflowEditorScreen({
   collapseLeftFloaterOnPanel = false,
   externalTestRun = null,
   buildRevealStage = null,
+  workflowExtras = [],
   externalOpenNode = null,
   flushAiPanel = false,
   aiPanelTitle,
@@ -377,8 +386,11 @@ export function WorkflowEditorScreen({
   )
   /* Staged reveal (Jay & Robin's build pass): slicing `nodeDetails` is what makes
      AgentBuilder's seed-sync pick up the new node list mid-session. */
+  const extendedWorkflow = workflowExtras.length
+    ? extendReviewResponseWorkflow(fullWorkflow, workflowExtras, REVIEW_RESPONSE_TEMPLATES)
+    : fullWorkflow
   const workflow =
-    buildRevealStage === null ? fullWorkflow : revealReviewResponseWorkflow(fullWorkflow, buildRevealStage)
+    buildRevealStage === null ? extendedWorkflow : revealReviewResponseWorkflow(extendedWorkflow, buildRevealStage)
 
   // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus

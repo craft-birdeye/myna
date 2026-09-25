@@ -17,7 +17,7 @@ import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased'
 import ShareModal from '../Organisms/Modals/ShareModal/ShareModal';
 import EmptyStates from '../Patterns/EmptyStates/EmptyStates';
 import { Button } from '../elemental-stubs';
-import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools, resolveToolForViewer } from '../services/agentService';
+import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools, resolveToolForViewer, applyToolFieldOverrides } from '../services/agentService';
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import { SLASH_TOOLS } from '../Molecules/Inputs/ToolSlashMenu/ToolSlashMenu';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
@@ -1752,8 +1752,10 @@ export default function AgentBuilder({
   }, [seedFingerprint, viewOnly, syncNodesOnSeedChange, initialNodes, initialNodeDetails, pageTitle]);
 
   /* ─── Open a tool viewer by tool name or id (used when clicking a tool chip in prompts) ─── */
-  const openToolByName = useCallback((nameOrId) => {
+  const openToolByName = useCallback((nameOrId, nodeIdOverride) => {
     if (!nameOrId) return;
+    // Opened for a node that was just selected in the same tick — state hasn't caught up yet.
+    const nodeId = nodeIdOverride ?? selectedNodeId;
     const raw = String(nameOrId).trim();
     const norm = (s) => String(s || '').toLowerCase().replace(/[_\s-]+/g, '');
     const key = norm(raw);
@@ -1797,10 +1799,11 @@ export default function AgentBuilder({
 
     if (!found) return;
 
-    const viewerTool = resolveToolForViewer(found.id) || found;
+    const overrides = nodeId ? nodeDetails[nodeId]?.toolFieldOverrides?.[found.id] : null;
+    const viewerTool = applyToolFieldOverrides(resolveToolForViewer(found.id) || found, overrides);
     setViewingTool(viewerTool);
-    const savedValues = selectedNodeId
-      ? (nodeDetails[selectedNodeId]?.toolFieldValues?.[found.id] ?? {})
+    const savedValues = nodeId
+      ? (nodeDetails[nodeId]?.toolFieldValues?.[found.id] ?? {})
       : {};
     setViewingToolValues(savedValues);
   }, [selectedNodeId, nodeDetails]);

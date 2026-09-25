@@ -46,6 +46,8 @@ import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { useTypewriter } from '../hooks/useTypewriter'
 import { SparkleLoader } from '../components/SparkleLoader/SparkleLoader'
 import { JayRobinCreateFlow } from '../components/JayRobinCreateFlow/JayRobinCreateFlow'
+import { JR_REQUIREMENTS_ATTACHMENT, JR_REQUIREMENTS_PROMPT, JR_TICKET_FOLLOW_UP_PROMPT } from '../data/jayRobinCreateFlow'
+import type { ReviewResponseExtra } from '../data/reviewResponseBuildReveal'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
@@ -6347,6 +6349,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onBuildStart,
   onBuildProgress,
   onOpenNode,
+  onWorkflowExtra,
+  initialAttachments,
   onViewWorkflow,
   onBack,
   onSubmittedChange,
@@ -6424,7 +6428,12 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onBuildStart?: () => void
   onBuildProgress?: (completedSteps: number) => void
   /** Jay & Robin: a "N nodes updated" row was clicked — open that node on the canvas. */
-  onOpenNode?: (nodeId: string) => void
+  onOpenNode?: (nodeId: string, tool?: string) => void
+  /** Jay & Robin: the copilot added a node beyond the stock workflow — the canvas extends. */
+  onWorkflowExtra?: (extra: ReviewResponseExtra) => void
+  /** Attachments the landing composer had when its prompt was handed off to the combined
+   *  panel — this instance starts with them, so the requirements doc rides along. */
+  initialAttachments?: AttachItem[]
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -6434,7 +6443,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   /** Mirrors the canvas RHS procedure so closing the panel clears the chat pressed state. */
   canvasProcedureId?: string | null
   /** Ghostwriter's combined flow — see `HealthcareFrontdeskCreateAgentLive`'s matching prop. */
-  onGhostwriterCombinedSend?: (text: string) => void
+  onGhostwriterCombinedSend?: (text: string, attachments: AttachItem[]) => void
   /** Jay & Robin only — see `ReviewResponseThread`'s matching prop. */
   simulationTabLabel?: string
   /** Jay & Robin only — see `HealthcareFrontdeskCreateAgentLive`'s matching prop. */
@@ -6475,6 +6484,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onBuildStart={onBuildStart}
       onBuildProgress={onBuildProgress}
       onOpenNode={onOpenNode}
+      onWorkflowExtra={onWorkflowExtra}
+      initialAttachments={initialAttachments}
       onViewWorkflow={onViewWorkflow}
       onBack={onBack}
       onSubmittedChange={onSubmittedChange}
@@ -6517,6 +6528,8 @@ function HealthcareFrontdeskCreateAgentLive({
   onBuildStart,
   onBuildProgress,
   onOpenNode,
+  onWorkflowExtra,
+  initialAttachments,
   onViewWorkflow,
   onBack,
   onSubmittedChange,
@@ -6554,7 +6567,12 @@ function HealthcareFrontdeskCreateAgentLive({
   onCreateAgent?: (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => void
   onBuildStart?: () => void
   onBuildProgress?: (completedSteps: number) => void
-  onOpenNode?: (nodeId: string) => void
+  onOpenNode?: (nodeId: string, tool?: string) => void
+  /** Jay & Robin: the copilot added a node beyond the stock workflow — the canvas extends. */
+  onWorkflowExtra?: (extra: ReviewResponseExtra) => void
+  /** Attachments the landing composer had when its prompt was handed off to the combined
+   *  panel — this instance starts with them, so the requirements doc rides along. */
+  initialAttachments?: AttachItem[]
   onViewWorkflow?: () => void
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
@@ -6589,7 +6607,7 @@ function HealthcareFrontdeskCreateAgentLive({
   /** Ghostwriter's combined flow: Send hands the typed prompt to the parent (which opens the
    *  canvas + real "Edit with AI" panel and re-mounts this same conversation inside it) instead
    *  of continuing here — this instance is about to be replaced. */
-  onGhostwriterCombinedSend?: (text: string) => void
+  onGhostwriterCombinedSend?: (text: string, attachments: AttachItem[]) => void
   /** Jay & Robin only — see `ReviewResponseThread`'s matching prop. */
   simulationTabLabel?: string
   /** Jay & Robin only: when given, "Open plan" calls this instead of the local inline
@@ -6617,7 +6635,7 @@ function HealthcareFrontdeskCreateAgentLive({
   const [prompt, setPrompt] = useState('')
   /** Exploration landing only — Option 1 = rotating placeholders; Option 2 = short seed prompt. */
   const [landingPromptOption, setLandingPromptOption] = useState<'1' | '2'>('1')
-  const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
+  const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>(initialAttachments ?? [])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [filesModalOpen, setFilesModalOpen] = useState(false)
   const landingImageInputRef = useRef<HTMLInputElement | null>(null)
@@ -6764,6 +6782,9 @@ function HealthcareFrontdeskCreateAgentLive({
   // never moves the page.
   const suppressAutoScrollRef = useRef(false)
   const reviewPromptFilledRef = useRef(false)
+  /** Jay & Robin: the first click into the composer after the agent exists pre-fills the
+   *  follow-up request the demo continues with. Once. */
+  const jrFollowUpPrefilledRef = useRef(false)
   const timingPromptFilledRef = useRef(false)
   const emailPromptFilledRef = useRef(false)
   const suppressAutoScrollBriefly = () => {
@@ -7202,7 +7223,7 @@ function HealthcareFrontdeskCreateAgentLive({
     // real "Edit with AI" panel and re-mounts this same conversation inside it (via
     // autoStart + initialPrompt) instead of continuing here.
     if (ghostwriterPolish && onGhostwriterCombinedSend) {
-      onGhostwriterCombinedSend(text)
+      onGhostwriterCombinedSend(text, landingAttachments)
       return
     }
     setPrompt(text)
@@ -7229,6 +7250,15 @@ function HealthcareFrontdeskCreateAgentLive({
    * user typed themselves is left alone — only an empty box or the untouched exploration seed
    * gets overwritten.
    */
+  /** Jay & Robin: "+ → Files" attaches the requirements doc and writes the sentence that goes
+   *  with it — the demo's "I already wrote this down" entry point for this flow. */
+  const seedJayRobinRequirements = () => {
+    setLandingAttachments((prev) =>
+      prev.some((a) => a.id === JR_REQUIREMENTS_ATTACHMENT.id) ? prev : [...prev, JR_REQUIREMENTS_ATTACHMENT],
+    )
+    setPrompt((prev) => (prev.trim() ? prev : JR_REQUIREMENTS_PROMPT))
+  }
+
   const seedGhostwriterPlaybook = () => {
     setLandingAttachments((prev) =>
       prev.some((a) => a.id === GHOSTWRITER_PLAYBOOK_ATTACHMENT.id)
@@ -7537,6 +7567,8 @@ function HealthcareFrontdeskCreateAgentLive({
                   onBuildStart={onBuildStart}
                   onBuildProgress={onBuildProgress}
                   onOpenNode={onOpenNode}
+                  attachments={landingAttachments}
+                  onWorkflowExtra={onWorkflowExtra}
                   onCreateAgent={() => saveCreatedAgent()}
                   onOpenPlan={onOpenPlanExternal ?? (() => setPlanPanelOpen(true))}
                   planOpen={onOpenPlanExternal ? planOpenExternal : planPanelOpen}
@@ -8328,6 +8360,12 @@ function HealthcareFrontdeskCreateAgentLive({
                 setAttachments(DEMO_DOCS_ATTACHMENTS)
                 return
               }
+              // Jay & Robin: once the agent exists, the first click pre-fills the follow-up.
+              if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
+                jrFollowUpPrefilledRef.current = true
+                setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
+                return
+              }
               // Review response: click composer to pre-fill the current question's reply.
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
                 setFollowUp(reviewComposerFill)
@@ -8364,6 +8402,11 @@ function HealthcareFrontdeskCreateAgentLive({
                 attachments.length === 0
               ) {
                 setAttachments(DEMO_DOCS_ATTACHMENTS)
+                return
+              }
+              if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
+                jrFollowUpPrefilledRef.current = true
+                setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
                 return
               }
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
@@ -8792,7 +8835,8 @@ function HealthcareFrontdeskCreateAgentLive({
                   else if (option === 'files') {
                     // Ghostwriter skips the file picker and lands straight on the seeded state.
                     if (ghostwriterPolish) {
-                      seedGhostwriterPlaybook()
+                      if (isJayRobinFlow) seedJayRobinRequirements()
+                      else seedGhostwriterPlaybook()
                       return
                     }
                     setFilesModalOpen(true)
@@ -9625,7 +9669,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
    *  non-null, swaps the empty scratch canvas for the real (initially empty) workflow. */
   const [ghostwriterBuildStage, setGhostwriterBuildStage] = useState<number | null>(null)
   /** Jay & Robin: a "N nodes updated" row asked for this node's panel — forwarded to the canvas. */
-  const [ghostwriterOpenNode, setGhostwriterOpenNode] = useState<{ id: string; nonce: number } | null>(null)
+  const [ghostwriterOpenNode, setGhostwriterOpenNode] = useState<{ id: string; nonce: number; tool?: string } | null>(null)
+  /** Jay & Robin: nodes the copilot added beyond the stock workflow — Select template when the
+   *  build created templates from a requirements doc, Create ticket from a follow-up. */
+  const [ghostwriterWorkflowExtras, setGhostwriterWorkflowExtras] = useState<ReviewResponseExtra[]>([])
+  /** What the landing composer had attached when its prompt moved into the combined panel. */
+  const [ghostwriterCombinedAttachments, setGhostwriterCombinedAttachments] = useState<AttachItem[]>([])
   /** Ghostwriter: covers the canvas with placeholder node shapes for a beat right after
    *  "Create agent" — the swap from empty scratch canvas to the fully-built workflow felt
    *  instant/jarring otherwise. */
@@ -9715,6 +9764,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     // 23 Sep: a fresh draft starts with none of its own — otherwise a recommendation accepted
     // in an earlier draft this session would still show up in this brand-new one's chat.
     setAcceptedRecommendations([])
+    setGhostwriterWorkflowExtras([])
+    setGhostwriterCombinedAttachments([])
   }
 
   const selectAllChats = () => {
@@ -10654,11 +10705,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           onGhostwriterCombinedSend={
             forCombinedPanel
               ? undefined
-              : (text) => {
+              : (text, attachments) => {
                   // Ghostwriter: Send opens the canvas + real "Edit with AI" panel and
                   // re-mounts this same conversation inside it (combined "Workflow" tab),
                   // instead of continuing full-page.
                   setGhostwriterCombinedPrompt(text)
+                  setGhostwriterCombinedAttachments(attachments)
                   setCreateGhostwriterTab('workflow')
                   setGhostwriterCombinedFlow(true)
                   openCreateWorkflow({ withAiPanel: true })
@@ -10726,7 +10778,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
           onBuildStart={() => setGhostwriterBuildStage(0)}
           onBuildProgress={setGhostwriterBuildStage}
-          onOpenNode={(id) => setGhostwriterOpenNode({ id, nonce: Date.now() })}
+          onOpenNode={(id, tool) => setGhostwriterOpenNode({ id, tool, nonce: Date.now() })}
+          onWorkflowExtra={(extra) =>
+            setGhostwriterWorkflowExtras((prev) => (prev.includes(extra) ? prev : [...prev, extra]))
+          }
           agentCreated={ghostwriterAgentCreated}
           onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
           libraryCards={
@@ -10751,6 +10806,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       : JOHN_CREATE_PROMPT)
           }
           autoStart={forCombinedPanel}
+          initialAttachments={forCombinedPanel ? ghostwriterCombinedAttachments : undefined}
           historyChatId={forCombinedPanel ? undefined : chatHistorySelectedId}
           historyChat={forCombinedPanel ? undefined : historyChat}
           fromScratchLabel={(isReminder || isReviewResponse || isReviewGeneration) ? 'Create from scratch' : 'Setup manually'}
@@ -11210,6 +11266,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                    with the chat's build pass; once created it shows the whole workflow. */
                 buildRevealStage={isJayRobinPolish && !ghostwriterAgentCreated ? ghostwriterBuildStage : null}
                 externalOpenNode={isJayRobinPolish ? ghostwriterOpenNode : null}
+                workflowExtras={isJayRobinPolish ? ghostwriterWorkflowExtras : undefined}
               />
               {isGhostwriterPolish && ghostwriterCanvasSkeleton && (
                 <div
