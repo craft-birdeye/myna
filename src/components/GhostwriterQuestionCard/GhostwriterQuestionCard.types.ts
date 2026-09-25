@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export interface QuestionCardOption {
   id: string
   label: string
@@ -27,11 +29,19 @@ export interface GhostwriterQuestionCardProps {
   onPick?: (label: string) => void
   /** Fired with whatever was typed into the free-text row. */
   onSubmitText?: (text: string) => void
-  /** Leaves the question unanswered. Also what the ✕ does when `onClose` is absent. */
+  /** Leaves the question unanswered. Shown as Skip in the footer. */
   onSkip?: () => void
+  /** Answers every remaining question with its skip response. Shown as Skip all. */
+  onSkipAll?: () => void
+  /**
+   * When the question has choices and a text option, this replaces the thin "Other…" field —
+   * the shared composer, sitting in that row. The parent hides its own copy underneath.
+   */
+  inputSlot?: ReactNode
+  /** Text currently in `inputSlot`, so Next can submit it. */
+  externalDraft?: string
+  onClearExternalDraft?: () => void
   skipLabel?: string
-  /** Renders the ✕. Omit on a question that has to be answered to go on. */
-  onClose?: () => void
   className?: string
   /** Hairlines between the question and each option row, and between rows. Off when this
    *  card is docked flush above a composer that supplies its own single divider instead. */

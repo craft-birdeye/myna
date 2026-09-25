@@ -1,11 +1,22 @@
 import type { ReactNode } from 'react'
 
+export interface AiBuilderPanelMessage {
+  role: 'user' | 'agent'
+  text: string
+}
+
 export interface AiBuilderPanelSession {
   id: string
   /** Generic chat summary — for now a canned label rather than a real recap. */
   title: string
+  /** Who the chat belongs to. Shown before the timestamp. */
+  author: string
   /** Already-formatted date + time (e.g. "Today, 2:41 PM"). */
   timestamp: string
+  /** The finished conversation. Opening the session shows this at once. */
+  messages: AiBuilderPanelMessage[]
+  /** The in-progress chat. Selecting it returns to the live pane instead of a transcript. */
+  current?: boolean
 }
 
 export interface AiBuilderPanelProps {
@@ -48,9 +59,9 @@ export interface AiBuilderPanelProps {
    * dock an arbitrary live conversation in the exact same panel chrome as every other workflow.
    */
   content?: ReactNode
-  /** Renders a "sessions" list icon to the left of expand/close — a header-anchored dropdown
-   *  of past chats (generic summary + timestamp for now, no real switching). Omit to hide it. */
+  /** Renders a sessions list icon to the left of expand/close. Clicking it replaces the
+   *  chat with the full history. Omit to hide it. */
   sessions?: AiBuilderPanelSession[]
-  /** Fired when a session row is picked. Optional — the dropdown just closes without it. */
+  /** Fired when a session row is picked. The history view closes either way. */
   onSelectSession?: (id: string) => void
 }

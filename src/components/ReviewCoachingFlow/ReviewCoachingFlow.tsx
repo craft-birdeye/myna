@@ -163,6 +163,7 @@ export function ReviewCoachingFlow({ item, onOpenNode, onResolved }: ReviewCoach
         {decision === 'undone' && <AgentLine tight text={script.undoneLine} />}
       </div>
 
+      {!questionOpen && (
       <div className="shrink-0 bg-surface px-lg pb-md pt-sm">
         <PromptComposer
           value={composer}
@@ -172,6 +173,7 @@ export function ReviewCoachingFlow({ item, onOpenNode, onResolved }: ReviewCoach
           sendDisabled={busy || !questionOpen}
         />
       </div>
+      )}
     </div>
   )
 }

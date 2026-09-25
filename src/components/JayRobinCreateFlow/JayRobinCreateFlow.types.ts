@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { RefKind } from '../../data/procedureData'
 import type { ReviewResponseExtra } from '../../data/reviewResponseBuildReveal'
 
@@ -29,6 +30,16 @@ export interface JayRobinCreateFlowProps {
   /** True while a question card is docked above the composer — the parent drops its bottom
    *  padding so the card sits flush. */
   onAnswerCardOpenChange?: (open: boolean) => void
+  /** The nodes card is docked with a gap above the composer, so the composer keeps its top radius. */
+  onNodesCardDockedChange?: (docked: boolean) => void
+  /** A question with choices and a text option is open — the parent hides the composer so
+   *  the choices sit in its place. */
+  onSuppressComposerChange?: (suppress: boolean) => void
+  /** The shared composer, shown in place of the question's "Other…" field. */
+  choiceInput?: ReactNode
+  /** Whatever is typed in `choiceInput`. */
+  choiceDraft?: string
+  onClearChoiceDraft?: () => void
   /** True while the copilot is working (typing, analysing, building) — the parent disables
    *  the composer. */
   onBusyChange?: (busy: boolean) => void
@@ -45,7 +56,12 @@ export interface JayRobinCreateFlowProps {
   /** The flow added a node beyond the stock workflow (Select template on Accept in the file
    *  variant, Create ticket when a follow-up is applied) — the parent extends the canvas. */
   onWorkflowExtra?: (extra: ReviewResponseExtra) => void
+  /** Undo on a follow-up's nodes card — the parent drops that extra from the canvas. */
+  onRemoveWorkflowExtra?: (extra: ReviewResponseExtra) => void
   /** Rewind on the opening message: the parent clears the thread and puts the text back in
    *  the composer. */
   onRewindToStart?: (prompt: string) => void
+  /** Rewind on a follow-up sent after the agent exists: the parent puts that text back in
+   *  the composer. The flow drops the follow-up itself. */
+  onRewindFollowUp?: (text: string) => void
 }

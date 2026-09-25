@@ -89,11 +89,51 @@ const END_NODE_ID = '__end__';
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
 /** Ghostwriter "Edit with AI" sessions list — Create agent CTA (agent list view) flow only.
- *  Generic summaries + timestamps for now; no real per-session chat history behind them. */
+ *  Each row is a finished chat: opening it shows `messages` at once, with no working pass. */
 const GHOSTWRITER_MOCK_SESSIONS = [
-  { id: 'session-1', title: 'Create a review response agent', timestamp: 'Today, 2:41 PM' },
-  { id: 'session-2', title: 'Set up a reminder follow-up agent', timestamp: 'Yesterday, 11:05 AM' },
-  { id: 'session-3', title: 'Draft a front desk intake agent', timestamp: 'Mar 3, 9:20 AM' },
+  {
+    id: 'session-1',
+    title: 'Create a review response agent',
+    author: 'John',
+    timestamp: 'Today, 2:41 PM',
+    messages: [
+      { role: 'user', text: 'Hey, I want you to respond to my reviews.' },
+      {
+        role: 'agent',
+        text: 'I read the account first — 1,035 reviews across 4 locations, four saved templates, and Google and Facebook taking 91% of replies. Spam above 0.8 is held and never answered publicly.',
+      },
+      {
+        role: 'agent',
+        text: 'Your review response agent is ready. It posts 4–5★ replies on its own, holds 3★ and below for a person, and skips sources that can’t take a reply. Open any step on the canvas to adjust it.',
+      },
+    ],
+  },
+  {
+    id: 'session-2',
+    title: 'Set up a reminder follow-up agent',
+    author: 'John',
+    timestamp: 'Yesterday, 11:05 AM',
+    messages: [
+      { role: 'user', text: 'Set up a reminder follow-up agent for unconfirmed appointments.' },
+      {
+        role: 'agent',
+        text: 'The reminder agent is ready. Unconfirmed patients get email and text first, then a call if they still haven’t confirmed. A reschedule hands off to staff.',
+      },
+    ],
+  },
+  {
+    id: 'session-3',
+    title: 'Draft a front desk intake agent',
+    author: 'John',
+    timestamp: 'Mar 3, 9:20 AM',
+    messages: [
+      { role: 'user', text: 'Draft a front desk intake agent for new callers.' },
+      {
+        role: 'agent',
+        text: 'The front desk intake agent is ready. It greets the caller, captures the reason for the visit, and books or hands off from there.',
+      },
+    ],
+  },
 ];
 
 /** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
@@ -4775,12 +4815,12 @@ export default function AgentBuilder({
                     draftAgentName={agentName}
                     onClose={closeAiBuilderPanel}
                     onExpand={
-                      onOpenAiFullscreen
-                        ? () => {
+                      ghostwriterChrome || !onOpenAiFullscreen
+                        ? undefined
+                        : () => {
                             closeAiBuilderPanel();
                             onOpenAiFullscreen();
                           }
-                        : undefined
                     }
                     className="rr-chrome-ai-panel"
                     fillShell
@@ -4790,7 +4830,19 @@ export default function AgentBuilder({
                     seedPrompt={ghostwriterChrome ? GHOSTWRITER_CANVAS_SEED_PROMPT : undefined}
                     // Create agent CTA (agent list → Create agent) flow only — a generic
                     // summary + timestamp per session, no real chat history behind it yet.
-                    sessions={ghostwriterChrome ? GHOSTWRITER_MOCK_SESSIONS : undefined}
+                    sessions={ghostwriterChrome ? [
+                      ...(aiPanelTitle
+                        ? [{
+                            id: 'current',
+                            title: aiPanelTitle,
+                            author: 'John',
+                            timestamp: 'Just now',
+                            messages: [],
+                            current: true,
+                          }]
+                        : []),
+                      ...GHOSTWRITER_MOCK_SESSIONS,
+                    ] : undefined}
                     onOpenNode={ghostwriterChrome ? () => setSpamGateOpen(true) : undefined}
                     openProcedureName={lhsPreviewProcedureId}
                     onOpenProcedure={(procedureId) => {

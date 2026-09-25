@@ -95,11 +95,6 @@ export function GhostwriterOpenQuestions({ onDone }: GhostwriterOpenQuestionsPro
       onSubmitText={answer}
       onSkip={advance}
       skipLabel={OPEN_QUESTIONS_COPY.skip}
-      /* ✕ gives up on the whole set, not just this question. */
-      onClose={() => {
-        setSettled(true)
-        onDone(answeredCount)
-      }}
     />
   )
 }

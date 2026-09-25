@@ -138,17 +138,20 @@
 .gw-top-actions .ab-header-more-btn {
   border-radius: 8px;
 }
+.gw-top-actions .ab-publish-split__main,
+.gw-top-actions .ab-publish-split__chevron {
+  background: #1976d2;
+}
 .gw-top-actions .ab-publish-split__main {
   border-radius: 8px 0 0 8px;
-  background: #2563eb;
 }
 .gw-top-actions .ab-publish-split__chevron {
   border-radius: 0 8px 8px 0;
-  background: #2563eb;
 }
 .gw-top-actions .ab-publish-split__main:hover,
-.gw-top-actions .ab-publish-split__chevron:hover {
-  background: #1d4ed8;
+.gw-top-actions .ab-publish-split__chevron:hover,
+.gw-top-actions .ab-publish-split__chevron--open {
+  background: #1565c0;
 }
 /* The split's divider is a white hairline, as in the reference. */
 .gw-top-actions .ab-publish-split__chevron {

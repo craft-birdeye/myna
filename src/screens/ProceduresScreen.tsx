@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { TopNav, HeaderSearchField } from '../components'
+import { TopNav, HeaderSearchField, Chip } from '../components'
 import { LayoutGrid, LayoutList, ListFilter, MoreVertical } from 'lucide-react'
 
 // Uploaded procedure.svg icon
@@ -70,7 +70,17 @@ const HC_PROCEDURE_IDS = new Set([
   'hc-fd-02', 'hc-fd-05', 'hc-fd-06', 'hc-fd-11', 'hc-fd-12', 'hc-wl-01', 'hc-pv-01',
 ])
 
-export function ProceduresScreen({ product = 'automotive' }: { product?: string }) {
+export function ProceduresScreen({
+  product = 'automotive',
+  hideTopNav = false,
+  activeChipCount = 0,
+}: {
+  product?: string
+  /** Drop the app TopNav when this list is already inside another shell. */
+  hideTopNav?: boolean
+  /** First N procedures (name order) show an Active chip beside the book icon. */
+  activeChipCount?: number
+}) {
   const { procedures, addProcedure, deleteProcedure } = useProcedureStore()
   const allProcedures = procedures.filter((p) => {
     if (product === 'dental') return HC_PROCEDURE_IDS.has(p.id) || p.category === 'Dental'
@@ -140,9 +150,11 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
     return true
   }).slice().sort((a, b) => a.name.localeCompare(b.name))
 
+  const activeIds = new Set(visibleProcedures.slice(0, activeChipCount).map((p) => p.id))
+
   return (
     <div className="flex h-full flex-col">
-      <TopNav initials="S" />
+      {hideTopNav ? null : <TopNav initials="S" />}
 
       <div className="flex min-h-0 flex-1">
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
@@ -208,6 +220,7 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
                 <ProcedureCard
                   key={p.id}
                   procedure={p}
+                  active={activeIds.has(p.id)}
                   onOpen={() => setEditing(p)}
                   onDuplicate={() => addProcedure({ ...p, id: `${p.id}-copy-${Date.now()}`, name: `${p.name} (copy)` })}
                   onDelete={() => deleteProcedure(p.id)}
@@ -249,19 +262,21 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
 // ── Grid card ───────────────────────────────────────────────────
 interface CardProps {
   procedure: Procedure
+  active?: boolean
   onOpen: () => void
   onDuplicate: () => void
   onDelete: () => void
 }
 
-function ProcedureCard({ procedure, onOpen, onDuplicate, onDelete }: CardProps) {
+function ProcedureCard({ procedure, active = false, onOpen, onDuplicate, onDelete }: CardProps) {
   return (
     <div
       onClick={onOpen}
       className="group relative flex min-h-[192px] cursor-pointer flex-col rounded-md border border-border-selected bg-surface p-xl transition-colors hover:bg-surface-selected"
     >
-      <div className="mb-md">
+      <div className="mb-md flex items-start justify-between gap-sm">
         <ProcedureBookIcon size={22} className="text-text-secondary" />
+        {active ? <Chip label="Active" variant="success" /> : null}
       </div>
 
       <h3 className="mb-xs text-body text-text-primary">{procedure.name}</h3>

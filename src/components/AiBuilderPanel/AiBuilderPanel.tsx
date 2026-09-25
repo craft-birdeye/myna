@@ -1,5 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Icon } from '../Icon/Icon'
+import { Tooltip } from '../Tooltip/Tooltip'
+import { PromptComposer } from '../PromptComposer/PromptComposer'
+import { SparkleLoader } from '../SparkleLoader/SparkleLoader'
+import type { AiBuilderPanelMessage } from './AiBuilderPanel.types'
 import { SendIcon } from '../../assets/SendIcon'
 import iconAgentsTwoStarSparkle from '../../assets/icon-agents-two-star-sparkle.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
@@ -375,6 +379,66 @@ function TrailMessages({
   )
 }
 
+/** A chat that is already finished — every turn is on screen, nothing types or says "Working". */
+function LoadedChat({ initial }: { initial: AiBuilderPanelMessage[] }) {
+  const [messages, setMessages] = useState(initial)
+  const [draft, setDraft] = useState('')
+
+  const send = () => {
+    const text = draft.trim()
+    if (!text) return
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text },
+      { role: 'agent', text: 'Done. That change is saved in this chat.' },
+    ])
+    setDraft('')
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto px-lg">
+        {messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-xs text-center">
+            <span className="flex size-8 items-center justify-center rounded-full bg-ai-summary">
+              <SparkleLoader size={16} spinning={false} />
+            </span>
+            <p className="m-0 text-body text-text-secondary">
+              Hi! I&apos;m here to help you. Tell me what you&apos;d like to do
+            </p>
+          </div>
+        ) : (
+          messages.map((message, i) =>
+            message.role === 'user' ? (
+              <div key={i} className={`flex justify-end ${i === 0 ? 'pt-md' : 'mt-3xl'}`}>
+                <p className="m-0 max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
+                  {message.text}
+                </p>
+              </div>
+            ) : (
+              <div key={i} className="mt-3xl flex gap-sm">
+                <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                  <SparkleLoader size={14} spinning={false} />
+                </span>
+                <p className="m-0 min-w-0 flex-1 text-body leading-6 text-text-primary">{message.text}</p>
+              </div>
+            ),
+          )
+        )}
+      </div>
+      <div className="shrink-0 px-lg pb-sm pt-md">
+        <PromptComposer
+          value={draft}
+          onChange={setDraft}
+          onSend={send}
+          placeholder="What would you like to change?"
+          rows={2}
+        />
+      </div>
+    </div>
+  )
+}
+
 export function AiBuilderPanel({
   title,
   onClose,
@@ -397,8 +461,13 @@ export function AiBuilderPanel({
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
   const [composerFocused, setComposerFocused] = useState(false)
-  const [sessionsOpen, setSessionsOpen] = useState(false)
-  const sessionsMenuRef = useRef<HTMLDivElement>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  /** 'live' is the in-progress conversation. A history row opens its finished transcript;
+   *  New chat starts an empty one. The live thread stays mounted while history is open so
+   *  Back doesn't replay it. */
+  const [pane, setPane] = useState<'live' | 'past' | 'new'>('live')
+  const [pastSessionId, setPastSessionId] = useState<string | null>(null)
+  const pastSession = sessions?.find((session) => session.id === pastSessionId) ?? null
   /** Scripted run: set to the sent text when it matches `seedPrompt`. Until it finishes the
    *  composer is locked, and the normal trail is replaced by the scripted timeline. */
   const [scriptedPrompt, setScriptedPrompt] = useState<string | null>(null)
@@ -420,17 +489,6 @@ export function AiBuilderPanel({
     if (!el) return
     el.scrollTop = el.scrollHeight
   }, [trail.length])
-
-  useEffect(() => {
-    if (!sessionsOpen) return undefined
-    const onDown = (e: MouseEvent) => {
-      if (sessionsMenuRef.current && !sessionsMenuRef.current.contains(e.target as Node)) {
-        setSessionsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [sessionsOpen])
 
   /* The scripted run reveals content on timers rather than on a state change we can depend
      on, so poll the scroll position for its duration to keep the newest row in view. */
@@ -461,58 +519,71 @@ export function AiBuilderPanel({
     handleSend(label)
   }
 
+  const startNewChat = () => {
+    setPane('new')
+    setPastSessionId(null)
+    setHistoryOpen(false)
+  }
+
   return (
     <aside
       className={`flex h-full ${fillShell ? 'w-full' : 'w-[392px]'} shrink-0 flex-col bg-surface shadow-modal ${
         side === 'left' ? 'rounded-tr-xl border-r border-border' : 'rounded-tl-xl border-l border-border'
       } ${className}`.trim()}
     >
-      <div className="flex shrink-0 items-center gap-sm bg-gradient-to-r from-violet-600 to-blue-500 px-lg py-md">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/15">
-          <span
-            className="ai-flat-sparkle-icon size-5 text-white"
-            aria-hidden="true"
-            style={{
-              maskImage: `url("${iconAgentsTwoStarSparkle}")`,
-              WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
-            }}
-          />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-[13px] leading-5 text-white">
-            {title ?? (seedPrompt ? 'Edit with AI' : 'Create with AI')}
-          </p>
-        </div>
-        {sessions && sessions.length > 0 && (
-          <div className="relative" ref={sessionsMenuRef}>
+      <div className={`flex shrink-0 items-center bg-gradient-to-r from-violet-600 to-blue-500 px-lg py-md ${historyOpen ? 'gap-lg' : 'gap-sm'}`}>
+        {historyOpen ? (
+          <span className="flex h-9 shrink-0 items-center">
             <button
               type="button"
-              aria-label="Chat sessions"
-              aria-expanded={sessionsOpen}
-              onClick={() => setSessionsOpen((v) => !v)}
-              className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+              aria-label="Back"
+              onClick={() => setHistoryOpen(false)}
+              className="flex size-5 items-center justify-center text-white transition-colors hover:text-white/80"
             >
-              <Icon name="list" size={18} />
+              <Icon name="arrow_back" size={20} />
             </button>
-            {sessionsOpen && (
-              <div className="absolute right-0 top-full z-30 mt-xs min-w-[260px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-                {sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectSession?.(session.id)
-                      setSessionsOpen(false)
-                    }}
-                    className="block w-full px-md py-sm text-left hover:bg-surface-hover"
-                  >
-                    <span className="block truncate text-body text-text-primary">{session.title}</span>
-                    <span className="block text-small text-text-tertiary">{session.timestamp}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          </span>
+        ) : (
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/15">
+            <span
+              className="ai-flat-sparkle-icon size-5 text-white"
+              aria-hidden="true"
+              style={{
+                maskImage: `url("${iconAgentsTwoStarSparkle}")`,
+                WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
+              }}
+            />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="m-0 truncate text-[13px] leading-5 text-white">
+            {historyOpen ? 'Chat history' : (title ?? (seedPrompt ? 'Edit with AI' : 'Create with AI'))}
+          </p>
+        </div>
+        {sessions && sessions.length > 0 && !historyOpen && (
+          <>
+            <Tooltip content="Chat history" variant="brief">
+              <button
+                type="button"
+                aria-label="Chat history"
+                aria-expanded={historyOpen}
+                onClick={() => setHistoryOpen(true)}
+                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                <Icon name="list" size={20} />
+              </button>
+            </Tooltip>
+            <Tooltip content="New chat" variant="brief">
+              <button
+                type="button"
+                aria-label="New chat"
+                onClick={startNewChat}
+                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                <Icon name="add" size={20} />
+              </button>
+            </Tooltip>
+          </>
         )}
         {onExpand && (
           <button
@@ -534,9 +605,52 @@ export function AiBuilderPanel({
         </button>
       </div>
 
-      {content ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{content}</div>
-      ) : (
+      {content && pane === 'live' && (
+        <div className={historyOpen ? 'hidden' : 'flex min-h-0 flex-1 flex-col overflow-hidden'}>{content}</div>
+      )}
+
+      {historyOpen && sessions ? (
+        <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto px-lg">
+          {sessions.map((session, i) => (
+            <div key={session.id} className={i < sessions.length - 1 ? 'border-b border-border' : ''}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectSession?.(session.id)
+                  if (session.current) {
+                    setPastSessionId(null)
+                    setPane('live')
+                  } else {
+                    setPastSessionId(session.id)
+                    setPane('past')
+                  }
+                  setHistoryOpen(false)
+                }}
+                className="flex w-full flex-col gap-2xs px-sm py-md text-left transition-colors hover:bg-surface-hover"
+              >
+                <span className="text-body text-text-primary">{session.title}</span>
+                <span className="text-small text-text-tertiary">
+                  {session.author} · {session.timestamp}
+                </span>
+              </button>
+            </div>
+          ))}
+          <div className="mt-auto flex shrink-0 justify-center px-sm py-lg">
+            <button
+              type="button"
+              onClick={startNewChat}
+              className="flex h-9 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              <Icon name="add" size={18} />
+              New chat
+            </button>
+          </div>
+        </div>
+      ) : pane === 'past' && pastSession ? (
+        <LoadedChat key={pastSession.id} initial={pastSession.messages} />
+      ) : pane === 'new' ? (
+        <LoadedChat key="new" initial={[]} />
+      ) : !content && !historyOpen ? (
       <>
       <div
         ref={scrollRef}
@@ -696,7 +810,7 @@ export function AiBuilderPanel({
         </div>
       </div>
       </>
-      )}
+      ) : null}
     </aside>
   )
 }

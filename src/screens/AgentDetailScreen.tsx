@@ -49,6 +49,7 @@ import { JayRobinCreateFlow } from '../components/JayRobinCreateFlow/JayRobinCre
 import { JR_REQUIREMENTS_ATTACHMENT, JR_REQUIREMENTS_PROMPT, JR_TICKET_FOLLOW_UP_PROMPT } from '../data/jayRobinCreateFlow'
 import type { ReviewResponseExtra } from '../data/reviewResponseBuildReveal'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
+import { ProceduresScreen } from './ProceduresScreen'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
@@ -1649,6 +1650,16 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
 const JOHN_CREATE_PROMPT =
   "I want a front desk agent for our clinic. It should answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human. I've got a bunch of our real call recordings if that helps."
 
+/** Short name for the docked create chat — same string in the panel header and chat history. */
+function goalChatTitle(prompt: string): string {
+  const text = prompt.trim()
+  if (!text || text === JOHN_CREATE_PROMPT.trim()) {
+    return 'Answer calls, book appointments, and hand off billing'
+  }
+  const sentence = text.split(/[.!?]/)[0]?.trim() || text
+  return sentence.length > 56 ? `${sentence.slice(0, 56)}…` : sentence
+}
+
 const REMINDER_CREATE_PROMPT =
   "Every time an appointment gets booked, I want patients to automatically get reminded — email and text. Start about a month out, then again a week before. If they still haven't confirmed two days before the appointment, have the agent actually call them. If they don't pick up, send a text. And nobody should get calls at weird hours"
 
@@ -1829,6 +1840,7 @@ const GHOSTWRITER_JAY_ROBIN_SHELL_TABS: Tab[] = [
 const FRONTDESK_MYNA_SHELL_TABS: Tab[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'simulation', label: 'Test' },
+  { id: 'procedures', label: 'Procedures' },
   { id: 'tools', label: 'Tools' },
   { id: 'knowledge', label: 'Knowledge' },
   { id: 'settings', label: 'Settings' },
@@ -2330,7 +2342,7 @@ function CreateAgentThinkingPanel({
   const stepCount = text.split('\n').filter((l) => l.trim()).length
 
   return (
-    <div className="agent-build-fade ml-3xl mt-3xl flex flex-col gap-sm">
+    <div className={`agent-build-fade ml-3xl flex flex-col gap-sm ${activityChrome ? 'mt-lg' : 'mt-3xl'}`}>
       {activityChrome ? (
         <AgentActivityHeader
           running={activityRunning}
@@ -2639,9 +2651,9 @@ const CREATE_AGENT_INTRO_PARAGRAPHS = [
   'You can drop in as many as you have.',
 ]
 
-function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
+function CreateAgentIntroReply({ onComplete, tight = false }: { onComplete?: () => void; tight?: boolean }) {
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+    <div className={`chat-turn agent-build-fade flex gap-sm ${tight ? 'mt-lg' : 'mt-3xl'}`}>
       {/* Sparkle avatar, left-aligned to sit in the same column as the Thoughts icon.
           Animates while the reply types, then rests. */}
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
@@ -6350,6 +6362,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onBuildProgress,
   onOpenNode,
   onWorkflowExtra,
+  onRemoveWorkflowExtra,
   initialAttachments,
   onViewWorkflow,
   onBack,
@@ -6431,6 +6444,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onOpenNode?: (nodeId: string, tool?: string) => void
   /** Jay & Robin: the copilot added a node beyond the stock workflow — the canvas extends. */
   onWorkflowExtra?: (extra: ReviewResponseExtra) => void
+  /** Jay & Robin: Undo on a follow-up's nodes card — drop that extra from the canvas. */
+  onRemoveWorkflowExtra?: (extra: ReviewResponseExtra) => void
   /** Attachments the landing composer had when its prompt was handed off to the combined
    *  panel — this instance starts with them, so the requirements doc rides along. */
   initialAttachments?: AttachItem[]
@@ -6485,6 +6500,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onBuildProgress={onBuildProgress}
       onOpenNode={onOpenNode}
       onWorkflowExtra={onWorkflowExtra}
+      onRemoveWorkflowExtra={onRemoveWorkflowExtra}
       initialAttachments={initialAttachments}
       onViewWorkflow={onViewWorkflow}
       onBack={onBack}
@@ -6529,6 +6545,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onBuildProgress,
   onOpenNode,
   onWorkflowExtra,
+  onRemoveWorkflowExtra,
   initialAttachments,
   onViewWorkflow,
   onBack,
@@ -6570,6 +6587,8 @@ function HealthcareFrontdeskCreateAgentLive({
   onOpenNode?: (nodeId: string, tool?: string) => void
   /** Jay & Robin: the copilot added a node beyond the stock workflow — the canvas extends. */
   onWorkflowExtra?: (extra: ReviewResponseExtra) => void
+  /** Jay & Robin: Undo on a follow-up's nodes card — drop that extra from the canvas. */
+  onRemoveWorkflowExtra?: (extra: ReviewResponseExtra) => void
   /** Attachments the landing composer had when its prompt was handed off to the combined
    *  panel — this instance starts with them, so the requirements doc rides along. */
   initialAttachments?: AttachItem[]
@@ -6678,7 +6697,7 @@ function HealthcareFrontdeskCreateAgentLive({
   const [showAllJobs, setShowAllJobs] = useState(false)
   const [introThinking, setIntroThinking] = useState(false)
   const [introStatusIndex, setIntroStatusIndex] = useState(0)
-  const [thinkingOpen, setThinkingOpen] = useState(true)
+  const [thinkingOpen, setThinkingOpen] = useState(!ghostwriterPolish)
   const [introReplyReady, setIntroReplyReady] = useState(false)
   const [introReplyDone, setIntroReplyDone] = useState(false)
   const [timingAnswer, setTimingAnswer] = useState('')
@@ -6766,6 +6785,9 @@ function HealthcareFrontdeskCreateAgentLive({
   /** True while an answer-choice card is docked above the composer — collapses the padding
    *  between the thread and the composer so the two read as one seamless box. */
   const [answerCardOpen, setAnswerCardOpen] = useState(false)
+  const [nodesCardDocked, setNodesCardDocked] = useState(false)
+  /** Choices plus a text option — the card takes the composer's place. */
+  const [suppressComposer, setSuppressComposer] = useState(false)
   const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
   const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
   const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
@@ -7413,6 +7435,81 @@ function HealthcareFrontdeskCreateAgentLive({
     setFollowUp('')
   }
 
+  function renderFollowUpComposer(flush: boolean) {
+    return (
+      <PromptComposer
+        value={followUp}
+        onChange={setFollowUp}
+        onSend={handleFollowUpSend}
+        onFocus={() => {
+          if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+            timingPromptFilledRef.current = true
+            setFollowUp(REMINDER_TIMING_REPLY)
+            return
+          }
+          if (isReminderFlow && handoffFollowDone && !connectAnswer && !followUp.trim()) {
+            emailPromptFilledRef.current = true
+            setFollowUp(REMINDER_EMAIL_REPLY)
+            return
+          }
+          if (!isReminderFlow && !isReviewFlow && phase === 'ask-docs' && introReplyDone && attachments.length === 0) {
+            setAttachments(DEMO_DOCS_ATTACHMENTS)
+            return
+          }
+          if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
+            jrFollowUpPrefilledRef.current = true
+            setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
+            return
+          }
+          if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+            setFollowUp(reviewComposerFill)
+            return
+          }
+          if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
+            reviewPromptFilledRef.current = true
+            setFollowUp(FINAL_REVIEW_PROMPT)
+          }
+        }}
+        onClick={() => {
+          if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+            timingPromptFilledRef.current = true
+            setFollowUp(REMINDER_TIMING_REPLY)
+            return
+          }
+          if (isReminderFlow && handoffFollowDone && !connectAnswer && !followUp.trim()) {
+            emailPromptFilledRef.current = true
+            setFollowUp(REMINDER_EMAIL_REPLY)
+            return
+          }
+          if (!isReminderFlow && !isReviewFlow && phase === 'ask-docs' && introReplyDone && attachments.length === 0) {
+            setAttachments(DEMO_DOCS_ATTACHMENTS)
+            return
+          }
+          if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
+            jrFollowUpPrefilledRef.current = true
+            setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
+            return
+          }
+          if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+            setFollowUp(reviewComposerFill)
+          }
+        }}
+        rows={2}
+        disabled={composerLocked}
+        sendDisabled={!canSendFollowUp}
+        placeholder={composerPlaceholder}
+        attachments={attachments}
+        onRemoveAttachment={removeAttachment}
+        onAttach={(option) => {
+          if (option === 'upload-image') landingImageInputRef.current?.click()
+          else if (option === 'media-library') setMediaLibraryOpen(true)
+          else if (option === 'files') setFilesModalOpen(true)
+        }}
+        flushTop={flush}
+      />
+    )
+  }
+
   if (submitted) {
     return (
       <div
@@ -7481,7 +7578,7 @@ function HealthcareFrontdeskCreateAgentLive({
         >
         <div
           ref={threadScrollRef}
-          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${ghostwriterPolish ? 'px-sm' : ''}`}
+          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${ghostwriterPolish ? 'px-lg' : ''}`}
         >
         {/* min-h-full: sticky alone only pins the card during scroll — it won't push the card
             down when the conversation so far is shorter than the viewport. Giving this flex
@@ -7569,11 +7666,14 @@ function HealthcareFrontdeskCreateAgentLive({
                   onOpenNode={onOpenNode}
                   attachments={landingAttachments}
                   onWorkflowExtra={onWorkflowExtra}
+                  onRemoveWorkflowExtra={onRemoveWorkflowExtra}
                   onCreateAgent={() => saveCreatedAgent()}
                   onOpenPlan={onOpenPlanExternal ?? (() => setPlanPanelOpen(true))}
                   planOpen={onOpenPlanExternal ? planOpenExternal : planPanelOpen}
                   agentCreated={agentCreated}
                   onAnswerCardOpenChange={setAnswerCardOpen}
+                  onNodesCardDockedChange={setNodesCardDocked}
+                  onSuppressComposerChange={setSuppressComposer}
                   onBusyChange={setReviewThreadBusy}
                   pendingAnswer={reviewPendingAnswer}
                   onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
@@ -7584,7 +7684,10 @@ function HealthcareFrontdeskCreateAgentLive({
                     setFollowUp(text)
                     setReviewThreadBusy(false)
                     setAnswerCardOpen(false)
+                    setNodesCardDocked(false)
+                    setSuppressComposer(false)
                   }}
+                  onRewindFollowUp={(text) => setFollowUp(text)}
                 />
                 )
               ) : isReviewFlow ? (
@@ -7715,8 +7818,8 @@ function HealthcareFrontdeskCreateAgentLive({
                 </>
               ) : (
                 <>
-                  <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
-                  {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
+                  <CreateAgentIntroReply tight={ghostwriterPolish} onComplete={() => setIntroReplyDone(true)} />
+                  {introReplyDone && !ghostwriterPolish && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
                 </>
               )
             )}
@@ -8308,9 +8411,10 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
         </div>
 
+        {!suppressComposer && (
         <div
-          className={`z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm ${answerCardOpen ? '' : 'pt-md'} ${
-            ghostwriterPolish ? 'px-sm' : ''
+          className={`z-10 flex shrink-0 flex-col gap-md bg-surface ${answerCardOpen ? '' : 'pt-md'} ${
+            ghostwriterPolish ? 'px-lg pb-lg' : 'pb-sm'
           }`}
         >
           {threadOverflowing && isScrolledUp && (
@@ -8326,107 +8430,9 @@ function HealthcareFrontdeskCreateAgentLive({
             </div>
           )}
 
-          <PromptComposer
-            value={followUp}
-            onChange={setFollowUp}
-            onSend={handleFollowUpSend}
-            onFocus={() => {
-              // Reminder create flow: after the agent asks about timing, click
-              // the composer to pre-fill the scripted reply, then Enter to send.
-              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                timingPromptFilledRef.current = true
-                setFollowUp(REMINDER_TIMING_REPLY)
-                return
-              }
-              // After no-connect defaults: pre-fill the email tone reply.
-              if (
-                isReminderFlow &&
-                handoffFollowDone &&
-                !connectAnswer &&
-                !followUp.trim()
-              ) {
-                emailPromptFilledRef.current = true
-                setFollowUp(REMINDER_EMAIL_REPLY)
-                return
-              }
-              // Front desk: after being asked for docs, click to attach the demo files.
-              if (
-                !isReminderFlow &&
-                !isReviewFlow &&
-                phase === 'ask-docs' &&
-                introReplyDone &&
-                attachments.length === 0
-              ) {
-                setAttachments(DEMO_DOCS_ATTACHMENTS)
-                return
-              }
-              // Jay & Robin: once the agent exists, the first click pre-fills the follow-up.
-              if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
-                jrFollowUpPrefilledRef.current = true
-                setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
-                return
-              }
-              // Review response: click composer to pre-fill the current question's reply.
-              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                setFollowUp(reviewComposerFill)
-                return
-              }
-              // Once the draft review is done, clicking into the box pre-fills
-              // John's next message so the demo can continue in one click.
-              if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
-                reviewPromptFilledRef.current = true
-                setFollowUp(FINAL_REVIEW_PROMPT)
-              }
-            }}
-            onClick={() => {
-              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                timingPromptFilledRef.current = true
-                setFollowUp(REMINDER_TIMING_REPLY)
-                return
-              }
-              if (
-                isReminderFlow &&
-                handoffFollowDone &&
-                !connectAnswer &&
-                !followUp.trim()
-              ) {
-                emailPromptFilledRef.current = true
-                setFollowUp(REMINDER_EMAIL_REPLY)
-                return
-              }
-              if (
-                !isReminderFlow &&
-                !isReviewFlow &&
-                phase === 'ask-docs' &&
-                introReplyDone &&
-                attachments.length === 0
-              ) {
-                setAttachments(DEMO_DOCS_ATTACHMENTS)
-                return
-              }
-              if (isReviewFlow && isJayRobinFlow && agentCreated && !followUp.trim() && !reviewThreadBusy && !jrFollowUpPrefilledRef.current) {
-                jrFollowUpPrefilledRef.current = true
-                setFollowUp(JR_TICKET_FOLLOW_UP_PROMPT)
-                return
-              }
-              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                setFollowUp(reviewComposerFill)
-              }
-            }}
-            rows={2}
-            disabled={composerLocked}
-            sendDisabled={!canSendFollowUp}
-            placeholder={composerPlaceholder}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttach={(option) => {
-              if (option === 'upload-image') landingImageInputRef.current?.click()
-              else if (option === 'media-library') setMediaLibraryOpen(true)
-              else if (option === 'files') setFilesModalOpen(true)
-            }}
-            flushTop={answerCardOpen}
-          />
+          {renderFollowUpComposer(answerCardOpen && !nodesCardDocked)}
         </div>
+        )}
         </div>
 
         {/* Matches the panel's own width now that it's absolutely positioned (out of
@@ -10782,6 +10788,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           onWorkflowExtra={(extra) =>
             setGhostwriterWorkflowExtras((prev) => (prev.includes(extra) ? prev : [...prev, extra]))
           }
+          onRemoveWorkflowExtra={(extra) =>
+            setGhostwriterWorkflowExtras((prev) => prev.filter((item) => item !== extra))
+          }
           agentCreated={ghostwriterAgentCreated}
           onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
           libraryCards={
@@ -11267,6 +11276,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 buildRevealStage={isJayRobinPolish && !ghostwriterAgentCreated ? ghostwriterBuildStage : null}
                 externalOpenNode={isJayRobinPolish ? ghostwriterOpenNode : null}
                 workflowExtras={isJayRobinPolish ? ghostwriterWorkflowExtras : undefined}
+                aiPanelTitle={
+                  isMynaCombinedNav && ghostwriterCombinedFlow
+                    ? goalChatTitle(ghostwriterCombinedPrompt || JOHN_CREATE_PROMPT)
+                    : undefined
+                }
               />
               {isGhostwriterPolish && ghostwriterCanvasSkeleton && (
                 <div
@@ -11324,10 +11338,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             ghostwriterShellPinned &&
             (createGhostwriterTab === 'tools' ||
               createGhostwriterTab === 'knowledge' ||
+              createGhostwriterTab === 'procedures' ||
               createGhostwriterTab === 'settings' ||
               (createGhostwriterTab === 'simulation' && (isJayRobinPolish || isMynaCombinedNav || ghostwriterSimStarted))) && (
               <div className="absolute inset-0 top-[56px] z-20 flex min-h-0 flex-col overflow-hidden">
-                {createGhostwriterTab === 'tools' ? (
+                {createGhostwriterTab === 'procedures' ? (
+                  <ProceduresScreen
+                    product={product ?? 'healthcare'}
+                    hideTopNav
+                    activeChipCount={2}
+                  />
+                ) : createGhostwriterTab === 'tools' ? (
                   isFrontdeskSep23Polish ? (
                     <FrontdeskToolsTab />
                   ) : isReviewResponse ? (

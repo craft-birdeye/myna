@@ -347,16 +347,30 @@ export interface JrNodeUpdate {
   id?: string
 }
 
-/** What the build pass changed on the canvas — Start and End were already there. */
+/**
+ * Every workflow card on the built canvas, named the way the card itself is named.
+ * Start uses the agent title. Branch-path chips (Respond, Fallback branch) and End
+ * are canvas structure, not cards, so they are left off. A requirements-doc build
+ * inserts Select template just before Generate response.
+ */
 export function buildJrNodeUpdates(plan: JrPlanStep[]): JrNodeUpdate[] {
-  return [
-    { kind: 'changed', id: '__start__', icon: 'play_circle', label: 'Start' },
-    ...plan.flatMap((step) => [
-      ...(step.extraNode ? [{ kind: 'added' as const, id: step.extraNode.id, icon: step.extraNode.icon, label: step.extraNode.label }] : []),
-      { kind: 'added' as const, id: step.node.id, icon: step.node.icon, label: step.node.label },
-    ]),
-    { kind: 'changed', icon: 'flag', label: 'End' },
+  const extra = plan.find((step) => step.extraNode)?.extraNode
+  const nodes: JrNodeUpdate[] = [
+    { kind: 'changed', id: '__start__', icon: 'play_circle', label: 'New review response agent' },
+    { kind: 'added', id: 'rr-1', icon: 'bolt', label: 'When a new review is received or updated' },
+    { kind: 'added', id: 'rr-2', icon: 'shield', label: 'Triage review' },
+    { kind: 'added', id: 'rr-3', icon: 'alt_route', label: 'Evaluate conditions' },
+    { kind: 'added', id: 'rr-4', icon: 'manage_search', label: 'Extract review details' },
   ]
+  if (extra) {
+    nodes.push({ kind: 'added', id: extra.id, icon: extra.icon, label: extra.label })
+  }
+  nodes.push(
+    { kind: 'added', id: 'rr-5', icon: 'edit_note', label: 'Generate response' },
+    { kind: 'added', id: 'rr-6', icon: 'send', label: 'Publish response' },
+    { kind: 'added', id: 'rr-7', icon: 'mail', label: 'Send email alert' },
+  )
+  return nodes
 }
 
 export const JR_NODES_CARD = {
@@ -518,6 +532,8 @@ export interface JrFollowUpScript {
   /** The reply once applied — node names are chips that open the node. */
   result: JrRichSegment[]
   declineLine: string
+  /** Shown in the "N nodes updated" card once the change is applied. */
+  nodes: JrNodeUpdate[]
   /** The canvas node(s) the change adds. */
   extra?: ReviewResponseExtra
 }
@@ -581,8 +597,13 @@ const JR_TICKET_FOLLOW_UP: JrFollowUpScript = {
     ' after Publish response. Every 1–2★ review that talks about the business now opens a Birdeye ticket for the location owner, with the review and the drafted reply attached. Open it to change the assignee or the rating cut-off.',
   ],
   declineLine: 'Left as is. Tell me when you want the ticketing step and I’ll add it.',
+  nodes: [
+    { kind: 'added', id: REVIEW_RESPONSE_TICKET_NODE_ID, icon: 'confirmation_number', label: 'Create ticket' },
+  ],
   extra: 'ticket',
 }
+
+export const JR_FOLLOW_UP_UNDONE_LINE = 'Reverted that change.'
 
 /** A request the script has no story for — asks for the one thing it needs, changes nothing. */
 const JR_GENERIC_FOLLOW_UP: JrFollowUpScript = {
@@ -621,6 +642,9 @@ const JR_GENERIC_FOLLOW_UP: JrFollowUpScript = {
   applySummary: 'Change applied.',
   result: ['Done — the Respond path is updated. Open any step on the canvas to fine-tune it.'],
   declineLine: 'Left as is.',
+  nodes: [
+    { kind: 'changed', id: 'rr-5', icon: 'edit_note', label: 'Generate response' },
+  ],
 }
 
 /** Which follow-up story a typed request gets. */

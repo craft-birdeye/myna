@@ -8,13 +8,14 @@
  *   one intro line
  *   "Working…" → "Worked for 18s" accordion (narration + "Ran N tools" groups; stays open)
  *   lead-in line, then four question cards, one at a time, each echoed as a user turn
- *   lead-in line, then the plan card (five pointers · See details · Create agent)
+ *   lead-in line, then the plan card (five pointers · Create agent)
  *   "Working…" → "Worked for 12s" accordion (one check-row per pointer, actions on a rail)
- *   "N nodes updated · Accept / Undo" docked above the composer
+ *   "N nodes updated · Undo" docked above the composer
  *   closing line
  *
  * Rewind on any user turn truncates the thread back to that point (the question is asked
- * again). Rewind is retired once the agent exists — there's nothing to un-build.
+ * again). Rewind on messages from before the agent existed is retired once it does.
+ * A follow-up sent after that still rewinds, until its changes are applied.
  *
  * Two more stories ride on the same beats (scripts in `data/jayRobinCreateFlow.ts`):
  *   - a requirements doc attached with the prompt switches the analysis, questions and step 4
@@ -33,6 +34,7 @@ import {
   JR_FILE_PLAN_META,
   JR_FILE_QUESTIONS,
   JR_FILE_QUESTIONS_LEAD_IN,
+  JR_FOLLOW_UP_UNDONE_LINE,
   JR_INTRO_LINE,
   JR_PLAN_CARD,
   JR_PLAN_LEAD_IN,
@@ -57,7 +59,8 @@ import { NodesUpdatedCard } from './NodesUpdatedCard'
 import type { JayRobinCreateFlowProps, JayRobinFlowAttachment } from './JayRobinCreateFlow.types'
 
 /** Question cards dock flush above the composer, the same way the other create flows do. */
-const DOCKED_CARD_CLASS = 'sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card'
+/** The nodes card keeps a full stroke and rounded bottom, matching its top edge. */
+const NODES_CARD_CLASS = 'sticky bottom-xs z-10 !ml-0 !mt-md shadow-card'
 
 const ACTION_BTN =
   'flex size-6 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary'
@@ -315,14 +318,11 @@ function AnswersSummaryCard({
 
 /**
  * The plan — five pointers (title + one line of what it does, no markers), a title row that
- * folds the list away, and the two things you can do with
- * it: "See details" (text button — the full plan panel) and "Create agent" (primary).
+ * folds the list away, and "Create agent" (primary).
  */
 function PlanCard({
   steps,
   meta = JR_PLAN_CARD.meta,
-  onOpenDetails,
-  detailsOpen = false,
   onCreateAgent,
   agentCreated = false,
 }: {
@@ -344,7 +344,7 @@ function PlanCard({
           className="flex items-center justify-between gap-md px-lg py-md text-left"
         >
           <span className="flex min-w-0 flex-col gap-2xs">
-            <span className="text-h3 text-text-primary">{JR_PLAN_CARD.title}</span>
+            <span className="text-base text-text-primary">{JR_PLAN_CARD.title}</span>
             <span className="text-small text-text-tertiary">{meta}</span>
           </span>
           <Icon
@@ -367,14 +367,7 @@ function PlanCard({
           </ol>
         )}
 
-        <div className="flex items-center justify-end gap-sm border-t border-border px-lg py-md">
-          <button
-            type="button"
-            onClick={onOpenDetails}
-            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            {detailsOpen ? JR_PLAN_CARD.detailsOpenLabel : JR_PLAN_CARD.detailsLabel}
-          </button>
+        <div className="flex items-center justify-end gap-sm px-lg py-md">
           {!agentCreated && (
             <button
               type="button"
@@ -405,9 +398,9 @@ function ProposalCard({
 }) {
   const { proposal } = script
   return (
-    <div className="gw-flow__in ml-3xl mt-sm flex max-w-full flex-col rounded-sm border border-border bg-surface">
+    <div className="gw-flow__in mb-xs ml-3xl mt-sm flex max-w-full flex-col rounded-sm border border-border bg-surface">
       <div className="flex flex-col gap-sm px-lg py-md">
-        <span className="text-h3 text-text-primary">{proposal.title}</span>
+        <span className="text-base text-text-primary">{proposal.title}</span>
         <ul className="m-0 flex list-none flex-col gap-xs">
           {proposal.lines.map((line) => (
             <li key={line} className="flex items-start gap-sm text-body text-text-secondary">
@@ -417,7 +410,7 @@ function ProposalCard({
           ))}
         </ul>
       </div>
-      <div className="flex items-center justify-end gap-sm border-t border-border px-lg py-md">
+      <div className="flex items-center justify-end gap-sm px-lg py-md">
         <button
           type="button"
           onClick={onDecline}
@@ -452,6 +445,8 @@ interface FollowUp {
   at: Date
   script: JrFollowUpScript
   stage: FollowUpStage
+  /** The nodes card after Apply, until Undo. */
+  nodesDecision: 'pending' | 'undone'
 }
 
 /** One follow-up request, start to finish. Owns its own stage so several can stack. */
@@ -459,10 +454,19 @@ function FollowUpThread({
   item,
   onStage,
   onOpenNode,
+  onRewind,
+  onUndoNodes,
+  showNodesCard = true,
 }: {
   item: FollowUp
   onStage: (stage: FollowUpStage) => void
   onOpenNode?: (nodeId: string, tool?: string) => void
+  /** Drops this follow-up. Hidden once Apply has started — the change is landing. */
+  onRewind?: () => void
+  /** Undo on the nodes card after Apply — the parent drops the canvas extra. */
+  onUndoNodes?: () => void
+  /** A later message exists, so this change's nodes card is no longer the latest. */
+  showNodesCard?: boolean
 }) {
   const { script, stage } = item
   const past = (s: FollowUpStage) => {
@@ -471,7 +475,11 @@ function FollowUpThread({
   }
   return (
     <>
-      <UserTurn text={item.text} at={item.at} />
+      <UserTurn
+        text={item.text}
+        at={item.at}
+        onRewind={stage === 'applying' || stage === 'applied' ? undefined : onRewind}
+      />
       <AgentWorkSequence phases={script.analysisPhases} onComplete={() => stage === 'analysing' && onStage('lead-in')} />
       {past('lead-in') && (
         <AgentLine tight text={script.leadIn} onDone={() => stage === 'lead-in' && onStage('proposed')} />
@@ -496,6 +504,21 @@ function FollowUpThread({
         </>
       )}
       {stage === 'applied' && <AgentRichLine tight actions segments={script.result} onOpenNode={onOpenNode} />}
+      {stage === 'applied' && showNodesCard && item.nodesDecision === 'pending' && script.nodes.length > 0 && (
+        <>
+          <div className="flex-1" aria-hidden />
+          <NodesUpdatedCard
+            nodes={script.nodes}
+            onAccept={() => {}}
+            onUndo={() => onUndoNodes?.()}
+            onOpenNode={onOpenNode}
+            className={NODES_CARD_CLASS}
+          />
+        </>
+      )}
+      {stage === 'applied' && item.nodesDecision === 'undone' && (
+        <AgentLine tight actions text={JR_FOLLOW_UP_UNDONE_LINE} />
+      )}
     </>
   )
 }
@@ -509,13 +532,17 @@ export function JayRobinCreateFlow({
   planOpen = false,
   agentCreated = false,
   onAnswerCardOpenChange,
+  onNodesCardDockedChange,
+  onSuppressComposerChange,
   onBusyChange,
   pendingAnswer,
   onPendingAnswerConsumed,
   onOpenNode,
   onRewindToStart,
+  onRewindFollowUp,
   attachments = [],
   onWorkflowExtra,
+  onRemoveWorkflowExtra,
 }: JayRobinCreateFlowProps) {
   const [promptAt] = useState(() => new Date())
   /** A file attached with the prompt makes this the requirements-doc story. */
@@ -534,6 +561,7 @@ export function JayRobinCreateFlow({
    *  from an earlier run in the same session (rewind, new chat), so it can't gate the build
    *  pass on its own — otherwise the build accordion mounts alongside the analysis one. */
   const [createPressed, setCreatePressed] = useState(false)
+  const [createPressedAt, setCreatePressedAt] = useState<Date | null>(null)
   /** The "N nodes updated" review: pending until Accept or Undo is pressed. */
   const [nodesDecision, setNodesDecision] = useState<'pending' | 'accepted' | 'undone'>('pending')
 
@@ -545,7 +573,14 @@ export function JayRobinCreateFlow({
   const allAnswered = analysisDone && answers.length >= questions.length
   /* The build runs off this thread's own click; `agentCreated` only flips at the end. */
   const building = createPressed
-  const nodesCardOpen = building && buildDone && nodesDecision === 'pending'
+  const nodesCardOpen = building && buildDone && nodesDecision === 'pending' && followUps.length === 0
+  const followUpNodesDocked = followUps.some(
+    (item, index) =>
+      index === followUps.length - 1 &&
+      item.stage === 'applied' &&
+      item.nodesDecision === 'pending' &&
+      item.script.nodes.length > 0,
+  )
 
   const answerMap = useMemo(
     () => Object.fromEntries(answers.map((a) => [a.id, a.text])) as Record<string, string>,
@@ -562,7 +597,27 @@ export function JayRobinCreateFlow({
   const followUpBusy = followUps.some((f) => f.stage === 'analysing' || f.stage === 'lead-in' || f.stage === 'applying')
 
   const startFollowUp = (text: string) =>
-    setFollowUps((prev) => [...prev, { id: Date.now(), text, at: new Date(), script: matchJrFollowUp(text), stage: 'analysing' }])
+    setFollowUps((prev) => [
+      ...prev,
+      { id: Date.now(), text, at: new Date(), script: matchJrFollowUp(text), stage: 'analysing', nodesDecision: 'pending' },
+    ])
+  /** Drop this follow-up and anything after it, and hand the text back to the composer.
+   *  Only offered until Apply starts — earlier messages stay without rewind. */
+  const rewindFollowUp = (id: number) => {
+    const item = followUps.find((f) => f.id === id)
+    if (!item || item.stage === 'applying' || item.stage === 'applied') return
+    setFollowUps((prev) => {
+      const index = prev.findIndex((f) => f.id === id)
+      return index < 0 ? prev : prev.slice(0, index)
+    })
+    onRewindFollowUp?.(item.text)
+  }
+  const undoFollowUpNodes = (id: number) => {
+    const item = followUps.find((f) => f.id === id)
+    if (!item || item.nodesDecision === 'undone') return
+    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, nodesDecision: 'undone' } : f)))
+    if (item.script.extra) onRemoveWorkflowExtra?.(item.script.extra)
+  }
   const setFollowUpStage = (id: number, stage: FollowUpStage) => {
     setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, stage } : f)))
     if (stage === 'applying') {
@@ -574,6 +629,17 @@ export function JayRobinCreateFlow({
   const answer = (text: string) => {
     if (!current) return
     setAnswers((prev) => [...prev, { id: current.id, question: current.question, text, at: new Date() }])
+  }
+  const skipAll = () => {
+    setAnswers((prev) => [
+      ...prev,
+      ...questions.slice(prev.length).map((q) => ({
+        id: q.id,
+        question: q.question,
+        text: q.skipAnswer,
+        at: new Date(),
+      })),
+    ])
   }
   /** Back to just before answer `k` — that question asks again, everything after it goes. */
   const rewindTo = (k: number) => {
@@ -597,12 +663,18 @@ export function JayRobinCreateFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodesDecision])
 
-  /* Both the question cards and the nodes-updated card dock flush above the composer. */
+  /* A question sheet owns its own field, so the composer stays hidden until the questions end. */
   useEffect(() => {
-    onAnswerCardOpenChange?.(questionOpen || nodesCardOpen)
-    return () => onAnswerCardOpenChange?.(false)
+    onAnswerCardOpenChange?.(questionOpen || nodesCardOpen || followUpNodesDocked)
+    onNodesCardDockedChange?.(nodesCardOpen || followUpNodesDocked)
+    onSuppressComposerChange?.(questionOpen)
+    return () => {
+      onAnswerCardOpenChange?.(false)
+      onNodesCardDockedChange?.(false)
+      onSuppressComposerChange?.(false)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionOpen, nodesCardOpen])
+  }, [questionOpen, nodesCardOpen, followUpNodesDocked])
 
   const busy =
     !introDone
@@ -652,10 +724,14 @@ export function JayRobinCreateFlow({
             hint={current.hint}
             options={current.options}
             freeText={current.freeText}
+            index={answers.length + 1}
+            total={questions.length}
+            onPrev={answers.length > 0 ? () => rewindTo(answers.length - 1) : undefined}
             onPick={answer}
             onSubmitText={answer}
             onSkip={() => answer(current.skipAnswer)}
-            className={DOCKED_CARD_CLASS}
+            onSkipAll={skipAll}
+            className="sticky bottom-lg z-10 !ml-0 !mt-md shadow-card"
             dividers={false}
           />
         </>
@@ -672,11 +748,16 @@ export function JayRobinCreateFlow({
           onOpenDetails={onOpenPlan}
           detailsOpen={planOpen}
           onCreateAgent={() => {
+            setCreatePressedAt(new Date())
             setCreatePressed(true)
             onBuildStart?.()
           }}
           agentCreated={createPressed}
         />
+      )}
+
+      {createPressed && createPressedAt && (
+        <UserTurn text={JR_PLAN_CARD.createLabel} at={createPressedAt} />
       )}
 
       {/* Stays mounted once done — the checked-off steps are part of the history, not a
@@ -701,8 +782,9 @@ export function JayRobinCreateFlow({
             nodes={nodeUpdates}
             onAccept={() => setNodesDecision('accepted')}
             onUndo={() => setNodesDecision('undone')}
+            undoDisabled={followUps.length > 0}
             onOpenNode={onOpenNode}
-            className={DOCKED_CARD_CLASS}
+            className={NODES_CARD_CLASS}
           />
         </>
       )}
@@ -712,12 +794,15 @@ export function JayRobinCreateFlow({
       )}
       {nodesDecision === 'undone' && <AgentLine tight actions text={JR_UNDONE_LINE} />}
 
-      {followUps.map((item) => (
+      {followUps.map((item, index) => (
         <FollowUpThread
           key={item.id}
           item={item}
           onStage={(stage) => setFollowUpStage(item.id, stage)}
           onOpenNode={onOpenNode}
+          onRewind={() => rewindFollowUp(item.id)}
+          onUndoNodes={() => undoFollowUpNodes(item.id)}
+          showNodesCard={index === followUps.length - 1}
         />
       ))}
     </>
