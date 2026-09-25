@@ -28,6 +28,7 @@ import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
 import { RecommendationsTab } from './RecommendationsTab'
+import { REVIEW_COACHING_AGENT, REVIEW_COACHING_SEEDS } from '../data/reviewCoaching'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
@@ -74,6 +75,9 @@ interface AgentInstanceScreenProps {
   /** When given, clicking a coaching row opens it on the workflow canvas with the copilot
    *  docked (the host owns that canvas) instead of this screen's full-page detail view. */
   onOpenCoaching?: (recommendationId: string) => void
+  /** Jay & Robin / 23 Sep review response instance: adds a Coaching tab listing the review
+   *  coaching items (thumbs-down feedback from Reviews + seeds) instead of Myna's recommendations. */
+  reviewCoaching?: boolean
   /** Full canvas: log view puts the Outcome/Log panel on the left and lets cards open a
    *  read-only config panel on the right. */
   fullCanvasChrome?: boolean
@@ -445,6 +449,7 @@ export function AgentInstanceScreen({
   hideRecommendationTab = false,
   onOpenCoaching,
   fullCanvasChrome = false,
+  reviewCoaching = false,
   initialLogSlug,
   initialPanel,
   initialRecommendationIdFromRoute,
@@ -631,7 +636,7 @@ export function AgentInstanceScreen({
   })
 
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = workflowButtonOpensEditor
+  const baseTabs = workflowButtonOpensEditor
     ? (isFrontdeskAgent ? EXPLORATION_FRONTDESK_TABS : EXPLORATION_TABS)
     : isTaggingRouting
     ? TAGGING_ROUTING_TABS
@@ -640,6 +645,11 @@ export function AgentInstanceScreen({
         ? REVIEW_RESPONSE_NO_RECOMMENDATION_TABS
         : REVIEW_RESPONSE_TABS
       : TABS
+  // Review coaching sits with the other instance tabs (after Logs, before the Workflow action).
+  const tabs =
+    reviewCoaching && !baseTabs.some((t) => t.id === 'recommendation')
+      ? [...baseTabs, { id: 'recommendation', label: 'Coaching' }]
+      : baseTabs
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
@@ -923,7 +933,14 @@ export function AgentInstanceScreen({
           ) : isRecommendationTab ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
               <RecommendationsTab
-                agentName={instanceName}
+                agentName={reviewCoaching ? REVIEW_COACHING_AGENT : instanceName}
+                includeGenerated={!reviewCoaching}
+                extraItems={reviewCoaching ? REVIEW_COACHING_SEEDS : undefined}
+                emptyDescription={
+                  reviewCoaching
+                    ? 'Coaching appears here whenever someone on your team thumbs-down an agent reply in Reviews and says what was wrong.'
+                    : undefined
+                }
                 onSelect={(id) => {
                   if (onOpenCoaching) {
                     onOpenCoaching(id)
@@ -933,7 +950,7 @@ export function AgentInstanceScreen({
                   onDeepRouteChange?.({ tab: 'recommendation', recId: id })
                 }}
                 isDraft={isDraftInstance}
-                empty={hideRecommendations}
+                empty={hideRecommendations && !reviewCoaching}
               />
             </div>
           ) : (

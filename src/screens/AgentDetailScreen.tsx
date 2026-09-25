@@ -47,8 +47,6 @@ import { useTypewriter } from '../hooks/useTypewriter'
 import { SparkleLoader } from '../components/SparkleLoader/SparkleLoader'
 import { JayRobinCreateFlow } from '../components/JayRobinCreateFlow/JayRobinCreateFlow'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
-import { RecommendationsTab } from './RecommendationsTab'
-import { REVIEW_COACHING_AGENT, REVIEW_COACHING_SEEDS } from '../data/reviewCoaching'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
@@ -480,7 +478,6 @@ const TABS: Tab[] = [
 ]
 /** Jay & Robin / 23 Sep: coaching from the team's feedback on agent replies lists here, at the
  *  agent level, not on an instance. */
-const TABS_WITH_COACHING: Tab[] = [...TABS, { id: 'coaching', label: 'Coaching' }]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Active: 'success',
@@ -11470,6 +11467,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
+          reviewCoaching={isJayRobinNav(navId) && isReviewResponse}
           fullCanvasChrome={isFullCanvasStyleNav(navId)}
         />
         <Toast
@@ -11564,7 +11562,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={isJayRobinNav(navId) && isReviewResponse ? TABS_WITH_COACHING : TABS}
+                  tabs={TABS}
                   activeTab={activeTab}
                   showBaseline={false}
                   onChange={(tabId) => {
@@ -11578,14 +11576,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 <>
                   {isReviewResponse ? <ReviewResponseOutcomesCharts /> : null}
                 </>
-              ) : activeTab === 'coaching' ? (
-                <RecommendationsTab
-                  agentName={REVIEW_COACHING_AGENT}
-                  includeGenerated={false}
-                  extraItems={REVIEW_COACHING_SEEDS}
-                  onSelect={(id) => onOpenCoaching?.(id, REVIEW_COACHING_AGENT)}
-                  emptyDescription="Coaching appears here whenever someone on your team thumbs-down an agent reply in Reviews and says what was wrong."
-                />
               ) : activeTab === 'agents' ? (
                 <>
                   {useAgentCardGrid ? (
