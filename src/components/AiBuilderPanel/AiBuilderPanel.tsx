@@ -557,33 +557,33 @@ export function AiBuilderPanel({
         )}
         <div className="min-w-0 flex-1">
           <p className="m-0 truncate text-[13px] leading-5 text-white">
-            {historyOpen ? 'Chat history' : (title ?? (seedPrompt ? 'Edit with AI' : 'Create with AI'))}
+            {historyOpen ? 'Chat history' : (title ?? 'Create with AI')}
           </p>
         </div>
         {sessions && sessions.length > 0 && !historyOpen && (
-          <>
-            <Tooltip content="Chat history" variant="brief">
-              <button
-                type="button"
-                aria-label="Chat history"
-                aria-expanded={historyOpen}
-                onClick={() => setHistoryOpen(true)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
-              >
-                <Icon name="list" size={20} />
-              </button>
-            </Tooltip>
-            <Tooltip content="New chat" variant="brief">
-              <button
-                type="button"
-                aria-label="New chat"
-                onClick={startNewChat}
-                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
-              >
-                <Icon name="add" size={20} />
-              </button>
-            </Tooltip>
-          </>
+          <Tooltip content="Chat history" variant="brief">
+            <button
+              type="button"
+              aria-label="Chat history"
+              aria-expanded={historyOpen}
+              onClick={() => setHistoryOpen(true)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <Icon name="history" size={20} />
+            </button>
+          </Tooltip>
+        )}
+        {sessions && sessions.length > 0 && (
+          <Tooltip content="New chat" variant="brief">
+            <button
+              type="button"
+              aria-label="New chat"
+              onClick={startNewChat}
+              className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <Icon name="add" size={20} />
+            </button>
+          </Tooltip>
         )}
         {onExpand && (
           <button

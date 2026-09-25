@@ -79,7 +79,7 @@ function ReplyActions({ text }: { text: string }) {
     window.setTimeout(() => setCopied(false), 1500)
   }
   return (
-    <div className="ml-3xl mt-xs flex h-6 items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+    <div className="clear-left ml-3xl mt-xs flex h-6 items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
       <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief" side="top">
         <button type="button" aria-label={copied ? 'Copied' : 'Copy'} onClick={copy} className={ACTION_BTN}>
           <Icon name={copied ? 'check' : 'content_copy'} size={15} />
